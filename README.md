@@ -85,7 +85,7 @@ SMTP_PASS=your_app_password
 
 5. **Start the Application**
 
-Backend (Port 5000):
+Backend (Port 5001):
 ```bash
 cd backend
 npm run dev

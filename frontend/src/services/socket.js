@@ -7,7 +7,7 @@ class SocketService {
 
   connect(userId, role) {
     if (!this.socket) {
-      this.socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000');
+      this.socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5001');
       
       this.socket.on('connect', () => {
         console.log('Connected to server');
