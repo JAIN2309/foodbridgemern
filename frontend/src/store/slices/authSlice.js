@@ -10,7 +10,7 @@ export const loginUser = createAsyncThunk(
       localStorage.setItem('token', response.data.token);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data.message);
+      return rejectWithValue(error.response?.data?.message || error.message || 'Login failed');
     }
   }
 );
@@ -23,7 +23,7 @@ export const registerUser = createAsyncThunk(
       localStorage.setItem('token', response.data.token);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data.message);
+      return rejectWithValue(error.response?.data?.message || error.message || 'Registration failed');
     }
   }
 );
@@ -52,7 +52,7 @@ export const updateProfile = createAsyncThunk(
       const response = await api.put('/auth/profile', profileData);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data.message);
+      return rejectWithValue(error.response?.data?.message || error.message || 'Profile update failed');
     }
   }
 );
@@ -64,7 +64,7 @@ export const loadUser = createAsyncThunk(
       const response = await api.get('/auth/profile');
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data.message);
+      return rejectWithValue(error.response?.data?.message || error.message || 'Failed to load user');
     }
   }
 );

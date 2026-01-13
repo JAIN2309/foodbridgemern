@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
+const logger = require('./middleware/logger');
 const authRoutes = require('./routes/auth');
 const donationRoutes = require('./routes/donations');
 const userRoutes = require('./routes/users');
@@ -16,6 +17,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+app.use(logger); // Add logging middleware
 
 // MongoDB Connection
 let isConnected = false;

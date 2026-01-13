@@ -13,7 +13,16 @@ const donationSchema = new mongoose.Schema({
       enum: ['vegetarian', 'non-vegetarian', 'vegan', 'mixed'],
       required: true 
     },
-    description: String
+    description: String,
+    expiry_date: { type: Date, required: true },
+    preparation_time: { type: Date, required: true },
+    storage_conditions: {
+      type: String,
+      enum: ['refrigerated', 'frozen', 'room_temperature'],
+      required: true
+    },
+    allergens: [String],
+    safety_verified: { type: Boolean, default: false }
   }],
   quantity_serves: {
     type: Number,
@@ -68,6 +77,23 @@ const donationSchema = new mongoose.Schema({
   special_instructions: {
     type: String,
     maxlength: 500
+  },
+  quality_score: {
+    type: Number,
+    min: 0,
+    max: 10,
+    default: null
+  },
+  safety_checklist: {
+    proper_storage: { type: Boolean, default: false },
+    within_expiry: { type: Boolean, default: false },
+    hygienic_preparation: { type: Boolean, default: false },
+    temperature_maintained: { type: Boolean, default: false }
+  },
+  verification_photos: [String],
+  auto_expire_buffer: {
+    type: Number,
+    default: 2 // hours before actual expiry
   },
   expiresAt: {
     type: Date,

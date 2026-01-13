@@ -7,14 +7,25 @@ class SocketService {
 
   connect(userId, role) {
     if (!this.socket) {
-      this.socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5001');
-      
-      this.socket.on('connect', () => {
-        console.log('Connected to server');
-        if (role === 'ngo') {
-          this.socket.emit('join-ngo-room', userId);
-        }
-      });
+      try {
+        this.socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5001', {
+          timeout: 5000,
+          forceNew: true
+        });
+        
+        this.socket.on('connect', () => {
+          console.log('Connected to server');
+          if (role === 'ngo') {
+            this.socket.emit('join-ngo-room', userId);
+          }
+        });
+
+        this.socket.on('connect_error', (error) => {
+          console.warn('Socket connection failed:', error.message);
+        });
+      } catch (error) {
+        console.warn('Socket initialization failed:', error.message);
+      }
     }
     return this.socket;
   }

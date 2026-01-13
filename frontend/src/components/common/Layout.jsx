@@ -11,26 +11,29 @@ import {
   LogOut,
   Users,
   BarChart3,
-  User
+  User,
+  MapPin
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user } = useSelector((state) => state.auth);
+  const { user, isLoading } = useSelector((state) => state.auth);
   const isMobile = useMobile();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
     try {
+      setIsLoggingOut(true);
       console.log('🚪 Frontend logout initiated');
       await dispatch(logoutUser()).unwrap();
       console.log('✅ Logout successful');
     } catch (error) {
       console.error('❌ Logout error:', error);
-      // Still logout locally even if API fails
       dispatch(logout());
     } finally {
+      setIsLoggingOut(false);
       setShowLogoutDialog(false);
     }
   };
@@ -109,10 +112,15 @@ const Layout = ({ children }) => {
               </button>
               <button
                 onClick={confirmLogout}
-                className="p-2 text-gray-600 hover:text-gray-900"
+                className="p-2 text-gray-600 hover:text-gray-900 disabled:opacity-50"
                 title="Logout"
+                disabled={isLoggingOut}
               >
-                <LogOut className="w-5 h-5" />
+                {isLoggingOut ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-gray-600 border-t-transparent" />
+                ) : (
+                  <LogOut className="w-5 h-5" />
+                )}
               </button>
             </div>
           </div>
@@ -179,10 +187,15 @@ const Layout = ({ children }) => {
           </button>
           <button
             onClick={confirmLogout}
-            className="w-full flex items-center px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            className="w-full flex items-center px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+            disabled={isLoggingOut}
           >
-            <LogOut className="w-5 h-5 mr-3" />
-            Logout
+            {isLoggingOut ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-2 border-red-600 border-t-transparent mr-3" />
+            ) : (
+              <LogOut className="w-5 h-5 mr-3" />
+            )}
+            {isLoggingOut ? 'Logging out...' : 'Logout'}
           </button>
         </div>
       </aside>
@@ -201,9 +214,17 @@ const Layout = ({ children }) => {
             <div className="flex space-x-3">
               <button
                 onClick={handleLogout}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center justify-center"
+                disabled={isLoggingOut}
               >
-                Yes, Logout
+                {isLoggingOut ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                    Logging out...
+                  </>
+                ) : (
+                  'Yes, Logout'
+                )}
               </button>
               <button
                 onClick={() => setShowLogoutDialog(false)}

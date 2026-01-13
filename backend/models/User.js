@@ -57,7 +57,39 @@ const userSchema = new mongoose.Schema({
   },
   verification_documents: [{
     type: String // Cloudinary URLs
-  }]
+  }],
+  trust_score: {
+    type: Number,
+    min: 0,
+    max: 100,
+    default: 50
+  },
+  ratings: {
+    average: { type: Number, default: 0 },
+    count: { type: Number, default: 0 },
+    reviews: [{
+      reviewer_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      rating: { type: Number, min: 1, max: 5 },
+      comment: String,
+      created_at: { type: Date, default: Date.now }
+    }]
+  },
+  activity_stats: {
+    donations_posted: { type: Number, default: 0 },
+    donations_claimed: { type: Number, default: 0 },
+    successful_pickups: { type: Number, default: 0 },
+    failed_pickups: { type: Number, default: 0 },
+    response_time_avg: { type: Number, default: 0 } // minutes
+  },
+  offline_mode: {
+    enabled: { type: Boolean, default: false },
+    last_sync: { type: Date, default: Date.now },
+    pending_actions: [{
+      action: String,
+      data: mongoose.Schema.Types.Mixed,
+      timestamp: { type: Date, default: Date.now }
+    }]
+  }
 }, {
   timestamps: true
 });

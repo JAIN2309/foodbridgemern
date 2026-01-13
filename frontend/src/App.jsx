@@ -22,14 +22,23 @@ function App() {
   const { user, isAuthenticated, token } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    if (token) {
+    if (token && !user) {
       dispatch(loadUser());
     }
-  }, [dispatch, token]);
+  }, [dispatch, token, user]);
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      socketService.connect(user.id, user.role);
+      // Only connect socket if backend is available
+      const connectSocket = async () => {
+        try {
+          await fetch(import.meta.env.VITE_API_URL || 'http://localhost:5001/api');
+          socketService.connect(user.id, user.role);
+        } catch (error) {
+          console.warn('Backend not available, skipping socket connection');
+        }
+      };
+      connectSocket();
     }
 
     return () => {
@@ -38,31 +47,27 @@ function App() {
   }, [isAuthenticated, user]);
 
   const getDashboardComponent = () => {
-    if (!user) {
-      console.log('No user found');
-      return null;
-    }
-    
-    console.log('User role:', user.role);
+    if (!user) return null;
     
     switch (user.role) {
       case 'donor':
-        console.log('Rendering DonorDashboard');
         return <DonorDashboard />;
       case 'ngo':
-        console.log('Rendering NGODashboard');
         return <NGODashboard />;
       case 'admin':
-        console.log('Rendering AdminDashboard');
         return <AdminDashboard />;
       default:
-        console.log('Unknown role, redirecting to login');
         return <Navigate to="/login" />;
     }
   };
 
   return (
-    <Router>
+    <Router
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true
+      }}
+    >
       <div className="App">
         <Toaster position="top-right" />
         <Routes>
