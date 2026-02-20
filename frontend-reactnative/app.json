@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "FoodBridge",
+    "slug": "foodbridge-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.foodbridge.mobile"
+    },
+    "android": {
+      "package": "com.foodbridge.mobile",
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow FoodBridge to use your location to find nearby food donations."
+        }
+      ]
+    ],
+    "scheme": "foodbridge"
+  }
+}
