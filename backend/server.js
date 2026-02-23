@@ -8,6 +8,7 @@ const authRoutes = require('./routes/auth');
 const donationRoutes = require('./routes/donations');
 const userRoutes = require('./routes/users');
 const mapRoutes = require('./routes/map');
+const { startCronJobs } = require('./services/cronService');
 
 const app = express();
 
@@ -35,6 +36,11 @@ const connectDB = async () => {
 
 // Connect to DB on startup
 connectDB();
+
+// Start cron jobs for auto-expiry
+if (process.env.NODE_ENV !== 'production') {
+  startCronJobs();
+}
 
 // Mock Socket.io for Vercel compatibility
 const mockIO = {

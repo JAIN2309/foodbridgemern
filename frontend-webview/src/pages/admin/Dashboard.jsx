@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { 
@@ -16,6 +17,7 @@ import api from '../../services/api';
 import 'leaflet/dist/leaflet.css';
 
 const AdminDashboard = () => {
+  const { t } = useTranslation();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('overview');
   const [pendingUsers, setPendingUsers] = useState([]);

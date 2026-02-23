@@ -86,6 +86,7 @@ const Layout = ({ children }) => {
     }
 
     baseItems.push({ icon: History, label: 'History', id: 'history', action: 'history' });
+    baseItems.push({ icon: Settings, label: 'Settings', id: 'settings', path: '/settings' });
 
     return baseItems;
   };
@@ -152,7 +153,7 @@ const Layout = ({ children }) => {
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-sm">
+      <aside className="w-64 bg-white shadow-sm flex flex-col h-screen">
         <div className="p-6 border-b">
           <h1 className="text-xl font-bold text-gray-900">FoodBridge</h1>
           <p className="text-sm text-gray-600 mt-1">{user?.organization_name}</p>
@@ -161,7 +162,7 @@ const Layout = ({ children }) => {
           </span>
         </div>
         
-        <nav className="p-4">
+        <nav className="p-4 flex-1">
           <ul className="space-y-2">
             {navItems.map((item) => (
               <li key={item.id}>
@@ -177,7 +178,7 @@ const Layout = ({ children }) => {
           </ul>
         </nav>
 
-        <div className="absolute bottom-4 left-4 right-4">
+        <div className="p-4 border-t">
           <button
             onClick={handleProfileClick}
             className="w-full flex items-center px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg mb-2 transition-colors"

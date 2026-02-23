@@ -23,10 +23,13 @@ export const createDonation = createAsyncThunk(
   'donations/create',
   async (donationData, { rejectWithValue }) => {
     try {
+      console.log('Creating donation with data:', donationData);
       const response = await api.post('/donations', donationData);
+      console.log('Create donation response:', response.data);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data.message);
+      console.error('Create donation error:', error);
+      return rejectWithValue(error.response?.data?.message || error.message || 'Failed to create donation');
     }
   }
 );
@@ -107,8 +110,17 @@ const donationSlice = createSlice({
         state.error = action.payload;
       })
       // Create donation
+      .addCase(createDonation.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
       .addCase(createDonation.fulfilled, (state, action) => {
+        state.isLoading = false;
         state.userDonations.unshift(action.payload);
+      })
+      .addCase(createDonation.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
       })
       // Claim donation
       .addCase(claimDonation.fulfilled, (state, action) => {
@@ -120,11 +132,29 @@ const donationSlice = createSlice({
         }
       })
       // Fetch histories
+      .addCase(fetchDonorHistory.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
       .addCase(fetchDonorHistory.fulfilled, (state, action) => {
+        state.isLoading = false;
         state.userDonations = action.payload;
       })
+      .addCase(fetchDonorHistory.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      .addCase(fetchNGOHistory.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
       .addCase(fetchNGOHistory.fulfilled, (state, action) => {
+        state.isLoading = false;
         state.userDonations = action.payload;
+      })
+      .addCase(fetchNGOHistory.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
       });
   },
 });

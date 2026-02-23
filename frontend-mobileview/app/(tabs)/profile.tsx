@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppSelector, useAppDispatch } from '../../src/hooks/useRedux';
-import { updateProfile } from '../../src/store/authSlice';
+import { updateProfile, loadUser } from '../../src/store/authSlice';
 
 export default function ProfileScreen() {
   const { user } = useAppSelector((state) => state.auth);
@@ -14,6 +14,11 @@ export default function ProfileScreen() {
     address: user?.address || '',
     contact_person: user?.contact_person || '',
   });
+
+  // Load user profile on component mount
+  useEffect(() => {
+    dispatch(loadUser());
+  }, [dispatch]);
 
   useEffect(() => {
     if (user && !isEditing) {
@@ -252,7 +257,7 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.infoRow}>
               <Ionicons name="id-card" size={20} color="#6b7280" />
-              <Text style={styles.infoText}>Admin ID: {user.id}</Text>
+              <Text style={styles.infoText}>Admin ID: {user._id || user.id}</Text>
             </View>
             {user.location && (
               <View style={styles.infoRow}>

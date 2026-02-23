@@ -27,6 +27,20 @@ function RootLayoutNav() {
     loadToken();
   }, []);
 
+  // Check for incomplete profile and reload if needed
+  useEffect(() => {
+    const { user, token } = store.getState().auth;
+    if (token && user) {
+      const requiredFields = ['contact_person', 'phone', 'address'];
+      const missingFields = requiredFields.filter(field => !user[field]);
+      
+      if (missingFields.length > 0) {
+        console.log('⚠️ INCOMPLETE PROFILE DETECTED, LOADING FULL DATA...');
+        dispatch(loadUser());
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (!isNavigationReady || !navigationState?.key) return;
     

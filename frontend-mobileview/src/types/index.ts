@@ -1,8 +1,10 @@
 export interface User {
-  id: string;
+  _id: string;
+  id?: string; // For backward compatibility
   email: string;
-  role: 'donor' | 'ngo' | 'admin';
+  role: 'donor' | 'ngo' | 'admin' | 'super_admin';
   organization_name: string;
+  license_number?: string;
   contact_person: string;
   phone: string;
   address: string;
@@ -11,20 +13,36 @@ export interface User {
     type: string;
     coordinates: [number, number];
   };
+  verification_documents?: string[];
   trust_score?: number;
   ratings?: {
     average: number;
     count: number;
     reviews?: Array<{
+      reviewer_id: string;
       rating: number;
       comment?: string;
       created_at: string;
     }>;
   };
   activity_stats?: {
+    donations_posted: number;
+    donations_claimed: number;
     successful_pickups: number;
     failed_pickups: number;
+    response_time_avg: number;
   };
+  offline_mode?: {
+    enabled: boolean;
+    last_sync: string;
+    pending_actions: Array<{
+      action: string;
+      data: any;
+      timestamp: string;
+    }>;
+  };
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface FoodItem {

@@ -6,10 +6,14 @@ export const loginUser = createAsyncThunk(
   'auth/login',
   async ({ email, password }, { rejectWithValue }) => {
     try {
+      console.log('🔐 LOGIN REQUEST:', { email });
       const response = await api.post('/auth/login', { email, password });
+      console.log('✅ LOGIN RESPONSE:', response.data);
+      console.log('👤 USER DATA RECEIVED:', response.data.user);
       localStorage.setItem('token', response.data.token);
       return response.data;
     } catch (error) {
+      console.error('❌ LOGIN ERROR:', error.response?.data || error.message);
       return rejectWithValue(error.response?.data?.message || error.message || 'Login failed');
     }
   }
@@ -49,9 +53,13 @@ export const updateProfile = createAsyncThunk(
   'auth/updateProfile',
   async (profileData, { rejectWithValue }) => {
     try {
+      console.log('📝 UPDATE PROFILE REQUEST:', profileData);
       const response = await api.put('/auth/profile', profileData);
+      console.log('✅ UPDATE PROFILE RESPONSE:', response.data);
+      console.log('👤 UPDATED USER DATA:', response.data.user);
       return response.data;
     } catch (error) {
+      console.error('❌ UPDATE PROFILE ERROR:', error.response?.data || error.message);
       return rejectWithValue(error.response?.data?.message || error.message || 'Profile update failed');
     }
   }
@@ -61,9 +69,22 @@ export const loadUser = createAsyncThunk(
   'auth/loadUser',
   async (_, { rejectWithValue }) => {
     try {
+      console.log('🔄 LOADING USER PROFILE...');
       const response = await api.get('/auth/profile');
+      console.log('✅ LOAD USER RESPONSE:', response.data);
+      console.log('👤 LOADED USER DATA FIELDS:', Object.keys(response.data));
+      console.log('📝 USER DETAILS:', {
+        organization_name: response.data.organization_name,
+        contact_person: response.data.contact_person,
+        phone: response.data.phone,
+        address: response.data.address,
+        email: response.data.email,
+        role: response.data.role,
+        is_verified: response.data.is_verified
+      });
       return response.data;
     } catch (error) {
+      console.error('❌ LOAD USER ERROR:', error.response?.data || error.message);
       return rejectWithValue(error.response?.data?.message || error.message || 'Failed to load user');
     }
   }
@@ -97,10 +118,22 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(loginUser.fulfilled, (state, action) => {
+        console.log('📦 LOGIN FULFILLED - SETTING USER STATE:', action.payload.user);
         state.isLoading = false;
         state.user = action.payload.user;
         state.token = action.payload.token;
         state.isAuthenticated = true;
+        console.log('📋 CURRENT USER STATE:', state.user);
+        
+        // Check if user profile is incomplete (missing required fields)
+        const user = action.payload.user;
+        const requiredFields = ['contact_person', 'phone', 'address'];
+        const missingFields = requiredFields.filter(field => !user[field]);
+        
+        if (missingFields.length > 0) {
+          console.log('⚠️ USER PROFILE INCOMPLETE, MISSING:', missingFields);
+          // The loadUser will be called by App.jsx useEffect
+        }
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;
@@ -127,8 +160,10 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(updateProfile.fulfilled, (state, action) => {
+        console.log('📦 UPDATE PROFILE FULFILLED - UPDATING USER STATE:', action.payload.user);
         state.isLoading = false;
         state.user = action.payload.user;
+        console.log('📋 UPDATED USER STATE:', state.user);
       })
       .addCase(updateProfile.rejected, (state, action) => {
         state.isLoading = false;
@@ -147,8 +182,10 @@ const authSlice = createSlice({
       })
       // Load User
       .addCase(loadUser.fulfilled, (state, action) => {
+        console.log('📦 LOAD USER FULFILLED - SETTING USER STATE:', action.payload);
         state.user = action.payload;
         state.isAuthenticated = true;
+        console.log('📋 LOADED USER STATE:', state.user);
       })
       .addCase(loadUser.rejected, (state) => {
         state.user = null;

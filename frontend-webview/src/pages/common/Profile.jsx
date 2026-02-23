@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { User, Mail, Phone, Save, ArrowLeft } from 'lucide-react';
+import { User, Mail, Phone, ArrowLeft, Building, MapPin, Edit3, Check, X } from 'lucide-react';
 import { updateProfile } from '../../store/slices/authSlice';
 
 const Profile = () => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user, isLoading } = useSelector((state) => state.auth);
@@ -16,17 +18,32 @@ const Profile = () => {
     defaultValues: {
       contact_person: user?.contact_person || '',
       email: user?.email || '',
-      phone: user?.phone || ''
+      phone: user?.phone || '',
+      organization_name: user?.organization_name || '',
+      address: user?.address || ''
     }
   });
+
+  useEffect(() => {
+    if (user && !isEditing) {
+      const defaultValues = {
+        contact_person: user.contact_person || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        organization_name: user.organization_name || '',
+        address: user.address || ''
+      };
+      reset(defaultValues);
+    }
+  }, [user?.id, reset]);
 
   const onSubmit = async (data) => {
     try {
       await dispatch(updateProfile(data)).unwrap();
-      toast.success('Profile updated successfully!');
+      toast.success(t('profile.profileUpdated'));
       setIsEditing(false);
     } catch (error) {
-      toast.error(error || 'Failed to update profile');
+      toast.error(error || t('profile.updateFailed'));
     }
   };
 
@@ -34,20 +51,20 @@ const Profile = () => {
     reset({
       contact_person: user?.contact_person || '',
       email: user?.email || '',
-      phone: user?.phone || ''
+      phone: user?.phone || '',
+      organization_name: user?.organization_name || '',
+      address: user?.address || ''
     });
     setIsEditing(false);
   };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <button
             onClick={() => navigate('/dashboard')}
             className="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100"
-            title="Back to Dashboard"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -58,22 +75,41 @@ const Profile = () => {
         </div>
       </div>
 
-      {/* Profile Card */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-medium text-gray-900">Personal Information</h2>
           {!isEditing && (
             <button
               onClick={() => setIsEditing(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
+              <Edit3 className="w-4 h-4 mr-2" />
               Edit Profile
             </button>
           )}
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Contact Person */}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Organization Name
+            </label>
+            <div className="relative">
+              <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                {...register('organization_name', { required: 'Organization name is required' })}
+                type="text"
+                disabled={!isEditing}
+                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  !isEditing ? 'bg-gray-50 text-gray-600' : 'bg-white'
+                } ${errors.organization_name ? 'border-red-300' : 'border-gray-300'}`}
+              />
+            </div>
+            {errors.organization_name && (
+              <p className="mt-1 text-sm text-red-600">{errors.organization_name.message}</p>
+            )}
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Contact Person Name
@@ -94,7 +130,6 @@ const Profile = () => {
             )}
           </div>
 
-          {/* Email */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Email Address
@@ -121,7 +156,6 @@ const Profile = () => {
             )}
           </div>
 
-          {/* Phone */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Phone Number
@@ -132,13 +166,13 @@ const Profile = () => {
                 {...register('phone', { 
                   required: 'Phone number is required',
                   pattern: {
-                    value: /^(\+91)?[6-9]\d{9}$/,
-                    message: 'Invalid phone number format (10 digits or +91XXXXXXXXXX)'
+                    value: /^[6-9]\d{9}$/,
+                    message: 'Enter valid 10-digit mobile number'
                   }
                 })}
                 type="tel"
                 disabled={!isEditing}
-                placeholder="8849096411 or +918849096411"
+                placeholder="9876543210"
                 className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   !isEditing ? 'bg-gray-50 text-gray-600' : 'bg-white'
                 } ${errors.phone ? 'border-red-300' : 'border-gray-300'}`}
@@ -149,22 +183,42 @@ const Profile = () => {
             )}
           </div>
 
-          {/* Action Buttons */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Address
+            </label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+              <textarea
+                {...register('address', { required: 'Address is required' })}
+                rows="3"
+                disabled={!isEditing}
+                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${
+                  !isEditing ? 'bg-gray-50 text-gray-600' : 'bg-white'
+                } ${errors.address ? 'border-red-300' : 'border-gray-300'}`}
+              />
+            </div>
+            {errors.address && (
+              <p className="mt-1 text-sm text-red-600">{errors.address.message}</p>
+            )}
+          </div>
+
           {isEditing && (
-            <div className="flex space-x-3 pt-4">
+            <div className="flex gap-3 pt-4">
               <button
                 type="submit"
                 disabled={isLoading}
-                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                className="flex-1 flex items-center justify-center px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
               >
-                <Save className="w-4 h-4 mr-2" />
+                <Check className="w-4 h-4 mr-2" />
                 {isLoading ? 'Saving...' : 'Save Changes'}
               </button>
               <button
                 type="button"
                 onClick={handleCancel}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                className="flex-1 flex items-center justify-center px-4 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
               >
+                <X className="w-4 h-4 mr-2" />
                 Cancel
               </button>
             </div>
@@ -172,7 +226,6 @@ const Profile = () => {
         </form>
       </div>
 
-      {/* Account Info */}
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-lg font-medium text-gray-900 mb-4">Account Information</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">

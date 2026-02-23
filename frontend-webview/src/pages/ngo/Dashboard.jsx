@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { MapPin, Clock, Users, Phone } from 'lucide-react';
@@ -16,6 +17,7 @@ import api from '../../services/api';
 import 'leaflet/dist/leaflet.css';
 
 const NGODashboard = () => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const location = useLocation();
   const { user } = useSelector((state) => state.auth);
@@ -138,9 +140,9 @@ const NGODashboard = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">NGO Dashboard</h1>
-        <p className="text-gray-600">Find and claim food donations in your area</p>
-        <p className="text-xs text-gray-400 mt-1">Auto-refreshes every 30 seconds</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('dashboard.ngo.title')}</h1>
+        <p className="text-gray-600">{t('dashboard.ngo.subtitle')}</p>
+        <p className="text-xs text-gray-400 mt-1">{t('dashboard.ngo.autoRefresh')}</p>
       </div>
 
       {/* Stats Cards */}

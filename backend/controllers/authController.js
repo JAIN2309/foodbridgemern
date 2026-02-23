@@ -54,15 +54,13 @@ const register = async (req, res) => {
 
     const token = generateToken(user._id);
     
+    // Return complete user profile (excluding password)
+    const userProfile = user.toObject();
+    delete userProfile.password;
+
     res.status(201).json({
       token,
-      user: {
-        id: user._id,
-        email: user.email,
-        role: user.role,
-        organization_name: user.organization_name,
-        is_verified: user.is_verified
-      }
+      user: userProfile
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -94,16 +92,13 @@ const login = async (req, res) => {
       console.error('Login email failed:', emailError);
     }
     
+    // Return complete user profile (excluding password)
+    const userProfile = user.toObject();
+    delete userProfile.password;
+    
     res.json({
       token,
-      user: {
-        id: user._id,
-        email: user.email,
-        role: user.role,
-        organization_name: user.organization_name,
-        is_verified: user.is_verified,
-        location: user.location
-      }
+      user: userProfile
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -153,7 +148,14 @@ const updateProfile = async (req, res) => {
       }
     }
 
-    const updateData = { contact_person, phone, email, organization_name, address };
+    // Only update basic profile fields, preserve stats and other data
+    const updateData = {};
+    if (contact_person !== undefined) updateData.contact_person = contact_person;
+    if (phone !== undefined) updateData.phone = phone;
+    if (email !== undefined) updateData.email = email;
+    if (organization_name !== undefined) updateData.organization_name = organization_name;
+    if (address !== undefined) updateData.address = address;
+    
     console.log('📝 Update Data:', updateData);
     
     // Update location if coordinates provided
@@ -166,11 +168,12 @@ const updateProfile = async (req, res) => {
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      updateData,
+      { $set: updateData },
       { new: true, runValidators: true }
     ).select('-password');
 
     console.log('✅ Updated User org name:', updatedUser.organization_name);
+    console.log('✅ Preserved activity stats:', updatedUser.activity_stats);
 
     res.json({
       message: 'Profile updated successfully',

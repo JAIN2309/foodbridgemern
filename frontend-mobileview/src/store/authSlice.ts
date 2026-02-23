@@ -117,9 +117,7 @@ const authSlice = createSlice({
         state.error = action.payload as string;
       })
       .addCase(loadUser.fulfilled, (state, action) => {
-        // Handle both direct user object and nested user object
-        const userData = action.payload.user || action.payload;
-        state.user = userData;
+        state.user = action.payload;
         state.isAuthenticated = true;
       })
       .addCase(loadUser.rejected, (state) => {
@@ -132,9 +130,7 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
       })
       .addCase(updateProfile.fulfilled, (state, action) => {
-        // Handle nested user object from API response
-        const updatedUser = action.payload.user || action.payload;
-        state.user = { ...state.user, ...updatedUser };
+        state.user = { ...state.user, ...action.payload.user };
       });
   },
 });
