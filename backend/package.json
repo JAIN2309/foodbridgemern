@@ -4,7 +4,11 @@
   "main": "api/index.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "fetch-users": "node scripts/fetchAllUsers.js",
+    "create-admin": "node scripts/createAdmin.js",
+    "create-super-admin": "node scripts/createSuperAdmin.js",
+    "get-ip": "node scripts/getNetworkIP.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

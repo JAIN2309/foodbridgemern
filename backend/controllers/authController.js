@@ -141,7 +141,8 @@ const logout = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    const { contact_person, phone, email } = req.body;
+    console.log('📝 Update Profile Request Body:', req.body);
+    const { contact_person, phone, email, organization_name, address, coordinates } = req.body;
     const userId = req.user._id;
 
     // Check if email is being changed and if it already exists
@@ -152,17 +153,31 @@ const updateProfile = async (req, res) => {
       }
     }
 
+    const updateData = { contact_person, phone, email, organization_name, address };
+    console.log('📝 Update Data:', updateData);
+    
+    // Update location if coordinates provided
+    if (coordinates && Array.isArray(coordinates) && coordinates.length === 2) {
+      updateData.location = {
+        type: 'Point',
+        coordinates: coordinates
+      };
+    }
+
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { contact_person, phone, email },
+      updateData,
       { new: true, runValidators: true }
     ).select('-password');
+
+    console.log('✅ Updated User org name:', updatedUser.organization_name);
 
     res.json({
       message: 'Profile updated successfully',
       user: updatedUser
     });
   } catch (error) {
+    console.error('❌ Update Profile Error:', error);
     res.status(500).json({ message: error.message });
   }
 };

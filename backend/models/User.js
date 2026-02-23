@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['donor', 'ngo', 'admin'],
+    enum: ['donor', 'ngo', 'admin', 'super_admin'],
     required: true
   },
   organization_name: {
@@ -25,7 +25,7 @@ const userSchema = new mongoose.Schema({
   license_number: {
     type: String,
     required: function() {
-      return this.role !== 'admin';
+      return this.role !== 'admin' && this.role !== 'super_admin';
     }
   },
   contact_person: {

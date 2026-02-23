@@ -41,6 +41,18 @@ export const loadUser = createAsyncThunk(
   }
 );
 
+export const updateProfile = createAsyncThunk(
+  'auth/updateProfile',
+  async (profileData: any, { rejectWithValue }) => {
+    try {
+      const response = await api.put('/auth/profile', profileData);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Update failed');
+    }
+  }
+);
+
 export const logoutUser = createAsyncThunk(
   'auth/logout',
   async (_, { rejectWithValue }) => {
@@ -105,7 +117,9 @@ const authSlice = createSlice({
         state.error = action.payload as string;
       })
       .addCase(loadUser.fulfilled, (state, action) => {
-        state.user = action.payload;
+        // Handle both direct user object and nested user object
+        const userData = action.payload.user || action.payload;
+        state.user = userData;
         state.isAuthenticated = true;
       })
       .addCase(loadUser.rejected, (state) => {
@@ -116,6 +130,11 @@ const authSlice = createSlice({
         state.user = null;
         state.token = null;
         state.isAuthenticated = false;
+      })
+      .addCase(updateProfile.fulfilled, (state, action) => {
+        // Handle nested user object from API response
+        const updatedUser = action.payload.user || action.payload;
+        state.user = { ...state.user, ...updatedUser };
       });
   },
 });

@@ -6,7 +6,7 @@ class SocketService {
   connect(userId: string, role: string) {
     if (this.socket?.connected) return;
 
-    this.socket = io('http://localhost:5001', {
+    this.socket = io('http://10.132.72.65:5001', {
       query: { userId, role },
       transports: ['websocket'],
     });

@@ -7,6 +7,10 @@ export interface User {
   phone: string;
   address: string;
   is_verified: boolean;
+  location: {
+    type: string;
+    coordinates: [number, number];
+  };
   trust_score?: number;
   ratings?: {
     average: number;

@@ -14,7 +14,10 @@
     },
     "android": {
       "package": "com.foodbridge.mobile",
-      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro"
@@ -26,7 +29,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow FoodBridge to use your location to find nearby food donations."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "scheme": "foodbridge"
   }

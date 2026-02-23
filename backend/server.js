@@ -7,6 +7,7 @@ const logger = require('./middleware/logger');
 const authRoutes = require('./routes/auth');
 const donationRoutes = require('./routes/donations');
 const userRoutes = require('./routes/users');
+const mapRoutes = require('./routes/map');
 
 const app = express();
 
@@ -46,6 +47,7 @@ app.set('io', mockIO);
 app.use('/api/auth', authRoutes);
 app.use('/api/donations', donationRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/map', mapRoutes);
 
 // Health check
 app.get('/', (req, res) => {
@@ -55,8 +57,10 @@ app.get('/', (req, res) => {
 // For Vercel serverless
 if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 5001;
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
+    console.log(`Local: http://localhost:${PORT}`);
+    console.log(`Network: http://10.0.2.2:${PORT}`);
   });
 }
 

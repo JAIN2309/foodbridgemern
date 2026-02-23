@@ -9,6 +9,10 @@ export default function TabsLayout() {
   const dispatch = useAppDispatch();
   const router = useRouter();
 
+  // Debug: Log user role
+  console.log('Current user role:', user?.role);
+  console.log('Full user object:', user);
+
   const handleLogout = async () => {
     await dispatch(logoutUser());
     router.replace('/login');
@@ -34,6 +38,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+      {/* All users see same simple navigation: Dashboard + Profile */}
       <Tabs.Screen
         name="profile"
         options={{

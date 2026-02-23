@@ -1,8 +1,23 @@
+const getLocalTimestamp = () => {
+  return new Date().toLocaleString('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    fractionalSecondDigits: 3,
+    hour12: false
+  }).replace(/[^\d]/g, match => match === ',' ? 'T' : match === ' ' ? '' : match);
+};
+
 const logger = (req, res, next) => {
   const start = Date.now();
   const { method, url, ip } = req;
   
-  console.log(`🔵 [${new Date().toISOString()}] ${method} ${url} - IP: ${ip}`);
+  console.log(`🔵 [${getLocalTimestamp()}] ${method} ${url}`);
+  console.log(`   📍 IP: ${ip} | User-Agent: ${req.get('User-Agent')?.substring(0, 50) || 'Unknown'}`);
+  console.log(`   🌐 Origin: ${req.get('Origin') || 'No Origin'}`);
   
   // Log request body for POST/PUT requests
   if ((method === 'POST' || method === 'PUT') && req.body) {
@@ -18,7 +33,7 @@ const logger = (req, res, next) => {
     // Color code based on status
     const statusColor = statusCode >= 400 ? '🔴' : statusCode >= 300 ? '🟡' : '🟢';
     
-    console.log(`${statusColor} [${new Date().toISOString()}] ${method} ${url} - ${statusCode} - ${duration}ms`);
+    console.log(`${statusColor} [${getLocalTimestamp()}] ${method} ${url} - ${statusCode} - ${duration}ms`);
     
     // Log response data for errors or important operations
     if (statusCode >= 400 || method !== 'GET') {

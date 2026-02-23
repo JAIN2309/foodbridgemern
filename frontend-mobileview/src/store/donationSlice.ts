@@ -30,7 +30,7 @@ export const fetchDonorHistory = createAsyncThunk(
   'donations/fetchDonorHistory',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get('/donations/my-donations');
+      const response = await api.get('/donations/history/donor');
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch history');
@@ -54,7 +54,7 @@ export const fetchClaimedDonations = createAsyncThunk(
   'donations/fetchClaimed',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get('/donations/my-claims');
+      const response = await api.get('/donations/history/ngo');
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch claims');
