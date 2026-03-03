@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Toaster } from 'react-hot-toast';
@@ -7,6 +7,7 @@ import socketService from './services/socket';
 import './i18n'; // Initialize i18n
 
 // Pages
+import LandingPage from './pages/common/LandingPage';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import DonorDashboard from './pages/donor/Dashboard';
@@ -18,10 +19,12 @@ import Settings from './pages/common/Settings';
 // Components
 import ProtectedRoute from './components/common/ProtectedRoute';
 import Layout from './components/common/Layout';
+import SplashScreen from './components/common/SplashScreen';
 
 function App() {
   const dispatch = useDispatch();
   const { user, isAuthenticated, token } = useSelector((state) => state.auth);
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     console.log('🚀 APP COMPONENT - TOKEN CHECK:', { token: !!token, user: !!user });
@@ -83,9 +86,13 @@ function App() {
         v7_relativeSplatPath: true
       }}
     >
+      {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
       <div className="App">
         <Toaster position="top-right" />
         <Routes>
+          <Route path="/" element={
+            isAuthenticated ? <Navigate to="/dashboard" /> : <LandingPage />
+          } />
           <Route path="/login" element={
             isAuthenticated ? <Navigate to="/dashboard" /> : <Login />
           } />
@@ -119,9 +126,6 @@ function App() {
                 <AdminDashboard />
               </Layout>
             </ProtectedRoute>
-          } />
-          <Route path="/" element={
-            isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
           } />
         </Routes>
       </div>

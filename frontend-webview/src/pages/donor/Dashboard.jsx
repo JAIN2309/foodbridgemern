@@ -35,6 +35,23 @@ const DonorDashboard = () => {
     if (tabParam) {
       setActiveTab(tabParam);
     }
+    
+    // Listen for sidebar navigation events
+    const handleTabChange = (event) => {
+      setActiveTab(event.detail);
+    };
+    
+    const handleForceUpdate = (event) => {
+      setActiveTab(event.detail);
+    };
+    
+    window.addEventListener('dashboardTabChange', handleTabChange);
+    window.addEventListener('forceTabUpdate', handleForceUpdate);
+    
+    return () => {
+      window.removeEventListener('dashboardTabChange', handleTabChange);
+      window.removeEventListener('forceTabUpdate', handleForceUpdate);
+    };
   }, [location.search]);
 
   const onSubmit = async (data) => {
@@ -111,94 +128,94 @@ const DonorDashboard = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">{t('dashboard.donor.title')}</h1>
-        <p className="text-gray-600">{t('dashboard.donor.subtitle')}</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('dashboard.donor.title')}</h1>
+        <p className="text-gray-600 dark:text-gray-400">{t('dashboard.donor.subtitle')}</p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow">
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
           <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Plus className="w-5 h-5 text-blue-600" />
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <Plus className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-gray-600">{t('dashboard.donor.totalDonations')}</p>
-              <p className="text-lg font-semibold">{stats.total}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.donor.totalDonations')}</p>
+              <p className="text-lg font-semibold dark:text-white">{stats.total}</p>
             </div>
           </div>
         </div>
         
-        <div className="bg-white p-4 rounded-lg shadow">
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
           <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Clock className="w-5 h-5 text-green-600" />
+            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <Clock className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-gray-600">{t('dashboard.donor.active')}</p>
-              <p className="text-lg font-semibold">{stats.active}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.donor.active')}</p>
+              <p className="text-lg font-semibold dark:text-white">{stats.active}</p>
             </div>
           </div>
         </div>
         
-        <div className="bg-white p-4 rounded-lg shadow">
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
           <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Users className="w-5 h-5 text-purple-600" />
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <Users className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-gray-600">{t('dashboard.donor.completed')}</p>
-              <p className="text-lg font-semibold">{stats.completed}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.donor.completed')}</p>
+              <p className="text-lg font-semibold dark:text-white">{stats.completed}</p>
             </div>
           </div>
         </div>
         
-        <div className="bg-white p-4 rounded-lg shadow">
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
           <div className="flex items-center">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <Users className="w-5 h-5 text-orange-600" />
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+              <Users className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-gray-600">{t('dashboard.donor.peopleServed')}</p>
-              <p className="text-lg font-semibold">{stats.totalServed}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.donor.peopleServed')}</p>
+              <p className="text-lg font-semibold dark:text-white">{stats.totalServed}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="flex space-x-8 px-6">
             <button
               onClick={() => setActiveTab('overview')}
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'overview'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
-              Overview
+              {t('dashboard.donor.overview')}
             </button>
             <button
               onClick={() => setActiveTab('post')}
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'post'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
-              Post Food
+              {t('dashboard.donor.postFood')}
             </button>
             <button
               onClick={() => setActiveTab('history')}
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'history'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
-              History
+              {t('dashboard.donor.history')}
             </button>
           </nav>
         </div>
@@ -206,29 +223,29 @@ const DonorDashboard = () => {
         <div className="p-6" onClick={(e) => e.stopPropagation()}>
           {activeTab === 'overview' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Recent Donations</h3>
+              <h3 className="text-lg font-medium dark:text-white">{t('dashboard.donor.recentDonations')}</h3>
               {userDonations.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-500">No donations yet.</p>
+                  <p className="text-gray-500 dark:text-gray-400">{t('dashboard.donor.noDonations')}</p>
                   {!dataFetched && (
                     <button
                       onClick={fetchData}
                       className="mt-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 mr-2"
                     >
-                      Load Data
+                      {t('dashboard.donor.loadData')}
                     </button>
                   )}
                   <button
                     onClick={() => setActiveTab('post')}
                     className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                   >
-                    Post Food
+                    {t('dashboard.donor.postFood')}
                   </button>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {userDonations.slice(0, 5).map((donation) => (
-                    <div key={donation._id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div key={donation._id} className="flex items-center justify-between p-4 border dark:border-gray-700 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <img
                           src={donation.photo_url}
@@ -236,19 +253,19 @@ const DonorDashboard = () => {
                           className="w-12 h-12 rounded-lg object-cover"
                         />
                         <div>
-                          <p className="font-medium">
+                          <p className="font-medium dark:text-white">
                             {donation.food_items.map(item => item.name).join(', ')}
                           </p>
-                          <p className="text-sm text-gray-600">
-                            Serves {donation.quantity_serves} people
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {t('dashboard.donor.serves')} {donation.quantity_serves} {t('dashboard.donor.people')}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(donation.status)}`}>
-                          {donation.status}
+                          {t(`dashboard.donor.${donation.status}`)}
                         </span>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                           {new Date(donation.createdAt).toLocaleDateString()}
                         </p>
                       </div>
@@ -261,17 +278,17 @@ const DonorDashboard = () => {
 
           {activeTab === 'post' && (
             <div className="space-y-6">
-              <h3 className="text-lg font-medium">Post New Food Donation</h3>
+              <h3 className="text-lg font-medium dark:text-white">{t('dashboard.donor.postNewDonation')}</h3>
               
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" onClick={(e) => e.stopPropagation()}>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Food Items *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dashboard.donor.foodItems')} *</label>
                     <input
                       {...register('food_items', { required: 'Food items are required' })}
                       type="text"
-                      placeholder="e.g., Rice, Dal, Vegetables (comma separated)"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder={t('dashboard.donor.foodItemsPlaceholder')}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                     {errors.food_items && (
                       <p className="mt-1 text-sm text-red-600">{errors.food_items.message}</p>
@@ -279,16 +296,16 @@ const DonorDashboard = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Food Category *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dashboard.donor.foodCategory')} *</label>
                     <select
                       {...register('food_category', { required: 'Category is required' })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="">Select category</option>
-                      <option value="vegetarian">Vegetarian</option>
-                      <option value="non-vegetarian">Non-Vegetarian</option>
-                      <option value="vegan">Vegan</option>
-                      <option value="mixed">Mixed</option>
+                      <option value="">{t('dashboard.donor.selectCategory')}</option>
+                      <option value="vegetarian">{t('dashboard.donor.vegetarian')}</option>
+                      <option value="non-vegetarian">{t('dashboard.donor.nonVegetarian')}</option>
+                      <option value="vegan">{t('dashboard.donor.vegan')}</option>
+                      <option value="mixed">{t('dashboard.donor.mixed')}</option>
                     </select>
                     {errors.food_category && (
                       <p className="mt-1 text-sm text-red-600">{errors.food_category.message}</p>
@@ -296,7 +313,7 @@ const DonorDashboard = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Quantity (Serves) *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dashboard.donor.quantity')} *</label>
                     <input
                       {...register('quantity_serves', { 
                         required: 'Quantity is required',
@@ -306,8 +323,8 @@ const DonorDashboard = () => {
                       type="number"
                       min="1"
                       max="1000"
-                      placeholder="Number of people this can serve"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder={t('dashboard.donor.quantityPlaceholder')}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                     {errors.quantity_serves && (
                       <p className="mt-1 text-sm text-red-600">{errors.quantity_serves.message}</p>
@@ -315,12 +332,12 @@ const DonorDashboard = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Pickup Address *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dashboard.donor.pickupAddress')} *</label>
                     <input
                       {...register('pickup_address', { required: 'Pickup address is required' })}
                       type="text"
-                      placeholder="Complete pickup address"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder={t('dashboard.donor.pickupAddressPlaceholder')}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                     {errors.pickup_address && (
                       <p className="mt-1 text-sm text-red-600">{errors.pickup_address.message}</p>
@@ -328,16 +345,16 @@ const DonorDashboard = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Storage Conditions *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dashboard.donor.storageConditions')} *</label>
                     <select
                       {...register('storage_conditions', { required: 'Storage conditions are required' })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="">Select storage conditions</option>
-                      <option value="refrigerated">Refrigerated (0-4°C)</option>
-                      <option value="frozen">Frozen (below -18°C)</option>
-                      <option value="room_temperature">Room Temperature</option>
-                      <option value="hot_holding">Hot Holding (above 60°C)</option>
+                      <option value="">{t('dashboard.donor.selectStorage')}</option>
+                      <option value="refrigerated">{t('dashboard.donor.refrigerated')}</option>
+                      <option value="frozen">{t('dashboard.donor.frozen')}</option>
+                      <option value="room_temperature">{t('dashboard.donor.roomTemperature')}</option>
+                      <option value="hot_holding">{t('dashboard.donor.hotHolding')}</option>
                     </select>
                     {errors.storage_conditions && (
                       <p className="mt-1 text-sm text-red-600">{errors.storage_conditions.message}</p>
@@ -345,11 +362,11 @@ const DonorDashboard = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Preparation Time *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dashboard.donor.preparationTime')} *</label>
                     <input
                       {...register('preparation_time', { required: 'Preparation time is required' })}
                       type="datetime-local"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       onChange={(e) => {
                         if (e.target.value) {
                           setTimeout(() => e.target.blur(), 100);
@@ -362,7 +379,7 @@ const DonorDashboard = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Pickup Start Date & Time *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dashboard.donor.pickupStart')} *</label>
                     <div className="relative">
                       <input
                         {...register('pickup_window_start', { 
@@ -378,7 +395,7 @@ const DonorDashboard = () => {
                         })}
                         type="datetime-local"
                         min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         onBlur={(e) => {
                           if (e.target.value) {
                             e.target.blur();
@@ -397,7 +414,7 @@ const DonorDashboard = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Pickup End Date & Time *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dashboard.donor.pickupEnd')} *</label>
                     <input
                       {...register('pickup_window_end', { 
                         required: 'End time is required',
@@ -411,7 +428,7 @@ const DonorDashboard = () => {
                       })}
                       type="datetime-local"
                       min={new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().slice(0, 16)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       onChange={(e) => {
                         if (e.target.value) {
                           setTimeout(() => e.target.blur(), 100);
@@ -424,7 +441,7 @@ const DonorDashboard = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Food Expiry Date & Time *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dashboard.donor.expiryDate')} *</label>
                     <input
                       {...register('expiry_date', { 
                         required: 'Expiry date is required',
@@ -438,7 +455,7 @@ const DonorDashboard = () => {
                       })}
                       type="datetime-local"
                       min={new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString().slice(0, 16)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       onChange={(e) => {
                         if (e.target.value) {
                           setTimeout(() => e.target.blur(), 100);
@@ -452,15 +469,15 @@ const DonorDashboard = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Special Instructions</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dashboard.donor.specialInstructions')}</label>
                   <textarea
                     {...register('special_instructions')}
                     rows="4"
-                    placeholder="Any special handling instructions, dietary information, or pickup notes..."
+                    placeholder={t('dashboard.donor.instructionsPlaceholder')}
                     onClick={(e) => e.stopPropagation()}
                     onFocus={(e) => e.stopPropagation()}
                     onMouseDown={(e) => e.stopPropagation()}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                   />
                 </div>
 
@@ -473,7 +490,7 @@ const DonorDashboard = () => {
                     }}
                     className="flex-1 py-3 px-6 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
                   >
-                    Cancel
+                    {t('dashboard.donor.cancel')}
                   </button>
                   <button
                     type="submit"
@@ -483,10 +500,10 @@ const DonorDashboard = () => {
                     {isLoading ? (
                       <div className="flex items-center justify-center gap-2">
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Posting...
+                        {t('dashboard.donor.posting')}
                       </div>
                     ) : (
-                      'Post Food Donation'
+                      t('dashboard.donor.postDonation')
                     )}
                   </button>
                 </div>
@@ -496,15 +513,15 @@ const DonorDashboard = () => {
 
           {activeTab === 'history' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Donation History</h3>
+              <h3 className="text-lg font-medium dark:text-white">{t('dashboard.donor.donationHistory')}</h3>
               {userDonations.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-500">No donation history yet</p>
+                  <p className="text-gray-500 dark:text-gray-400">{t('dashboard.donor.noDonationHistory')}</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {userDonations.map((donation) => (
-                    <div key={donation._id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div key={donation._id} className="flex items-center justify-between p-4 border dark:border-gray-700 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <img
                           src={donation.photo_url}
@@ -512,24 +529,24 @@ const DonorDashboard = () => {
                           className="w-12 h-12 rounded-lg object-cover"
                         />
                         <div>
-                          <p className="font-medium">
+                          <p className="font-medium dark:text-white">
                             {donation.food_items.map(item => item.name).join(', ')}
                           </p>
-                          <p className="text-sm text-gray-600">
-                            Serves {donation.quantity_serves} people
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {t('dashboard.donor.serves')} {donation.quantity_serves} {t('dashboard.donor.people')}
                           </p>
-                          <p className="text-sm text-gray-600">
-                            Posted: {new Date(donation.createdAt).toLocaleDateString()}
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {t('dashboard.donor.posted')}: {new Date(donation.createdAt).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(donation.status)}`}>
-                          {donation.status}
+                          {t(`dashboard.donor.${donation.status}`)}
                         </span>
                         {donation.claimed_by && (
-                          <p className="text-sm text-gray-600 mt-1">
-                            Claimed by: {donation.claimed_by.organization_name}
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            {t('dashboard.donor.claimedBy')}: {donation.claimed_by.organization_name}
                           </p>
                         )}
                       </div>

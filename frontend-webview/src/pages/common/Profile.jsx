@@ -69,22 +69,22 @@ const Profile = () => {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
-            <p className="text-gray-600">Manage your account information</p>
+            <h1 className="text-2xl font-bold text-gray-900">{t('profile.title')}</h1>
+            <p className="text-gray-600">{t('profile.subtitle')}</p>
           </div>
         </div>
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-medium text-gray-900">Personal Information</h2>
+          <h2 className="text-lg font-medium text-gray-900">{t('profile.personalInfo')}</h2>
           {!isEditing && (
             <button
               onClick={() => setIsEditing(true)}
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               <Edit3 className="w-4 h-4 mr-2" />
-              Edit Profile
+              {t('profile.editProfile')}
             </button>
           )}
         </div>
@@ -92,12 +92,12 @@ const Profile = () => {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Organization Name
+              {t('profile.organizationName')}
             </label>
             <div className="relative">
               <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
-                {...register('organization_name', { required: 'Organization name is required' })}
+                {...register('organization_name', { required: t('profile.orgNameRequired') })}
                 type="text"
                 disabled={!isEditing}
                 className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
@@ -112,12 +112,12 @@ const Profile = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Contact Person Name
+              {t('profile.contactPerson')}
             </label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
-                {...register('contact_person', { required: 'Name is required' })}
+                {...register('contact_person', { required: t('profile.nameRequired') })}
                 type="text"
                 disabled={!isEditing}
                 className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
@@ -132,16 +132,16 @@ const Profile = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
+              {t('profile.emailAddress')}
             </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 {...register('email', { 
-                  required: 'Email is required',
+                  required: t('profile.emailRequired'),
                   pattern: {
                     value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: 'Invalid email address'
+                    message: t('profile.emailInvalid')
                   }
                 })}
                 type="email"
@@ -158,16 +158,16 @@ const Profile = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Phone Number
+              {t('profile.phoneNumber')}
             </label>
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 {...register('phone', { 
-                  required: 'Phone number is required',
+                  required: t('profile.phoneRequired'),
                   pattern: {
                     value: /^[6-9]\d{9}$/,
-                    message: 'Enter valid 10-digit mobile number'
+                    message: t('profile.phoneInvalid')
                   }
                 })}
                 type="tel"
@@ -185,12 +185,12 @@ const Profile = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Address
+              {t('profile.address')}
             </label>
             <div className="relative">
               <MapPin className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
               <textarea
-                {...register('address', { required: 'Address is required' })}
+                {...register('address', { required: t('profile.addressRequired') })}
                 rows="3"
                 disabled={!isEditing}
                 className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${
@@ -211,7 +211,7 @@ const Profile = () => {
                 className="flex-1 flex items-center justify-center px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
               >
                 <Check className="w-4 h-4 mr-2" />
-                {isLoading ? 'Saving...' : 'Save Changes'}
+                {isLoading ? t('profile.saving') : t('profile.saveChanges')}
               </button>
               <button
                 type="button"
@@ -219,7 +219,7 @@ const Profile = () => {
                 className="flex-1 flex items-center justify-center px-4 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
               >
                 <X className="w-4 h-4 mr-2" />
-                Cancel
+                {t('profile.cancel')}
               </button>
             </div>
           )}
@@ -227,26 +227,26 @@ const Profile = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Account Information</h2>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">{t('profile.accountInfo')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-gray-600">Organization</p>
+            <p className="text-gray-600">{t('profile.organization')}</p>
             <p className="font-medium">{user?.organization_name}</p>
           </div>
           <div>
-            <p className="text-gray-600">Role</p>
+            <p className="text-gray-600">{t('profile.role')}</p>
             <p className="font-medium capitalize">{user?.role}</p>
           </div>
           <div>
-            <p className="text-gray-600">License Number</p>
+            <p className="text-gray-600">{t('profile.licenseNumber')}</p>
             <p className="font-medium">{user?.license_number}</p>
           </div>
           <div>
-            <p className="text-gray-600">Verification Status</p>
+            <p className="text-gray-600">{t('profile.verificationStatus')}</p>
             <span className={`inline-block px-2 py-1 text-xs rounded-full ${
               user?.is_verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
             }`}>
-              {user?.is_verified ? 'Verified' : 'Pending'}
+              {user?.is_verified ? t('profile.verified') : t('profile.pending')}
             </span>
           </div>
         </div>

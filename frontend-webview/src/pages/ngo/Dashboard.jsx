@@ -62,7 +62,7 @@ const NGODashboard = () => {
         maxDistance: 10000
       }));
       dispatch(fetchNGOHistory());
-    }, 3000);
+    }, 30000);
     
     // Listen for sidebar navigation events
     const handleTabChange = (event) => {
@@ -153,7 +153,7 @@ const NGODashboard = () => {
               <MapPin className="w-5 h-5 text-green-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-gray-600">Available Nearby</p>
+              <p className="text-sm text-gray-600">{t('dashboard.ngo.availableNearby')}</p>
               <p className="text-lg font-semibold">{stats.available}</p>
             </div>
           </div>
@@ -165,7 +165,7 @@ const NGODashboard = () => {
               <Clock className="w-5 h-5 text-yellow-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-gray-600">Claimed</p>
+              <p className="text-sm text-gray-600">{t('dashboard.ngo.claimed')}</p>
               <p className="text-lg font-semibold">{stats.claimed}</p>
             </div>
           </div>
@@ -177,7 +177,7 @@ const NGODashboard = () => {
               <Users className="w-5 h-5 text-blue-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-gray-600">Completed</p>
+              <p className="text-sm text-gray-600">{t('dashboard.ngo.completed')}</p>
               <p className="text-lg font-semibold">{stats.completed}</p>
             </div>
           </div>
@@ -189,7 +189,7 @@ const NGODashboard = () => {
               <Users className="w-5 h-5 text-purple-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-gray-600">People Fed</p>
+              <p className="text-sm text-gray-600">{t('dashboard.ngo.peopleFed')}</p>
               <p className="text-lg font-semibold">{stats.totalServed}</p>
             </div>
           </div>
@@ -208,7 +208,7 @@ const NGODashboard = () => {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Live Feed
+              {t('dashboard.ngo.liveFeed')}
             </button>
             <button
               onClick={() => setActiveTab('history')}
@@ -218,7 +218,7 @@ const NGODashboard = () => {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              My Claims
+              {t('dashboard.ngo.myClaims')}
             </button>
           </nav>
         </div>
@@ -227,7 +227,7 @@ const NGODashboard = () => {
           {activeTab === 'feed' && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">Available Food Donations</h3>
+                <h3 className="text-lg font-medium">{t('dashboard.ngo.availableDonations')}</h3>
                 <div className="flex space-x-2">
                   <button
                     onClick={() => setViewMode('list')}
@@ -235,7 +235,7 @@ const NGODashboard = () => {
                       viewMode === 'list' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100'
                     }`}
                   >
-                    List
+                    {t('dashboard.ngo.list')}
                   </button>
                   <button
                     onClick={() => setViewMode('map')}
@@ -243,7 +243,7 @@ const NGODashboard = () => {
                       viewMode === 'map' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100'
                     }`}
                   >
-                    Map
+                    {t('dashboard.ngo.map')}
                   </button>
                 </div>
               </div>
@@ -252,14 +252,14 @@ const NGODashboard = () => {
                 <div className="space-y-3">
                   {nearbyDonations.filter(d => d.status === 'available').length === 0 ? (
                     <div className="text-center py-8">
-                      <p className="text-gray-500">No food donations available nearby</p>
+                      <p className="text-gray-500">{t('dashboard.ngo.noDonationsNearby')}</p>
                       <div className="text-xs text-gray-400 mt-4 p-3 bg-gray-50 rounded">
-                        <p><strong>Debug Info:</strong></p>
-                        <p>Total donations: {nearbyDonations.length}</p>
-                        <p>Available: {nearbyDonations.filter(d => d.status === 'available').length}</p>
-                        <p>User verified: {debugInfo.userVerified ? 'Yes' : 'No'}</p>
-                        <p>Location: {debugInfo.userLocation ? `${debugInfo.userLocation.latitude}, ${debugInfo.userLocation.longitude}` : 'Using fallback (Delhi)'}</p>
-                        <p>Fallback used: {debugInfo.fallbackUsed ? 'Yes' : 'No'}</p>
+                        <p><strong>{t('dashboard.ngo.debugInfo')}:</strong></p>
+                        <p>{t('dashboard.ngo.totalDonations')}: {nearbyDonations.length}</p>
+                        <p>{t('dashboard.ngo.availableNearby')}: {nearbyDonations.filter(d => d.status === 'available').length}</p>
+                        <p>{t('dashboard.ngo.userVerified')}: {debugInfo.userVerified ? t('common.yes') : t('common.no')}</p>
+                        <p>{t('dashboard.ngo.location')}: {debugInfo.userLocation ? `${debugInfo.userLocation.latitude}, ${debugInfo.userLocation.longitude}` : 'Using fallback (Delhi)'}</p>
+                        <p>{t('dashboard.ngo.fallbackUsed')}: {debugInfo.fallbackUsed ? t('common.yes') : t('common.no')}</p>
                       </div>
                       <button
                         onClick={async () => {
@@ -286,7 +286,7 @@ const NGODashboard = () => {
                         }}
                         className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
                       >
-                        Refresh Donations (Debug)
+                        {t('dashboard.ngo.refreshDonations')}
                       </button>
                     </div>
                   ) : (
@@ -306,12 +306,12 @@ const NGODashboard = () => {
                                   {donation.food_items.map(item => item.name).join(', ')}
                                 </h4>
                                 <p className="text-sm text-gray-600 mb-2">
-                                  By {donation.donor_id.organization_name}
+                                  {t('dashboard.ngo.by')} {donation.donor_id.organization_name}
                                 </p>
                                 <div className="flex items-center space-x-4 text-sm text-gray-600">
                                   <span className="flex items-center">
                                     <Users className="w-4 h-4 mr-1" />
-                                    Serves {donation.quantity_serves}
+                                    {t('dashboard.ngo.serves')} {donation.quantity_serves}
                                   </span>
                                   <span className="flex items-center">
                                     <Clock className="w-4 h-4 mr-1" />
@@ -324,21 +324,21 @@ const NGODashboard = () => {
                                 </div>
                                 {donation.special_instructions && (
                                   <p className="text-sm text-gray-600 mt-2">
-                                    <strong>Instructions:</strong> {donation.special_instructions}
+                                    <strong>{t('dashboard.ngo.instructions')}:</strong> {donation.special_instructions}
                                   </p>
                                 )}
                               </div>
                             </div>
                             <div className="flex flex-col items-end space-y-2">
                               <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(donation.status)}`}>
-                                {donation.status}
+                                {t(`dashboard.donor.${donation.status}`)}
                               </span>
                               <button
                                 onClick={() => handleClaimDonation(donation._id)}
                                 disabled={isLoading}
                                 className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 text-sm"
                               >
-                                Claim Food
+                                {t('dashboard.ngo.claimFood')}
                               </button>
                             </div>
                           </div>
@@ -398,10 +398,10 @@ const NGODashboard = () => {
 
           {activeTab === 'history' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">My Claimed Donations</h3>
+              <h3 className="text-lg font-medium">{t('dashboard.ngo.claimedDonations')}</h3>
               {userDonations.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-500">No claimed donations yet</p>
+                  <p className="text-gray-500">{t('dashboard.ngo.noClaimedDonations')}</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -418,16 +418,16 @@ const NGODashboard = () => {
                             {donation.food_items.map(item => item.name).join(', ')}
                           </p>
                           <p className="text-sm text-gray-600">
-                            From {donation.donor_id.organization_name}
+                            {t('dashboard.ngo.from')} {donation.donor_id.organization_name}
                           </p>
                           <p className="text-sm text-gray-600">
-                            Serves {donation.quantity_serves} people
+                            {t('dashboard.ngo.serves')} {donation.quantity_serves} {t('dashboard.donor.people')}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(donation.status)}`}>
-                          {donation.status}
+                          {t(`dashboard.donor.${donation.status}`)}
                         </span>
                         <p className="text-sm text-gray-600 mt-1">
                           {new Date(donation.claimed_at).toLocaleDateString()}
@@ -450,7 +450,7 @@ const NGODashboard = () => {
                               }}
                               className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
                             >
-                              Mark Collected
+                              {t('dashboard.ngo.markCollected')}
                             </button>
                           </div>
                         )}

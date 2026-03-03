@@ -131,9 +131,9 @@ const AdminDashboard = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600">Manage users, monitor donations, and view analytics</p>
-          <p className="text-xs text-gray-400 mt-1">Auto-refreshes every 30 seconds</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('dashboard.admin.title')}</h1>
+          <p className="text-gray-600">{t('dashboard.admin.subtitle')}</p>
+          <p className="text-xs text-gray-400 mt-1">{t('dashboard.admin.autoRefresh')}</p>
         </div>
         <button
           onClick={fetchData}
@@ -143,7 +143,7 @@ const AdminDashboard = () => {
           {isLoading ? (
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
           ) : (
-            <span>Refresh Data</span>
+            <span>{t('dashboard.admin.refreshData')}</span>
           )}
         </button>
       </div>
@@ -154,9 +154,9 @@ const AdminDashboard = () => {
           <div className="flex items-center">
             <XCircle className="w-5 h-5 text-red-500 mr-2" />
             <div>
-              <h3 className="text-red-800 font-medium">API Connection Error</h3>
+              <h3 className="text-red-800 font-medium">{t('dashboard.admin.apiError')}</h3>
               <p className="text-red-700 text-sm mt-1">
-                {apiError}. Make sure the backend server is running on port 5000.
+                {apiError}. {t('dashboard.admin.apiErrorDesc')}
               </p>
             </div>
           </div>
@@ -167,7 +167,7 @@ const AdminDashboard = () => {
       {isLoading && (
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-gray-600 mt-2">Loading dashboard data...</p>
+          <p className="text-gray-600 mt-2">{t('dashboard.admin.loadingData')}</p>
         </div>
       )}
 
@@ -179,7 +179,7 @@ const AdminDashboard = () => {
               <Users className="w-5 h-5 text-blue-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-gray-600">Total Users</p>
+              <p className="text-sm text-gray-600">{t('dashboard.admin.totalUsers')}</p>
               <p className="text-lg font-semibold">{stats.users?.total || 0}</p>
             </div>
           </div>
@@ -191,7 +191,7 @@ const AdminDashboard = () => {
               <CheckCircle className="w-5 h-5 text-green-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-gray-600">Verified Users</p>
+              <p className="text-sm text-gray-600">{t('dashboard.admin.verifiedUsers')}</p>
               <p className="text-lg font-semibold">{stats.users?.verified || 0}</p>
             </div>
           </div>
@@ -203,7 +203,7 @@ const AdminDashboard = () => {
               <Clock className="w-5 h-5 text-yellow-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-gray-600">Pending Approval</p>
+              <p className="text-sm text-gray-600">{t('dashboard.admin.pendingApproval')}</p>
               <p className="text-lg font-semibold">{stats.users?.pending || 0}</p>
             </div>
           </div>
@@ -215,7 +215,7 @@ const AdminDashboard = () => {
               <TrendingUp className="w-5 h-5 text-purple-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-gray-600">Meals Served</p>
+              <p className="text-sm text-gray-600">{t('dashboard.admin.mealsServed')}</p>
               <p className="text-lg font-semibold">{stats.meals_served || 0}</p>
             </div>
           </div>
@@ -234,7 +234,7 @@ const AdminDashboard = () => {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Overview
+              {t('dashboard.admin.overview')}
             </button>
             <button
               onClick={() => setActiveTab('verify')}
@@ -244,7 +244,7 @@ const AdminDashboard = () => {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Verify Users ({pendingUsers.length})
+              {t('dashboard.admin.verifyUsers')} ({pendingUsers.length})
             </button>
             <button
               onClick={() => setActiveTab('map')}
@@ -254,7 +254,7 @@ const AdminDashboard = () => {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Live Map
+              {t('dashboard.admin.liveMap')}
             </button>
             <button
               onClick={() => setActiveTab('analytics')}
@@ -264,7 +264,7 @@ const AdminDashboard = () => {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Analytics
+              {t('dashboard.admin.analytics')}
             </button>
             <button
               onClick={() => setActiveTab('users')}
@@ -274,7 +274,7 @@ const AdminDashboard = () => {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Users List ({allUsers.length})
+              {t('dashboard.admin.usersList')} ({allUsers.length})
             </button>
           </nav>
         </div>
@@ -284,36 +284,36 @@ const AdminDashboard = () => {
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-medium mb-4">Donation Statistics</h3>
+                  <h3 className="text-lg font-medium mb-4">{t('dashboard.admin.donationStats')}</h3>
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span>Total Donations:</span>
+                      <span>{t('dashboard.admin.total')}:</span>
                       <span className="font-semibold">{stats.donations?.total || 0}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Active Donations:</span>
+                      <span>{t('dashboard.admin.activeNow')}:</span>
                       <span className="font-semibold">{stats.donations?.active || 0}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Completed:</span>
+                      <span>{t('dashboard.admin.completed')}:</span>
                       <span className="font-semibold">{stats.donations?.completed || 0}</span>
                     </div>
                   </div>
                 </div>
                 
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-medium mb-4">User Statistics</h3>
+                  <h3 className="text-lg font-medium mb-4">{t('dashboard.admin.userStats')}</h3>
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span>Total Users:</span>
+                      <span>{t('dashboard.admin.total')}:</span>
                       <span className="font-semibold">{stats.users?.total || 0}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Verified:</span>
+                      <span>{t('dashboard.admin.verified')}:</span>
                       <span className="font-semibold">{stats.users?.verified || 0}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Pending:</span>
+                      <span>{t('dashboard.admin.pending')}:</span>
                       <span className="font-semibold">{stats.users?.pending || 0}</span>
                     </div>
                   </div>
@@ -321,7 +321,7 @@ const AdminDashboard = () => {
               </div>
 
               <div>
-                <h3 className="text-lg font-medium mb-4">Recent Activity</h3>
+                <h3 className="text-lg font-medium mb-4">{t('dashboard.admin.recentActivity')}</h3>
                 <div className="space-y-3">
                   {activeDonations.slice(0, 5).map((donation) => (
                     <div key={donation._id} className="flex items-center justify-between p-3 border rounded-lg">
@@ -352,10 +352,10 @@ const AdminDashboard = () => {
 
           {activeTab === 'verify' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Pending User Verifications</h3>
+              <h3 className="text-lg font-medium">{t('dashboard.admin.pendingVerifications')}</h3>
               {pendingUsers.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-500">No pending verifications</p>
+                  <p className="text-gray-500">{t('dashboard.admin.noPendingVerifications')}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -373,14 +373,14 @@ const AdminDashboard = () => {
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
                             <div>
-                              <p><strong>Email:</strong> {user.email}</p>
-                              <p><strong>Contact:</strong> {user.contact_person}</p>
-                              <p><strong>Phone:</strong> {user.phone}</p>
+                              <p><strong>{t('dashboard.admin.email')}:</strong> {user.email}</p>
+                              <p><strong>{t('dashboard.admin.contact')}:</strong> {user.contact_person}</p>
+                              <p><strong>{t('dashboard.admin.phone')}:</strong> {user.phone}</p>
                             </div>
                             <div>
-                              <p><strong>License:</strong> {user.license_number}</p>
-                              <p><strong>Address:</strong> {user.address}</p>
-                              <p><strong>Registered:</strong> {new Date(user.createdAt).toLocaleDateString()}</p>
+                              <p><strong>{t('dashboard.admin.license')}:</strong> {user.license_number}</p>
+                              <p><strong>{t('dashboard.admin.address')}:</strong> {user.address}</p>
+                              <p><strong>{t('dashboard.admin.registered')}:</strong> {new Date(user.createdAt).toLocaleDateString()}</p>
                             </div>
                           </div>
                         </div>
@@ -391,7 +391,7 @@ const AdminDashboard = () => {
                             className="flex items-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
                           >
                             <CheckCircle className="w-4 h-4 mr-1" />
-                            Approve
+                            {t('dashboard.admin.approve')}
                           </button>
                           <button
                             onClick={() => handleVerifyUser(user._id, false)}
@@ -399,7 +399,7 @@ const AdminDashboard = () => {
                             className="flex items-center px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
                           >
                             <XCircle className="w-4 h-4 mr-1" />
-                            Reject
+                            {t('dashboard.admin.reject')}
                           </button>
                         </div>
                       </div>
@@ -412,7 +412,7 @@ const AdminDashboard = () => {
 
           {activeTab === 'map' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Live Donation Map</h3>
+              <h3 className="text-lg font-medium">{t('dashboard.admin.liveDonationMap')}</h3>
               <div className="h-96 rounded-lg overflow-hidden">
                 <MapContainer
                   center={[28.6139, 77.2090]} // Default to Delhi
@@ -456,15 +456,15 @@ const AdminDashboard = () => {
 
           {activeTab === 'analytics' && (
             <div className="space-y-6">
-              <h3 className="text-lg font-medium">Platform Analytics</h3>
+              <h3 className="text-lg font-medium">{t('dashboard.admin.platformAnalytics')}</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-blue-100">Total Impact</p>
+                      <p className="text-blue-100">{t('dashboard.admin.totalImpact')}</p>
                       <p className="text-2xl font-bold">{stats.meals_served || 0}</p>
-                      <p className="text-blue-100">Meals Served</p>
+                      <p className="text-blue-100">{t('dashboard.admin.mealsServed')}</p>
                     </div>
                     <Users className="w-8 h-8 text-blue-200" />
                   </div>
@@ -473,12 +473,12 @@ const AdminDashboard = () => {
                 <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-green-100">Success Rate</p>
+                      <p className="text-green-100">{t('dashboard.admin.successRate')}</p>
                       <p className="text-2xl font-bold">
                         {stats.donations?.total ? 
                           Math.round((stats.donations.completed / stats.donations.total) * 100) : 0}%
                       </p>
-                      <p className="text-green-100">Completion Rate</p>
+                      <p className="text-green-100">{t('dashboard.admin.completionRate')}</p>
                     </div>
                     <BarChart3 className="w-8 h-8 text-green-200" />
                   </div>
@@ -487,9 +487,9 @@ const AdminDashboard = () => {
                 <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-purple-100">Active Now</p>
+                      <p className="text-purple-100">{t('dashboard.admin.activeNow')}</p>
                       <p className="text-2xl font-bold">{stats.donations?.active || 0}</p>
-                      <p className="text-purple-100">Live Donations</p>
+                      <p className="text-purple-100">{t('dashboard.admin.liveDonations')}</p>
                     </div>
                     <MapPin className="w-8 h-8 text-purple-200" />
                   </div>
@@ -497,10 +497,10 @@ const AdminDashboard = () => {
               </div>
 
               <div className="bg-gray-50 p-6 rounded-lg">
-                <h4 className="font-medium mb-4">Platform Health</h4>
+                <h4 className="font-medium mb-4">{t('dashboard.admin.platformHealth')}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <p className="text-sm text-gray-600 mb-2">User Verification Rate</p>
+                    <p className="text-sm text-gray-600 mb-2">{t('dashboard.admin.userVerificationRate')}</p>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div 
                         className="bg-blue-600 h-2 rounded-full" 
@@ -511,12 +511,12 @@ const AdminDashboard = () => {
                       ></div>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
-                      {stats.users?.verified || 0} of {stats.users?.total || 0} users verified
+                      {stats.users?.verified || 0} {t('dashboard.admin.usersVerified').toLowerCase()}
                     </p>
                   </div>
                   
                   <div>
-                    <p className="text-sm text-gray-600 mb-2">Donation Success Rate</p>
+                    <p className="text-sm text-gray-600 mb-2">{t('dashboard.admin.donationSuccessRate')}</p>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div 
                         className="bg-green-600 h-2 rounded-full" 
@@ -527,7 +527,7 @@ const AdminDashboard = () => {
                       ></div>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
-                      {stats.donations?.completed || 0} of {stats.donations?.total || 0} donations completed
+                      {stats.donations?.completed || 0} {t('dashboard.admin.donationsCompleted').toLowerCase()}
                     </p>
                   </div>
                 </div>
@@ -538,31 +538,31 @@ const AdminDashboard = () => {
           {activeTab === 'users' && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">All Users</h3>
+                <h3 className="text-lg font-medium">{t('dashboard.admin.allUsers')}</h3>
                 <div className="text-sm text-gray-500">
-                  {dataLoaded ? `${allUsers.length} users found` : 'Loading...'}
+                  {dataLoaded ? `${allUsers.length} ${t('dashboard.admin.usersFound')}` : t('dashboard.admin.loading')}
                 </div>
               </div>
               {!dataLoaded ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
-                  <p className="text-gray-500 mt-2">Loading users...</p>
+                  <p className="text-gray-500 mt-2">{t('dashboard.admin.loadingUsers')}</p>
                 </div>
               ) : allUsers.length === 0 ? (
                 <div className="text-center py-8">
                   <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">No users found</p>
+                  <p className="text-gray-500">{t('dashboard.admin.noUsersFound')}</p>
                   <p className="text-xs text-gray-400 mt-2">
-                    This could mean:
-                    <br />• Backend server is not running
-                    <br />• No users have registered yet
-                    <br />• Database connection issue
+                    {t('dashboard.admin.noUsersDesc')}
+                    <br />• {t('dashboard.admin.backendNotRunning')}
+                    <br />• {t('dashboard.admin.noRegistrations')}
+                    <br />• {t('dashboard.admin.dbIssue')}
                   </p>
                   <button
                     onClick={fetchData}
                     className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
                   >
-                    Retry Loading
+                    {t('dashboard.admin.retryLoading')}
                   </button>
                 </div>
               ) : (
@@ -570,12 +570,12 @@ const AdminDashboard = () => {
                   <table className="min-w-full bg-white border border-gray-200 rounded-lg">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organization</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">License</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('dashboard.admin.organization')}</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('dashboard.admin.role')}</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('dashboard.admin.contact')}</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('dashboard.admin.license')}</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('dashboard.admin.status')}</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('dashboard.admin.joined')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -605,7 +605,7 @@ const AdminDashboard = () => {
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                               user.is_verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                             }`}>
-                              {user.is_verified ? 'Verified' : 'Pending'}
+                              {user.is_verified ? t('dashboard.admin.verified') : t('dashboard.admin.pending')}
                             </span>
                           </td>
                           <td className="px-4 py-4 text-sm text-gray-500">
