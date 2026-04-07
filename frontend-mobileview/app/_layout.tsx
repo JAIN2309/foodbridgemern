@@ -4,6 +4,7 @@ import { Provider } from 'react-redux';
 import * as SecureStore from 'expo-secure-store';
 import Toast from 'react-native-toast-message';
 import { store } from '../src/store';
+import '../src/i18n';
 import { useAppSelector, useAppDispatch } from '../src/hooks/useRedux';
 import { setToken, loadUser } from '../src/store/authSlice';
 
@@ -43,8 +44,11 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (!isNavigationReady || !navigationState?.key) return;
-    
+
     const inAuthGroup = segments[0] === '(auth)';
+    const inSplash = segments[0] === 'splash';
+
+    if (inSplash) return; // let splash handle its own navigation
 
     if (!isAuthenticated && !inAuthGroup) {
       router.replace('/login');
@@ -57,8 +61,10 @@ function RootLayoutNav() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="splash" options={{ headerShown: false }} />
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="about" options={{ headerShown: false }} />
     </Stack>
   );
 }

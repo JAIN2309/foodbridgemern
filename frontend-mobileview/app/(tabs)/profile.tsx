@@ -1,10 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAppSelector, useAppDispatch } from '../../src/hooks/useRedux';
 import { updateProfile, loadUser } from '../../src/store/authSlice';
+import { useTranslation } from 'react-i18next';
+import Toast from 'react-native-toast-message';
+
+const ROLE_COLORS: any = { donor: ['#2563eb', '#3b82f6'], ngo: ['#16a34a', '#22c55e'], admin: ['#7c3aed', '#8b5cf6'], super_admin: ['#db2777', '#ec4899'] };
+
+const InfoRow = ({ icon, label, value, editable, editKey, multiline = false, isEditing, editData, setEditData, color }: any) => (
+  <View style={styles.infoRow}>
+    <View style={[styles.infoIcon, { backgroundColor: color + '18' }]}>
+      <Ionicons name={icon} size={16} color={color} />
+    </View>
+    <View style={{ flex: 1 }}>
+      <Text style={styles.infoLabel}>{label}</Text>
+      {isEditing && editable ? (
+        <TextInput
+          style={[styles.infoInput, { borderColor: color }]}
+          value={editData[editKey]}
+          onChangeText={(v) => setEditData({ ...editData, [editKey]: v })}
+          multiline={multiline}
+          autoCorrect={false}
+        />
+      ) : (
+        <Text style={styles.infoValue}>{value || '—'}</Text>
+      )}
+    </View>
+  </View>
+);
 
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const { user } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const [isEditing, setIsEditing] = useState(false);
@@ -15,10 +44,7 @@ export default function ProfileScreen() {
     contact_person: user?.contact_person || '',
   });
 
-  // Load user profile on component mount
-  useEffect(() => {
-    dispatch(loadUser());
-  }, [dispatch]);
+  useEffect(() => { dispatch(loadUser()); }, [dispatch]);
 
   useEffect(() => {
     if (user && !isEditing) {
@@ -33,505 +59,162 @@ export default function ProfileScreen() {
 
   if (!user) return null;
 
+  const colors = ROLE_COLORS[user.role] || ROLE_COLORS.donor;
+
   const handleSave = async () => {
     try {
       await dispatch(updateProfile(editData)).unwrap();
       setIsEditing(false);
-      Alert.alert('Success', 'Profile updated successfully');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update profile');
+      Toast.show({ type: 'success', text1: '✅ Profile Updated', text2: 'Your changes have been saved successfully.' });
+    } catch {
+      Toast.show({ type: 'error', text1: '❌ Update Failed', text2: 'Could not save changes. Please try again.' });
     }
   };
 
-  const handleCancel = () => {
-    setEditData({
-      organization_name: user.organization_name || '',
-      phone: user.phone || '',
-      address: user.address || '',
-      contact_person: user.contact_person || '',
-    });
-    setIsEditing(false);
-  };
+  const rowProps = { isEditing, editData, setEditData, color: colors[0] };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Ionicons name="person" size={48} color="#fff" />
-        </View>
-        {isEditing ? (
-          <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Organization Name</Text>
-            <TextInput
-              style={[styles.editInput, styles.highlightBorder]}
-              value={editData.organization_name}
-              onChangeText={(text) => setEditData({...editData, organization_name: text})}
-              placeholder="Enter organization name"
-            />
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f7fa' }} edges={['bottom']}>
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+
+        {/* Gradient Header */}
+        <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
+          <View style={styles.avatarWrap}>
+            <View style={styles.avatar}>
+              <Ionicons name="person" size={40} color="#fff" />
+            </View>
+            {user.is_verified && (
+              <View style={styles.verifiedBadge}>
+                <Ionicons name="checkmark" size={10} color="#fff" />
+              </View>
+            )}
           </View>
-        ) : (
           <Text style={styles.name}>{user.organization_name}</Text>
-        )}
-        <Text style={styles.role}>{user.role.toUpperCase()}</Text>
-        
-        <TouchableOpacity 
-          style={styles.editButton}
-          onPress={() => isEditing ? handleSave() : setIsEditing(true)}
-        >
-          <Ionicons name={isEditing ? "checkmark" : "pencil"} size={20} color="#fff" />
-          <Text style={styles.editButtonText}>{isEditing ? 'Save' : 'Edit'}</Text>
-        </TouchableOpacity>
-        
-        {isEditing && (
-          <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+          <View style={styles.rolePill}>
+            <Text style={styles.roleText}>{user.role.replace('_', ' ').toUpperCase()}</Text>
+          </View>
+          <Text style={styles.email}>{user.email}</Text>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Basic Information</Text>
-        
-        <View style={styles.fieldContainer}>
-          <Text style={styles.fieldLabel}>Organization Name</Text>
-          {isEditing ? (
-            <TextInput
-              style={[styles.editInput, styles.highlightBorder]}
-              value={editData.organization_name}
-              onChangeText={(text) => setEditData({...editData, organization_name: text})}
-              placeholder="Enter organization name"
-            />
-          ) : (
-            <Text style={styles.fieldValue}>{user.organization_name}</Text>
-          )}
-        </View>
-
-        <View style={styles.fieldContainer}>
-          <Text style={styles.fieldLabel}>Email Address</Text>
-          <Text style={styles.fieldValue}>{user.email}</Text>
-          <Text style={styles.fieldNote}>Email cannot be changed</Text>
-        </View>
-
-        {(user.phone || isEditing) && (
-          <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Phone Number</Text>
+          {/* Edit / Save buttons */}
+          <View style={styles.headerBtns}>
             {isEditing ? (
-              <TextInput
-                style={[styles.editInput, styles.highlightBorder]}
-                value={editData.phone}
-                onChangeText={(text) => setEditData({...editData, phone: text})}
-                placeholder="Enter phone number"
-                keyboardType="phone-pad"
-              />
+              <>
+                <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
+                  <Ionicons name="checkmark" size={16} color={colors[0]} />
+                  <Text style={[styles.saveBtnText, { color: colors[0] }]}>{t('profile.save')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsEditing(false)}>
+                  <Text style={styles.cancelBtnText}>{t('profile.cancel')}</Text>
+                </TouchableOpacity>
+              </>
             ) : (
-              <Text style={styles.fieldValue}>{user.phone}</Text>
+              <TouchableOpacity style={styles.saveBtn} onPress={() => setIsEditing(true)}>
+                <Ionicons name="pencil" size={16} color={colors[0]} />
+                <Text style={[styles.saveBtnText, { color: colors[0] }]}>{t('profile.editProfile')}</Text>
+              </TouchableOpacity>
             )}
+          </View>
+        </LinearGradient>
+
+        {/* Stats */}
+        {user.activity_stats && (
+          <View style={styles.statsRow}>
+            {[
+              { icon: 'add-circle', value: user.activity_stats.donations_posted || 0, label: t('profile.posted'), color: colors[0] },
+              { icon: 'checkmark-circle', value: user.activity_stats.successful_pickups || 0, label: t('profile.success'), color: '#10b981' },
+              { icon: 'star', value: user.ratings?.average?.toFixed(1) || '—', label: t('profile.rating'), color: '#f59e0b' },
+            ].map((s, i) => (
+              <View key={i} style={styles.statCard}>
+                <Ionicons name={s.icon as any} size={20} color={s.color} />
+                <Text style={[styles.statVal, { color: s.color }]}>{s.value}</Text>
+                <Text style={styles.statLbl}>{s.label}</Text>
+              </View>
+            ))}
           </View>
         )}
-        
-        {(user.address || isEditing) && (
-          <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Address/Location</Text>
-            {isEditing ? (
-              <TextInput
-                style={[styles.editInput, styles.highlightBorder, styles.multilineInput]}
-                value={editData.address}
-                onChangeText={(text) => setEditData({...editData, address: text})}
-                placeholder="Enter full address"
-                multiline
-                numberOfLines={2}
-              />
-            ) : (
-              <Text style={styles.fieldValue}>{user.address}</Text>
-            )}
+
+        {/* Info Card */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('profile.profileInfo')}</Text>
+          <View style={styles.card}>
+            <InfoRow icon="business-outline" label={t('profile.organization')} value={user.organization_name} editable editKey="organization_name" {...rowProps} />
+            <View style={styles.sep} />
+            <InfoRow icon="person-outline" label={t('profile.contactPerson')} value={user.contact_person} editable editKey="contact_person" {...rowProps} />
+            <View style={styles.sep} />
+            <InfoRow icon="call-outline" label={t('profile.phone')} value={user.phone} editable editKey="phone" {...rowProps} />
+            <View style={styles.sep} />
+            <InfoRow icon="location-outline" label={t('profile.address')} value={user.address} editable editKey="address" multiline {...rowProps} />
+            <View style={styles.sep} />
+            <InfoRow icon="mail-outline" label={t('profile.email')} value={user.email} {...rowProps} />
+          </View>
+        </View>
+
+        {/* Trust Score */}
+        {user.trust_score !== undefined && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('profile.trustScore')}</Text>
+            <View style={styles.card}>
+              <View style={styles.trustRow}>
+                <Text style={[styles.trustVal, { color: colors[0] }]}>{user.trust_score}</Text>
+                <Text style={styles.trustMax}>/100</Text>
+              </View>
+              <View style={styles.progressBar}>
+                <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  style={[styles.progressFill, { width: `${user.trust_score}%` as any }]} />
+              </View>
+            </View>
           </View>
         )}
-        
-        {(user.contact_person || isEditing) && (
-          <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Contact Person</Text>
-            {isEditing ? (
-              <TextInput
-                style={[styles.editInput, styles.highlightBorder]}
-                value={editData.contact_person}
-                onChangeText={(text) => setEditData({...editData, contact_person: text})}
-                placeholder="Enter contact person name"
-              />
-            ) : (
-              <Text style={styles.fieldValue}>{user.contact_person}</Text>
-            )}
-          </View>
-        )}
-      </View>
 
-      {user.trust_score !== undefined && (
+        {/* Verification */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Trust Score</Text>
-          <View style={styles.trustScore}>
-            <Text style={styles.trustScoreValue}>{user.trust_score}/100</Text>
-            <View style={styles.progressBar}>
-              <View 
-                style={[
-                  styles.progressFill, 
-                  { width: `${user.trust_score}%` }
-                ]} 
-              />
-            </View>
+          <View style={[styles.card, styles.verifyCard]}>
+            <Ionicons name={user.is_verified ? 'shield-checkmark' : 'time'} size={24}
+              color={user.is_verified ? '#10b981' : '#f59e0b'} />
+            <Text style={[styles.verifyText, { color: user.is_verified ? '#10b981' : '#f59e0b' }]}>
+              {user.is_verified ? t('profile.verified') : t('profile.pending')}
+            </Text>
           </View>
         </View>
-      )}
 
-      {user.ratings && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ratings & Reviews</Text>
-          <View style={styles.ratingContainer}>
-            <View style={styles.ratingHeader}>
-              <View style={styles.ratingScore}>
-                <Ionicons name="star" size={24} color="#fbbf24" />
-                <Text style={styles.ratingValue}>{user.ratings.average.toFixed(1)}</Text>
-              </View>
-              <Text style={styles.ratingCount}>({user.ratings.count} reviews)</Text>
-            </View>
-            {user.ratings.reviews && user.ratings.reviews.length > 0 && (
-              <View style={styles.reviewsList}>
-                {user.ratings.reviews.slice(0, 3).map((review, index) => (
-                  <View key={index} style={styles.reviewItem}>
-                    <View style={styles.reviewHeader}>
-                      <View style={styles.stars}>
-                        {[...Array(5)].map((_, i) => (
-                          <Ionicons 
-                            key={i} 
-                            name={i < review.rating ? "star" : "star-outline"} 
-                            size={14} 
-                            color="#fbbf24" 
-                          />
-                        ))}
-                      </View>
-                      <Text style={styles.reviewDate}>
-                        {new Date(review.created_at).toLocaleDateString()}
-                      </Text>
-                    </View>
-                    {review.comment && (
-                      <Text style={styles.reviewComment}>{review.comment}</Text>
-                    )}
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        </View>
-      )}
-
-      {user.activity_stats && (user.role === 'donor' || user.role === 'ngo') && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            {user.role === 'donor' ? 'Donation Statistics' : 'Activity Statistics'}
-          </Text>
-          <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <Ionicons name="add-circle" size={20} color="#3b82f6" />
-              <Text style={styles.statNumber}>{user.activity_stats.donations_posted || 0}</Text>
-              <Text style={styles.statText}>Donations Posted</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Ionicons name="checkmark-circle" size={20} color="#10b981" />
-              <Text style={styles.statNumber}>{user.activity_stats.successful_pickups || 0}</Text>
-              <Text style={styles.statText}>Successful</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Ionicons name="close-circle" size={20} color="#ef4444" />
-              <Text style={styles.statNumber}>{user.activity_stats.failed_pickups || 0}</Text>
-              <Text style={styles.statText}>Failed</Text>
-            </View>
-          </View>
-        </View>
-      )}
-
-      {user.role === 'admin' && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Admin Information</Text>
-          <View style={styles.adminInfo}>
-            <View style={styles.infoRow}>
-              <Ionicons name="shield-checkmark" size={20} color="#10b981" />
-              <Text style={styles.infoText}>System Administrator</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Ionicons name="id-card" size={20} color="#6b7280" />
-              <Text style={styles.infoText}>Admin ID: {user._id || user.id}</Text>
-            </View>
-            {user.location && (
-              <View style={styles.infoRow}>
-                <Ionicons name="globe" size={20} color="#6b7280" />
-                <Text style={styles.infoText}>Location: {user.location.coordinates[1].toFixed(4)}, {user.location.coordinates[0].toFixed(4)}</Text>
-              </View>
-            )}
-            <View style={styles.infoRow}>
-              <Ionicons name="checkmark-circle" size={20} color="#10b981" />
-              <Text style={styles.infoText}>Full System Access</Text>
-            </View>
-          </View>
-        </View>
-      )}
-
-      <View style={styles.section}>
-        <View style={styles.statusBadge}>
-          <Ionicons 
-            name={user.is_verified ? 'checkmark-circle' : 'time'} 
-            size={20} 
-            color={user.is_verified ? '#10b981' : '#f59e0b'} 
-          />
-          <Text style={[
-            styles.statusText,
-            { color: user.is_verified ? '#10b981' : '#f59e0b' }
-          ]}>
-            {user.is_verified ? 'Verified' : 'Pending Verification'}
-          </Text>
-        </View>
-      </View>
-    </ScrollView>
+        <View style={{ height: 32 }} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    padding: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#2563eb',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 4,
-  },
-  role: {
-    fontSize: 14,
-    color: '#6b7280',
-    fontWeight: '600',
-  },
-  section: {
-    backgroundColor: '#fff',
-    marginTop: 16,
-    padding: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 16,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  infoText: {
-    fontSize: 16,
-    color: '#374151',
-    marginLeft: 12,
-  },
-  trustScore: {
-    alignItems: 'center',
-  },
-  trustScoreValue: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#2563eb',
-    marginBottom: 12,
-  },
-  progressBar: {
-    width: '100%',
-    height: 8,
-    backgroundColor: '#e5e7eb',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#2563eb',
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statusText: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  ratingContainer: {
-    alignItems: 'center',
-  },
-  ratingHeader: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  ratingScore: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  ratingValue: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginLeft: 8,
-  },
-  ratingCount: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  reviewsList: {
-    width: '100%',
-  },
-  reviewItem: {
-    backgroundColor: '#f9fafb',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  reviewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  stars: {
-    flexDirection: 'row',
-  },
-  reviewDate: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  reviewComment: {
-    fontSize: 14,
-    color: '#374151',
-    fontStyle: 'italic',
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  statItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  statNumber: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginTop: 4,
-  },
-  statText: {
-    fontSize: 12,
-    color: '#6b7280',
-    textAlign: 'center',
-    marginTop: 2,
-  },
-  adminInfo: {
-    marginTop: 8,
-  },
-  fieldContainer: {
-    marginBottom: 20,
-  },
-  fieldLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  fieldValue: {
-    fontSize: 16,
-    color: '#1f2937',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  fieldNote: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 4,
-    fontStyle: 'italic',
-  },
-  highlightBorder: {
-    borderColor: '#3b82f6',
-    borderWidth: 2,
-    shadowColor: '#3b82f6',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  multilineInput: {
-    minHeight: 60,
-    textAlignVertical: 'top',
-  },
-  editButton: {
-    backgroundColor: '#2563eb',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginTop: 12,
-    gap: 6,
-  },
-  editButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  cancelButton: {
-    backgroundColor: '#6b7280',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginTop: 8,
-  },
-  cancelButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  editInput: {
-    fontSize: 16,
-    color: '#1f2937',
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  editInfoInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#374151',
-    backgroundColor: '#f8fafc',
-    borderWidth: 2,
-    borderColor: '#e2e8f0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginLeft: 12,
-  },
+  header: { alignItems: 'center', paddingTop: 36, paddingBottom: 28, paddingHorizontal: 24 },
+  avatarWrap: { position: 'relative', marginBottom: 14 },
+  avatar: { width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.25)', justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: 'rgba(255,255,255,0.5)' },
+  verifiedBadge: { position: 'absolute', bottom: 2, right: 2, width: 22, height: 22, borderRadius: 11, backgroundColor: '#10b981', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' },
+  name: { fontSize: 22, fontWeight: '800', color: '#fff', marginBottom: 8 },
+  rolePill: { backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 14, paddingVertical: 4, borderRadius: 20, marginBottom: 6 },
+  roleText: { color: '#fff', fontSize: 11, fontWeight: '700', letterSpacing: 1 },
+  email: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 16 },
+  headerBtns: { flexDirection: 'row', gap: 10 },
+  saveBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  saveBtnText: { fontSize: 14, fontWeight: '700' },
+  cancelBtn: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  cancelBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  statsRow: { flexDirection: 'row', backgroundColor: '#fff', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  statCard: { flex: 1, alignItems: 'center', gap: 4 },
+  statVal: { fontSize: 20, fontWeight: '800' },
+  statLbl: { fontSize: 11, color: '#9ca3af', fontWeight: '600' },
+  section: { paddingHorizontal: 16, marginTop: 20 },
+  sectionTitle: { fontSize: 12, fontWeight: '700', color: '#9ca3af', letterSpacing: 1, marginBottom: 8, marginLeft: 4 },
+  card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
+  infoRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 10, gap: 12 },
+  infoIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginTop: 2 },
+  infoLabel: { fontSize: 11, color: '#9ca3af', fontWeight: '600', marginBottom: 3 },
+  infoValue: { fontSize: 15, color: '#1f2937', fontWeight: '500' },
+  infoInput: { fontSize: 15, color: '#1f2937', borderWidth: 1.5, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#f9fafb', marginTop: 2 },
+  sep: { height: 1, backgroundColor: '#f3f4f6', marginLeft: 48 },
+  trustRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4, marginBottom: 12 },
+  trustVal: { fontSize: 36, fontWeight: '800' },
+  trustMax: { fontSize: 16, color: '#9ca3af' },
+  progressBar: { height: 8, backgroundColor: '#f3f4f6', borderRadius: 4, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 4 },
+  verifyCard: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  verifyText: { fontSize: 16, fontWeight: '700' },
 });

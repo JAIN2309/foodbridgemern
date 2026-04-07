@@ -2,7 +2,7 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { LocationData } from './mapService';
 
-const API_BASE_URL = 'http://10.132.72.65:5001/api'; // Host Wi-Fi IP
+const API_BASE_URL = 'http://10.139.232.65:5001/api'; // Host Wi-Fi IP
 
 console.log('🔧 API Base URL:', API_BASE_URL);
 
