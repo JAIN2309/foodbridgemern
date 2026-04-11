@@ -10,215 +10,360 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+// Modern Email Base Template
+const getEmailBase = (content) => `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FoodBridge</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body { margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-font-smoothing: antialiased; }
+    .email-wrapper { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .email-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; }
+    .logo { width: 60px; height: 60px; background: white; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 15px; }
+    .email-header h1 { color: white; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+    .email-header p { color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px; }
+    .email-body { padding: 40px 30px; }
+    .greeting { font-size: 18px; color: #1f2937; margin: 0 0 20px 0; font-weight: 600; }
+    .message { font-size: 15px; line-height: 1.6; color: #4b5563; margin: 0 0 25px 0; }
+    .info-card { background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 4px solid #3b82f6; border-radius: 12px; padding: 25px; margin: 25px 0; }
+    .info-card.success { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-left-color: #10b981; }
+    .info-card.warning { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-left-color: #f59e0b; }
+    .info-card.danger { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-left-color: #ef4444; }
+    .info-card h3 { margin: 0 0 15px 0; font-size: 18px; color: #1f2937; font-weight: 600; }
+    .info-table { width: 100%; border-collapse: collapse; }
+    .info-table tr { border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .info-table tr:last-child { border-bottom: none; }
+    .info-table td { padding: 12px 0; font-size: 14px; }
+    .info-table td:first-child { color: #6b7280; font-weight: 500; width: 40%; }
+    .info-table td:last-child { color: #1f2937; font-weight: 600; }
+    .badge { display: inline-block; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .badge.donor { background: #dbeafe; color: #1e40af; }
+    .badge.ngo { background: #d1fae5; color: #065f46; }
+    .badge.admin { background: #fce7f3; color: #9f1239; }
+    .badge.pending { background: #fef3c7; color: #92400e; }
+    .badge.approved { background: #d1fae5; color: #065f46; }
+    .badge.rejected { background: #fee2e2; color: #991b1b; }
+    .action-list { background: #f9fafb; border-radius: 8px; padding: 20px; margin: 20px 0; }
+    .action-list ol { margin: 0; padding-left: 20px; }
+    .action-list li { color: #4b5563; font-size: 14px; line-height: 1.8; margin-bottom: 8px; }
+    .cta-button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 15px; margin: 20px 0; box-shadow: 0 4px 12px rgba(102,126,234,0.4); }
+    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin: 20px 0; }
+    .stat-card { background: white; border: 2px solid #e5e7eb; border-radius: 8px; padding: 15px; text-align: center; }
+    .stat-value { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+    .stat-label { font-size: 12px; color: #6b7280; margin: 5px 0 0 0; text-transform: uppercase; letter-spacing: 0.5px; }
+    .email-footer { background: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb; }
+    .email-footer p { margin: 0 0 10px 0; font-size: 13px; color: #6b7280; }
+    .social-links { margin: 15px 0; }
+    .social-links a { display: inline-block; width: 36px; height: 36px; background: #e5e7eb; border-radius: 50%; margin: 0 5px; line-height: 36px; text-decoration: none; color: #4b5563; font-size: 16px; }
+    .divider { height: 1px; background: linear-gradient(to right, transparent, #e5e7eb, transparent); margin: 30px 0; }
+    @media only screen and (max-width: 600px) {
+      .email-wrapper { margin: 0; border-radius: 0; }
+      .email-body { padding: 30px 20px; }
+      .stats-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="email-header">
+      <div class="logo">🍽️</div>
+      <h1>FoodBridge</h1>
+      <p>Connecting Hearts, Reducing Waste</p>
+    </div>
+    <div class="email-body">
+      ${content}
+    </div>
+    <div class="email-footer">
+      <p><strong>FoodBridge</strong> - Bridging Food Surplus with Food Security</p>
+      <p>📧 support@foodbridge.com | 📞 +91 8849096412
+      
+      <p style="font-size: 11px; color: #9ca3af; margin-top: 20px;">
+        © 2026 FoodBridge. All rights reserved.<br>
+        This email was sent to you because you are registered with FoodBridge.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+`;
+
 // Email Templates
 const emailTemplates = {
   registration: (user) => ({
-    subject: 'Welcome to FoodBridge - Registration Successful!',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2563eb;">Welcome to FoodBridge!</h2>
-        <p>Dear ${user.contact_person},</p>
-        <p>Thank you for registering with FoodBridge as a <strong>${user.role.toUpperCase()}</strong>.</p>
-        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3>Your Registration Details:</h3>
-          <p><strong>Organization:</strong> ${user.organization_name}</p>
-          <p><strong>Email:</strong> ${user.email}</p>
-          <p><strong>Role:</strong> ${user.role.toUpperCase()}</p>
-          <p><strong>Status:</strong> Pending Verification</p>
-        </div>
-        <p>Your account is currently under review. You'll receive another email once approved by our admin team.</p>
-        <p>Best regards,<br>FoodBridge Team</p>
+    subject: '🎉 Welcome to FoodBridge - Registration Successful!',
+    html: getEmailBase(`
+      <p class="greeting">Dear ${user.contact_person},</p>
+      <p class="message">
+        Thank you for joining FoodBridge! We're excited to have you as part of our mission to reduce food waste and help feed those in need.
+      </p>
+      <div class="info-card">
+        <h3>📝 Your Registration Details</h3>
+        <table class="info-table">
+          <tr><td>Organization</td><td>${user.organization_name}</td></tr>
+          <tr><td>Email Address</td><td>${user.email}</td></tr>
+          <tr><td>Contact Person</td><td>${user.contact_person}</td></tr>
+          <tr><td>Phone Number</td><td>${user.phone}</td></tr>
+          <tr><td>Role</td><td><span class="badge ${user.role}">${user.role.toUpperCase()}</span></td></tr>
+          <tr><td>License Number</td><td>${user.license_number}</td></tr>
+          <tr><td>Status</td><td><span class="badge pending">Pending Verification</span></td></tr>
+          <tr><td>Registered On</td><td>${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</td></tr>
+        </table>
       </div>
-    `
+      <div class="info-card warning">
+        <h3>⏳ What Happens Next?</h3>
+        <p class="message">Your account is currently under review by our admin team. This process typically takes 24-48 hours. You'll receive an email notification once your account is approved.</p>
+      </div>
+      <div class="divider"></div>
+      <p class="message" style="text-align: center; color: #6b7280; font-size: 14px;">
+        <strong>Thank you for choosing FoodBridge!</strong><br>Together, we can make a difference.
+      </p>
+    `)
   }),
 
   approval: (user, approved) => ({
-    subject: approved ? 'Account Approved - Welcome to FoodBridge!' : 'Account Registration Update',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: ${approved ? '#059669' : '#dc2626'};">
-          Account ${approved ? 'Approved' : 'Rejected'}
-        </h2>
-        <p>Dear ${user.contact_person},</p>
-        ${approved ? `
-          <p>Great news! Your FoodBridge account has been approved.</p>
-          <div style="background: #ecfdf5; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #059669;">
-            <p><strong>You can now:</strong></p>
-            <ul>
-              ${user.role === 'donor' ? 
-                '<li>Post food donations</li><li>Track donation status</li><li>Help reduce food waste</li>' :
-                '<li>Browse nearby donations</li><li>Claim food donations</li><li>Help feed those in need</li>'
-              }
-            </ul>
-          </div>
-        ` : `
-          <p>Unfortunately, your account registration has been rejected.</p>
-          <p>Please contact our support team if you believe this is an error.</p>
-        `}
-        <p>Best regards,<br>FoodBridge Team</p>
-      </div>
-    `
+    subject: approved ? '✅ Account Approved - Welcome to FoodBridge!' : '❌ Account Registration Update',
+    html: getEmailBase(`
+      <p class="greeting">Dear ${user.contact_person},</p>
+      ${approved ? `
+        <p class="message">🎉 <strong>Great news!</strong> Your FoodBridge account has been approved and is now active!</p>
+        <div class="info-card success">
+          <h3>✅ Account Approved</h3>
+          <table class="info-table">
+            <tr><td>Organization</td><td>${user.organization_name}</td></tr>
+            <tr><td>Account Type</td><td><span class="badge ${user.role}">${user.role.toUpperCase()}</span></td></tr>
+            <tr><td>Status</td><td><span class="badge approved">VERIFIED</span></td></tr>
+            <tr><td>Approved On</td><td>${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</td></tr>
+          </table>
+        </div>
+        <div style="text-align: center;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" class="cta-button">🚀 Login to Your Dashboard</a>
+        </div>
+      ` : `
+        <p class="message">We regret to inform you that your account registration has been rejected after review.</p>
+        <div class="info-card danger">
+          <h3>❌ Registration Rejected</h3>
+          <p class="message">Your application did not meet our verification criteria. Please contact <strong>support@foodbridge.com</strong> for more information.</p>
+        </div>
+      `}
+      <div class="divider"></div>
+      <p class="message" style="text-align: center; color: #6b7280; font-size: 14px;">Questions? Contact us at support@foodbridge.com</p>
+    `)
   }),
 
   newDonation: (donation, ngo) => ({
-    subject: 'New Food Donation Available Nearby!',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #059669;">🍽️ New Food Donation Available!</h2>
-        <p>Dear ${ngo.contact_person},</p>
-        <p>A new food donation is available near your location:</p>
-        <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #bbf7d0;">
-          <h3>${donation.food_items.map(item => item.name).join(', ')}</h3>
-          <p><strong>Donor:</strong> ${donation.donor_id.organization_name}</p>
-          <p><strong>Serves:</strong> ${donation.quantity_serves} people</p>
-          <p><strong>Pickup Address:</strong> ${donation.pickup_address}</p>
-          <p><strong>Available Until:</strong> ${new Date(donation.pickup_window_end).toLocaleString()}</p>
-        </div>
-        <p>Act fast - donations are claimed on a first-come, first-served basis!</p>
-        <p>Best regards,<br>FoodBridge Team</p>
+    subject: '🍽️ New Food Donation Available Nearby!',
+    html: getEmailBase(`
+      <p class="greeting">Dear ${ngo.contact_person},</p>
+      <p class="message">🚨 <strong>Alert!</strong> A new food donation matching your area is now available.</p>
+      <div class="info-card success">
+        <h3>🍽️ Donation Details</h3>
+        <table class="info-table">
+          <tr><td>Food Items</td><td><strong>${donation.food_items.map(item => item.name).join(', ')}</strong></td></tr>
+          <tr><td>Quantity</td><td><strong>🍽️ Serves ${donation.quantity_serves} people</strong></td></tr>
+          <tr><td>Donor</td><td>${donation.donor_id.organization_name}</td></tr>
+          <tr><td>Contact</td><td>${donation.donor_id.phone}</td></tr>
+        </table>
       </div>
-    `
+      <div class="info-card warning">
+        <h3>📍 Pickup Information</h3>
+        <table class="info-table">
+          <tr><td>Address</td><td>${donation.pickup_address}</td></tr>
+          <tr><td>Pickup Window</td><td><strong>From:</strong> ${new Date(donation.pickup_window_start).toLocaleString('en-IN')}<br><strong>To:</strong> ${new Date(donation.pickup_window_end).toLocaleString('en-IN')}</td></tr>
+        </table>
+      </div>
+      <div style="text-align: center;">
+        <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" class="cta-button">👍 Claim This Donation</a>
+      </div>
+    `)
   }),
 
   donationClaimed: (donation, ngo, donor) => ({
     ngo: {
-      subject: 'Donation Claimed Successfully!',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #059669;">✅ Donation Claimed Successfully!</h2>
-          <p>Dear ${ngo.contact_person},</p>
-          <p>You have successfully claimed a food donation:</p>
-          <div style="background: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3>${donation.food_items.map(item => item.name).join(', ')}</h3>
-            <p><strong>From:</strong> ${donor.organization_name}</p>
-            <p><strong>Contact:</strong> ${donor.phone}</p>
-            <p><strong>Pickup Address:</strong> ${donation.pickup_address}</p>
-            <p><strong>Pickup Window:</strong> ${new Date(donation.pickup_window_start).toLocaleString()} - ${new Date(donation.pickup_window_end).toLocaleString()}</p>
-          </div>
-          <p><strong>Next Steps:</strong></p>
-          <ol>
-            <li>Contact the donor at ${donor.phone}</li>
-            <li>Coordinate pickup time</li>
-            <li>Pick up the food</li>
-            <li>Mark as collected in your dashboard</li>
-          </ol>
-          <p>Best regards,<br>FoodBridge Team</p>
+      subject: '✅ Donation Claimed Successfully!',
+      html: getEmailBase(`
+        <p class="greeting">Dear ${ngo.contact_person},</p>
+        <p class="message">🎉 <strong>Success!</strong> You have successfully claimed a food donation. Please coordinate with the donor for pickup.</p>
+        <div class="info-card success">
+          <h3>🍽️ Claimed Donation</h3>
+          <table class="info-table">
+            <tr><td>Food Items</td><td><strong>${donation.food_items.map(item => item.name).join(', ')}</strong></td></tr>
+            <tr><td>Quantity</td><td><strong>🍽️ Serves ${donation.quantity_serves} people</strong></td></tr>
+            <tr><td>Claimed On</td><td>${new Date().toLocaleString('en-IN')}</td></tr>
+          </table>
         </div>
-      `
+        <div class="info-card">
+          <h3>👤 Donor Contact Information</h3>
+          <table class="info-table">
+            <tr><td>Organization</td><td>${donor.organization_name}</td></tr>
+            <tr><td>Contact Person</td><td>${donor.contact_person}</td></tr>
+            <tr><td>Phone Number</td><td><strong>📞 ${donor.phone}</strong></td></tr>
+            <tr><td>Email</td><td>${donor.email}</td></tr>
+          </table>
+        </div>
+        <div class="info-card warning">
+          <h3>📍 Pickup Details</h3>
+          <table class="info-table">
+            <tr><td>Address</td><td>${donation.pickup_address}</td></tr>
+            <tr><td>Pickup Window</td><td><strong>From:</strong> ${new Date(donation.pickup_window_start).toLocaleString('en-IN')}<br><strong>To:</strong> ${new Date(donation.pickup_window_end).toLocaleString('en-IN')}</td></tr>
+          </table>
+        </div>
+        <div style="text-align: center;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" class="cta-button">📊 View in Dashboard</a>
+        </div>
+      `)
     },
     donor: {
-      subject: 'Your Donation Has Been Claimed!',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #2563eb;">🎉 Your Donation Has Been Claimed!</h2>
-          <p>Dear ${donor.contact_person},</p>
-          <p>Great news! Your food donation has been claimed by an NGO:</p>
-          <div style="background: #dbeafe; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3>${donation.food_items.map(item => item.name).join(', ')}</h3>
-            <p><strong>Claimed by:</strong> ${ngo.organization_name}</p>
-            <p><strong>Contact Person:</strong> ${ngo.contact_person}</p>
-            <p><strong>Phone:</strong> ${ngo.phone}</p>
-          </div>
-          <p><strong>What's Next:</strong></p>
-          <p>The NGO will contact you shortly to coordinate the pickup. Please be available during your specified pickup window.</p>
-          <p>Thank you for helping reduce food waste and feeding those in need!</p>
-          <p>Best regards,<br>FoodBridge Team</p>
+      subject: '🎉 Your Donation Has Been Claimed!',
+      html: getEmailBase(`
+        <p class="greeting">Dear ${donor.contact_person},</p>
+        <p class="message">🎉 <strong>Great news!</strong> Your food donation has been claimed by an NGO. They will contact you shortly to coordinate pickup.</p>
+        <div class="info-card success">
+          <h3>🍽️ Donation Claimed</h3>
+          <table class="info-table">
+            <tr><td>Food Items</td><td><strong>${donation.food_items.map(item => item.name).join(', ')}</strong></td></tr>
+            <tr><td>Quantity</td><td><strong>🍽️ Serves ${donation.quantity_serves} people</strong></td></tr>
+            <tr><td>Claimed On</td><td>${new Date().toLocaleString('en-IN')}</td></tr>
+          </table>
         </div>
-      `
+        <div class="info-card">
+          <h3>🤝 NGO Contact Information</h3>
+          <table class="info-table">
+            <tr><td>Organization</td><td>${ngo.organization_name}</td></tr>
+            <tr><td>Contact Person</td><td>${ngo.contact_person}</td></tr>
+            <tr><td>Phone Number</td><td><strong>📞 ${ngo.phone}</strong></td></tr>
+            <tr><td>Email</td><td>${ngo.email}</td></tr>
+          </table>
+        </div>
+        <div class="divider"></div>
+        <p class="message" style="text-align: center; color: #6b7280; font-size: 14px;">
+          <strong>Thank you for helping reduce food waste!</strong><br>
+          Your contribution will help feed ${donation.quantity_serves} people. 🙏
+        </p>
+      `)
     }
   }),
 
   donationCompleted: (donation, ngo, donor) => ({
     ngo: {
-      subject: 'Donation Completed - Thank You!',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #059669;">🙏 Thank You for Making a Difference!</h2>
-          <p>Dear ${ngo.contact_person},</p>
-          <p>You have successfully completed a food donation pickup:</p>
-          <div style="background: #ecfdf5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3>${donation.food_items.map(item => item.name).join(', ')}</h3>
-            <p><strong>From:</strong> ${donor.organization_name}</p>
-            <p><strong>Serves:</strong> ${donation.quantity_serves} people</p>
-            <p><strong>Completed:</strong> ${new Date().toLocaleString()}</p>
-          </div>
-          <p>Your efforts help reduce food waste and feed those in need. Keep up the amazing work!</p>
-          <p>Best regards,<br>FoodBridge Team</p>
+      subject: '🙏 Donation Completed - Thank You!',
+      html: getEmailBase(`
+        <p class="greeting">Dear ${ngo.contact_person},</p>
+        <p class="message">🎉 <strong>Congratulations!</strong> You have successfully completed a food donation pickup.</p>
+        <div class="info-card success">
+          <h3>✅ Completed Donation</h3>
+          <table class="info-table">
+            <tr><td>Food Items</td><td><strong>${donation.food_items.map(item => item.name).join(', ')}</strong></td></tr>
+            <tr><td>Quantity</td><td><strong>🍽️ Serves ${donation.quantity_serves} people</strong></td></tr>
+            <tr><td>Donor</td><td>${donor.organization_name}</td></tr>
+            <tr><td>Status</td><td><span class="badge approved">COMPLETED</span></td></tr>
+            <tr><td>Completed On</td><td>${new Date().toLocaleString('en-IN')}</td></tr>
+          </table>
         </div>
-      `
+        <div class="stats-grid">
+          <div class="stat-card"><p class="stat-value">${donation.quantity_serves}</p><p class="stat-label">People Fed</p></div>
+          <div class="stat-card"><p class="stat-value">100%</p><p class="stat-label">Food Saved</p></div>
+        </div>
+        <div style="text-align: center;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" class="cta-button">📊 View Your Impact</a>
+        </div>
+      `)
     },
     donor: {
-      subject: 'Donation Successfully Completed!',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #2563eb;">✨ Your Donation Made an Impact!</h2>
-          <p>Dear ${donor.contact_person},</p>
-          <p>Your food donation has been successfully collected and will help feed ${donation.quantity_serves} people!</p>
-          <div style="background: #dbeafe; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3>Impact Summary</h3>
-            <p><strong>Food Items:</strong> ${donation.food_items.map(item => item.name).join(', ')}</p>
-            <p><strong>People Fed:</strong> ${donation.quantity_serves}</p>
-            <p><strong>Collected by:</strong> ${ngo.organization_name}</p>
-            <p><strong>Completed:</strong> ${new Date().toLocaleString()}</p>
-          </div>
-          <p>Thank you for being part of the solution to food waste and hunger!</p>
-          <p>Best regards,<br>FoodBridge Team</p>
+      subject: '✨ Your Donation Made an Impact!',
+      html: getEmailBase(`
+        <p class="greeting">Dear ${donor.contact_person},</p>
+        <p class="message">✨ <strong>Wonderful news!</strong> Your food donation has been successfully collected and will help feed ${donation.quantity_serves} people!</p>
+        <div class="info-card success">
+          <h3>🎯 Impact Summary</h3>
+          <table class="info-table">
+            <tr><td>Food Items</td><td><strong>${donation.food_items.map(item => item.name).join(', ')}</strong></td></tr>
+            <tr><td>People Fed</td><td><strong>🍽️ ${donation.quantity_serves} people</strong></td></tr>
+            <tr><td>Collected By</td><td>${ngo.organization_name}</td></tr>
+            <tr><td>Status</td><td><span class="badge approved">COMPLETED</span></td></tr>
+            <tr><td>Completed On</td><td>${new Date().toLocaleString('en-IN')}</td></tr>
+          </table>
         </div>
-      `
+        <div class="stats-grid">
+          <div class="stat-card"><p class="stat-value">${donation.quantity_serves}</p><p class="stat-label">People Helped</p></div>
+          <div class="stat-card"><p class="stat-value">0kg</p><p class="stat-label">Waste Prevented</p></div>
+        </div>
+        <div style="text-align: center;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" class="cta-button">📊 View Your Impact Dashboard</a>
+        </div>
+        <div class="divider"></div>
+        <p class="message" style="text-align: center; color: #6b7280; font-size: 14px;">
+          <strong>Thank you for being a FoodBridge hero!</strong><br>Your generosity makes a real difference. 🙏
+        </p>
+      `)
     }
   }),
 
   login: (user) => ({
-    subject: 'Welcome Back to FoodBridge!',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2563eb;">Welcome Back!</h2>
-        <p>Dear ${user.contact_person},</p>
-        <p>You have successfully logged into your FoodBridge account.</p>
-        <div style="background: #dbeafe; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3>Login Details:</h3>
-          <p><strong>Account:</strong> ${user.email}</p>
-          <p><strong>Organization:</strong> ${user.organization_name}</p>
-          <p><strong>Role:</strong> ${user.role.toUpperCase()}</p>
-          <p><strong>Login Time:</strong> ${new Date().toLocaleString()}</p>
-        </div>
-        <p>If this wasn't you, please contact our support team immediately.</p>
-        <p>Best regards,<br>FoodBridge Team</p>
+    subject: '🔐 Welcome Back to FoodBridge!',
+    html: getEmailBase(`
+      <p class="greeting">Welcome back, ${user.contact_person}!</p>
+      <p class="message">You have successfully logged into your FoodBridge account.</p>
+      <div class="info-card">
+        <h3>🔐 Login Details</h3>
+        <table class="info-table">
+          <tr><td>Account</td><td>${user.email}</td></tr>
+          <tr><td>Organization</td><td>${user.organization_name}</td></tr>
+          <tr><td>Role</td><td><span class="badge ${user.role}">${user.role.toUpperCase()}</span></td></tr>
+          <tr><td>Login Time</td><td>${new Date().toLocaleString('en-IN')}</td></tr>
+        </table>
       </div>
-    `
+      <div class="info-card warning">
+        <h3>🔒 Security Notice</h3>
+        <p class="message">If this wasn't you, please contact our support team immediately at <strong>support@foodbridge.com</strong>.</p>
+      </div>
+      <div style="text-align: center;">
+        <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" class="cta-button">📊 Go to Dashboard</a>
+      </div>
+    `)
   }),
 
   logout: (user) => ({
-    subject: 'Logout Notification - FoodBridge',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #6b7280;">Logout Notification</h2>
-        <p>Dear ${user.contact_person},</p>
-        <p>You have successfully logged out from your FoodBridge account.</p>
-        <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <p><strong>Logout Time:</strong> ${new Date().toLocaleString()}</p>
-          <p><strong>Account:</strong> ${user.email}</p>
-        </div>
-        <p>If this wasn't you, please contact our support team immediately.</p>
-        <p>Best regards,<br>FoodBridge Team</p>
+    subject: '👋 Logout Notification - FoodBridge',
+    html: getEmailBase(`
+      <p class="greeting">Goodbye, ${user.contact_person}!</p>
+      <p class="message">You have successfully logged out from your FoodBridge account.</p>
+      <div class="info-card">
+        <h3>📝 Session Details</h3>
+        <table class="info-table">
+          <tr><td>Account</td><td>${user.email}</td></tr>
+          <tr><td>Logout Time</td><td>${new Date().toLocaleString('en-IN')}</td></tr>
+        </table>
       </div>
-    `
+      <div class="info-card warning">
+        <h3>🔒 Security Notice</h3>
+        <p class="message">If this wasn't you, please contact our support team immediately.</p>
+      </div>
+      <div style="text-align: center;">
+        <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" class="cta-button">🔐 Login Again</a>
+      </div>
+      <div class="divider"></div>
+      <p class="message" style="text-align: center; color: #6b7280; font-size: 14px;">
+        Thank you for using FoodBridge!<br>See you again soon. 👋
+      </p>
+    `)
   })
 };
 
 // Send Email Function
 const sendEmail = async (to, template) => {
   try {
-    console.log(`Attempting to send email to: ${to}`);
-    console.log(`Email subject: ${template.subject}`);
-    
+    console.log(`📧 Attempting to send email to: ${to}`);
+    console.log(`📨 Email subject: ${template.subject}`);
     const mailOptions = {
-      from: `"FoodBridge" <${process.env.SMTP_USER}>`,
-      to: to,
+      from: `"FoodBridge 🍽️" <${process.env.SMTP_USER}>`,
+      to,
       subject: template.subject,
       html: template.html
     };
-
     const result = await transporter.sendMail(mailOptions);
     console.log('✅ Email sent successfully:', result.messageId);
     return result;
@@ -228,7 +373,4 @@ const sendEmail = async (to, template) => {
   }
 };
 
-module.exports = {
-  sendEmail,
-  emailTemplates
-};
+module.exports = { sendEmail, emailTemplates };

@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '../hooks/useRedux';
 import { registerUser } from '../store/authSlice';
 import Toast from 'react-native-toast-message';
@@ -14,21 +15,22 @@ import Toast from 'react-native-toast-message';
 const { width } = Dimensions.get('window');
 
 const ROLES = [
-  { key: 'donor', label: 'Donor', icon: 'restaurant', desc: 'Share surplus food', colors: ['#2563eb', '#3b82f6'] },
-  { key: 'ngo', label: 'NGO', icon: 'people', desc: 'Claim & distribute', colors: ['#16a34a', '#22c55e'] },
+  { key: 'donor', label: 'auth.register.donor', icon: 'restaurant', desc: 'auth.register.donorDesc', colors: ['#2563eb', '#3b82f6'] },
+  { key: 'ngo', label: 'auth.register.ngo', icon: 'people', desc: 'auth.register.ngoDesc', colors: ['#16a34a', '#22c55e'] },
 ];
 
 const FIELDS = [
-  { key: 'organization_name', placeholder: 'Organization Name *', icon: 'business-outline', required: true },
-  { key: 'contact_person', placeholder: 'Contact Person', icon: 'person-outline' },
-  { key: 'phone', placeholder: 'Phone Number', icon: 'call-outline', keyboard: 'phone-pad' },
-  { key: 'address', placeholder: 'Address', icon: 'location-outline' },
+  { key: 'organization_name', placeholder: 'auth.register.orgNamePlaceholder', icon: 'business-outline', required: true },
+  { key: 'contact_person', placeholder: 'auth.register.contactPersonPlaceholder', icon: 'person-outline' },
+  { key: 'phone', placeholder: 'auth.register.phonePlaceholder', icon: 'call-outline', keyboard: 'phone-pad' },
+  { key: 'address', placeholder: 'auth.register.addressPlaceholder', icon: 'location-outline' },
 ];
 
 export default function RegisterScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { isLoading } = useAppSelector((state) => state.auth);
+  const { t } = useTranslation();
 
   const [formData, setFormData] = useState({
     email: '', password: '', role: 'donor',
@@ -45,16 +47,16 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!formData.email || !formData.password || !formData.organization_name) {
-      Toast.show({ type: 'error', text1: 'Fill required fields', text2: 'Email, password & org name required' });
+      Toast.show({ type: 'error', text1: t('auth.register.fillRequired'), text2: t('auth.register.fillRequiredDesc') });
       return;
     }
     try {
       await dispatch(registerUser(formData)).unwrap();
-      Toast.show({ type: 'success', text1: 'Account created!' });
+      Toast.show({ type: 'success', text1: t('auth.register.accountCreated') });
       router.replace('/(tabs)');
     } catch (error: any) {
-      const msg = typeof error === 'string' ? error : error?.message || 'Registration failed';
-      Toast.show({ type: 'error', text1: 'Registration Failed', text2: msg, visibilityTime: 4000 });
+      const msg = typeof error === 'string' ? error : error?.message || t('auth.register.registrationFailed');
+      Toast.show({ type: 'error', text1: t('auth.register.registrationFailed'), text2: msg, visibilityTime: 4000 });
     }
   };
 
@@ -72,17 +74,17 @@ export default function RegisterScreen() {
             <LinearGradient colors={['#16a34a', '#2563eb', '#7c3aed']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.logoBox}>
               <Ionicons name="person-add" size={30} color="#fff" />
             </LinearGradient>
-            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.title}>{t('auth.register.title')}</Text>
             <View style={styles.subtitleRow}>
               <Ionicons name="sparkles" size={14} color="#eab308" />
-              <Text style={styles.subtitle}>Join the FoodBridge community</Text>
+              <Text style={styles.subtitle}>{t('auth.register.subtitle')}</Text>
             </View>
           </View>
 
           <View style={styles.card}>
 
             {/* Role Selector */}
-            <Text style={styles.sectionLabel}>I am a...</Text>
+            <Text style={styles.sectionLabel}>{t('auth.register.iAmA')}</Text>
             <View style={styles.roleRow}>
               {ROLES.map((r) => (
                 <TouchableOpacity key={r.key} onPress={() => update('role', r.key)} activeOpacity={0.85}
@@ -96,8 +98,8 @@ export default function RegisterScreen() {
                       <Ionicons name={r.icon as any} size={22} color="#9ca3af" />
                     </View>
                   )}
-                  <Text style={[styles.roleLabel, formData.role === r.key && { color: r.colors[0], fontWeight: '700' }]}>{r.label}</Text>
-                  <Text style={styles.roleDesc}>{r.desc}</Text>
+                  <Text style={[styles.roleLabel, formData.role === r.key && { color: r.colors[0], fontWeight: '700' }]}>{t(r.label)}</Text>
+                  <Text style={styles.roleDesc}>{t(r.desc)}</Text>
                   {formData.role === r.key && (
                     <View style={[styles.roleCheck, { backgroundColor: r.colors[0] }]}>
                       <Ionicons name="checkmark" size={10} color="#fff" />
@@ -110,12 +112,12 @@ export default function RegisterScreen() {
             {/* Email */}
             <View style={styles.labelRow}>
               <Ionicons name="mail" size={13} color="#2563eb" />
-              <Text style={styles.label}>Email Address *</Text>
+              <Text style={styles.label}>{t('auth.register.email')} *</Text>
             </View>
             <View style={[styles.inputWrap, focused === 'email' && styles.inputFocusBlue]}>
               <Ionicons name="mail-outline" size={18} color={focused === 'email' ? '#2563eb' : '#9ca3af'} style={styles.inputIcon} />
               <TextInput
-                style={styles.input} placeholder="you@example.com" placeholderTextColor="#9ca3af"
+                style={styles.input} placeholder={t('auth.register.emailPlaceholder')} placeholderTextColor="#9ca3af"
                 value={formData.email} onChangeText={(v) => update('email', v)}
                 keyboardType="email-address" autoCapitalize="none"
                 onFocus={() => setFocused('email')} onBlur={() => setFocused('')}
@@ -125,12 +127,12 @@ export default function RegisterScreen() {
             {/* Password */}
             <View style={[styles.labelRow, { marginTop: 14 }]}>
               <Ionicons name="lock-closed" size={13} color="#7c3aed" />
-              <Text style={styles.label}>Password *</Text>
+              <Text style={styles.label}>{t('auth.register.password')} *</Text>
             </View>
             <View style={[styles.inputWrap, focused === 'password' && styles.inputFocusPurple]}>
               <Ionicons name="lock-closed-outline" size={18} color={focused === 'password' ? '#7c3aed' : '#9ca3af'} style={styles.inputIcon} />
               <TextInput
-                style={styles.input} placeholder="Min. 6 characters" placeholderTextColor="#9ca3af"
+                style={styles.input} placeholder={t('auth.register.passwordPlaceholder')} placeholderTextColor="#9ca3af"
                 value={formData.password} onChangeText={(v) => update('password', v)}
                 secureTextEntry={!showPassword}
                 onFocus={() => setFocused('password')} onBlur={() => setFocused('')}
@@ -146,20 +148,20 @@ export default function RegisterScreen() {
                   <View style={[styles.strengthFill, { width: passWidth[passStrength] as any, backgroundColor: passColor[passStrength] }]} />
                 </View>
                 <Text style={[styles.strengthText, { color: passColor[passStrength] }]}>
-                  {passStrength.charAt(0).toUpperCase() + passStrength.slice(1)}
+                  {t(`auth.register.${passStrength}`)}
                 </Text>
               </View>
             )}
 
             {/* Other fields */}
-            <View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>Organization Details</Text><View style={styles.dividerLine} /></View>
+            <View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>{t('auth.register.orgDetails')}</Text><View style={styles.dividerLine} /></View>
 
             {FIELDS.map((f) => (
               <View key={f.key} style={{ marginBottom: 12 }}>
                 <View style={[styles.inputWrap, focused === f.key && styles.inputFocusBlue]}>
                   <Ionicons name={f.icon as any} size={18} color={focused === f.key ? '#2563eb' : '#9ca3af'} style={styles.inputIcon} />
                   <TextInput
-                    style={styles.input} placeholder={f.placeholder} placeholderTextColor="#9ca3af"
+                    style={styles.input} placeholder={t(f.placeholder)} placeholderTextColor="#9ca3af"
                     value={(formData as any)[f.key]} onChangeText={(v) => update(f.key, v)}
                     keyboardType={(f as any).keyboard || 'default'}
                     onFocus={() => setFocused(f.key)} onBlur={() => setFocused('')}
@@ -178,14 +180,14 @@ export default function RegisterScreen() {
                 {isLoading ? <ActivityIndicator color="#fff" /> : (
                   <>
                     <Ionicons name="person-add" size={18} color="#fff" />
-                    <Text style={styles.btnText}>Create Account</Text>
+                    <Text style={styles.btnText}>{t('auth.register.createBtn')}</Text>
                   </>
                 )}
               </LinearGradient>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => router.back()} style={styles.loginBtn}>
-              <Text style={styles.loginText}>Already have an account? <Text style={styles.loginBold}>Sign in →</Text></Text>
+              <Text style={styles.loginText}>{t('auth.register.alreadyHaveAccount')} <Text style={styles.loginBold}>{t('auth.register.signIn')} →</Text></Text>
             </TouchableOpacity>
           </View>
 

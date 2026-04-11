@@ -4,9 +4,10 @@ import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { Eye, EyeOff, Check, X, Building, Mail, Lock, Sparkles, Heart, Users, TrendingUp, Shield } from 'lucide-react';
+import { Eye, EyeOff, Check, X, Building, Mail, Lock, Sparkles, Heart, Users, TrendingUp, Shield, Fingerprint } from 'lucide-react';
 import { loginUser, clearError } from '../../store/slices/authSlice';
 import LanguageSelector from '../../components/common/LanguageSelector';
+import { useBiometric } from '../../hooks/useBiometric';
 
 const Login = () => {
   const { t } = useTranslation();
@@ -15,6 +16,8 @@ const Login = () => {
   const { register, handleSubmit, watch, formState: { errors } } = useForm();
   const [showPassword, setShowPassword] = useState(false);
   const [isTyping, setIsTyping] = useState({ email: false, password: false });
+  const { isAvailable, isEnabled, authenticate } = useBiometric();
+  const [isBiometricLoading, setIsBiometricLoading] = useState(false);
 
   const watchedEmail = watch('email');
   const watchedPassword = watch('password');
@@ -27,9 +30,51 @@ const Login = () => {
   const onSubmit = async (data) => {
     try {
       await dispatch(loginUser(data)).unwrap();
+      
+      // ALWAYS save credentials if biometric is available (even if not enabled yet)
+      // This way when user enables biometric later, credentials are already saved
+      if (isAvailable) {
+        localStorage.setItem('biometricEmail', data.email);
+        localStorage.setItem('biometricPassword', data.password);
+      }
+      
       toast.success(t('auth.login.loginSuccess') || 'Login successful!');
     } catch (error) {
       toast.error(error || t('auth.login.loginFailed') || 'Login failed');
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    setIsBiometricLoading(true);
+    try {
+      // Check if credentials are saved
+      const savedEmail = localStorage.getItem('biometricEmail');
+      const savedPassword = localStorage.getItem('biometricPassword');
+      
+      if (!savedEmail || !savedPassword) {
+        toast.error(t('biometric.noCredentials'), {
+          duration: 4000,
+          icon: '🔑',
+        });
+        setIsBiometricLoading(false);
+        return;
+      }
+
+      // Authenticate with biometric
+      const result = await authenticate();
+      
+      if (result.success) {
+        // Use saved credentials to login
+        await dispatch(loginUser({ email: savedEmail, password: savedPassword })).unwrap();
+        toast.success(t('biometric.loginSuccess'));
+      } else {
+        toast.error(t('biometric.authFailed') + ': ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Biometric login error:', error);
+      toast.error(t('biometric.loginFailed'));
+    } finally {
+      setIsBiometricLoading(false);
     }
   };
 
@@ -276,6 +321,46 @@ const Login = () => {
                 )}
               </span>
             </button>
+
+            {/* Biometric Login Button */}
+            {isAvailable && isEnabled && (
+              <>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-white text-gray-500">OR</span>
+                  </div>
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={handleBiometricLogin}
+                  disabled={isBiometricLoading}
+                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 px-6 rounded-xl font-semibold text-lg shadow-xl hover:shadow-2xl transform hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none relative overflow-hidden group"
+                >
+                  <span className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-green-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                  <span className="relative flex items-center justify-center gap-2">
+                    {isBiometricLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                        {t('biometric.authenticating')}
+                      </>
+                    ) : (
+                      <>
+                        <Fingerprint className="w-5 h-5" />
+                        {t('biometric.loginButton')}
+                      </>
+                    )}
+                  </span>
+                </button>
+                
+                <p className="text-xs text-center text-gray-500">
+                  {t('biometric.credentialsSaved')}
+                </p>
+              </>
+            )}
 
             {/* Register Link */}
             <div className="text-center pt-6 border-t border-gray-200">

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { User, Mail, Phone, ArrowLeft, Building, MapPin, Edit3, Check, X } from 'lucide-react';
 import { updateProfile } from '../../store/slices/authSlice';
+import BiometricGuard from '../../components/common/BiometricGuard';
 
 const Profile = () => {
   const { t } = useTranslation();
@@ -59,6 +60,7 @@ const Profile = () => {
   };
 
   return (
+    <BiometricGuard screenName="Profile">
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
@@ -252,6 +254,7 @@ const Profile = () => {
         </div>
       </div>
     </div>
+    </BiometricGuard>
   );
 };
 

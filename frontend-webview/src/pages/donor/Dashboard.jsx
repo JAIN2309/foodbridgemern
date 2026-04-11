@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { Plus, Clock, MapPin, Users } from 'lucide-react';
 import { createDonation, fetchDonorHistory } from '../../store/slices/donationSlice';
 import { useGeolocation } from '../../hooks/useGeolocation';
+import BiometricGuard from '../../components/common/BiometricGuard';
 
 const DonorDashboard = () => {
   const { t } = useTranslation();
@@ -277,6 +278,7 @@ const DonorDashboard = () => {
           )}
 
           {activeTab === 'post' && (
+            <BiometricGuard screenName="Post Food Donation">
             <div className="space-y-6">
               <h3 className="text-lg font-medium dark:text-white">{t('dashboard.donor.postNewDonation')}</h3>
               
@@ -509,6 +511,7 @@ const DonorDashboard = () => {
                 </div>
               </form>
             </div>
+            </BiometricGuard>
           )}
 
           {activeTab === 'history' && (

@@ -372,7 +372,31 @@
     "hindi": "हिंदी",
     "gujarati": "ગુજરાતી",
     "darkMode": "Dark Mode",
-    "darkModeDesc": "Toggle between light and dark themes"
+    "darkModeDesc": "Toggle between light and dark themes",
+    "security": "Security",
+    "biometric": "Biometric Authentication",
+    "biometricDesc": "Use fingerprint or face recognition to secure your account",
+    "biometricNotAvailable": "Biometric authentication not available on this device",
+    "checkingBiometric": "Checking biometric availability..."
+  },
+  "biometric": {
+    "loginButton": "Login with Biometric",
+    "authenticating": "Authenticating...",
+    "credentialsSaved": "Your credentials are saved securely for quick biometric login",
+    "loginSuccess": "👍 Biometric login successful!",
+    "loginFailed": "Biometric login failed. Please try password login.",
+    "noCredentials": "Please login with password first to enable biometric login",
+    "authFailed": "Biometric authentication failed",
+    "required": "Biometric Authentication Required",
+    "pleaseAuth": "Please authenticate to access",
+    "authButton": "Authenticate with Biometric",
+    "goBack": "Go Back",
+    "privacyNotice": "Your biometric data never leaves your device. This authentication is required because you have enabled biometric security in Settings.",
+    "authFailedTitle": "Authentication Failed",
+    "enabledSuccess": "Biometric authentication enabled successfully",
+    "disabledSuccess": "Biometric authentication disabled",
+    "enableFailed": "Failed to enable biometric",
+    "notAvailableError": "Biometric authentication is not available on this device"
   },
   "layout": {
     "dashboard": "Dashboard",

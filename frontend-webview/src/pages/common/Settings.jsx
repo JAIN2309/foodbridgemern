@@ -1,17 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Moon, Sun, Globe, Check } from 'lucide-react';
+import { Moon, Sun, Globe, Check, Fingerprint, Shield } from 'lucide-react';
+import { useSelector } from 'react-redux';
+import toast from 'react-hot-toast';
+import { BiometricAuth } from '../../utils/biometricAuth';
 
 const Settings = () => {
   const { t, i18n } = useTranslation();
+  const { user } = useSelector((state) => state.auth);
   const [darkMode, setDarkMode] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [isCheckingBiometric, setIsCheckingBiometric] = useState(true);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     const isDark = savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
     setDarkMode(isDark);
     document.documentElement.classList.toggle('dark', isDark);
+
+    // Check biometric availability
+    checkBiometricAvailability();
+    
+    // Load biometric preference
+    const biometricPref = localStorage.getItem('biometricEnabled');
+    setBiometricEnabled(biometricPref === 'true');
   }, []);
+
+  const checkBiometricAvailability = async () => {
+    setIsCheckingBiometric(true);
+    const available = await BiometricAuth.isPlatformAuthenticatorAvailable();
+    setBiometricAvailable(available);
+    setIsCheckingBiometric(false);
+  };
 
   const toggleDarkMode = () => {
     const newDarkMode = !darkMode;
@@ -28,6 +49,36 @@ const Settings = () => {
 
   const handleLanguageChange = (langCode) => {
     i18n.changeLanguage(langCode);
+  };
+
+  const toggleBiometric = async () => {
+    if (!biometricAvailable) {
+      toast.error(t('biometric.notAvailableError'));
+      return;
+    }
+
+    if (!biometricEnabled) {
+      // Enable biometric
+      const result = await BiometricAuth.register(
+        user?._id || 'user',
+        user?.organization_name || user?.email || 'User'
+      );
+
+      if (result.success) {
+        localStorage.setItem('biometricEnabled', 'true');
+        localStorage.setItem('biometricCredentialId', result.credentialId);
+        setBiometricEnabled(true);
+        toast.success(t('biometric.enabledSuccess'));
+      } else {
+        toast.error(t('biometric.enableFailed') + ': ' + result.error);
+      }
+    } else {
+      // Disable biometric
+      localStorage.removeItem('biometricEnabled');
+      localStorage.removeItem('biometricCredentialId');
+      setBiometricEnabled(false);
+      toast.success(t('biometric.disabledSuccess'));
+    }
   };
 
   return (
@@ -95,6 +146,46 @@ const Settings = () => {
                 }`}
               />
             </button>
+          </div>
+        </div>
+
+        {/* Biometric Security Settings */}
+        <div className="border-t dark:border-gray-700 pt-6">
+          <div className="flex items-center mb-4">
+            <Shield className="w-5 h-5 text-green-600 dark:text-green-400 mr-2" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">{t('settings.security')}</h3>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Fingerprint className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" />
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-white">{t('settings.biometric')}</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{t('settings.biometricDesc')}</p>
+                  {!biometricAvailable && !isCheckingBiometric && (
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">{t('settings.biometricNotAvailable')}</p>
+                  )}
+                  {isCheckingBiometric && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('settings.checkingBiometric')}</p>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={toggleBiometric}
+                disabled={!biometricAvailable || isCheckingBiometric}
+                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  biometricEnabled ? 'bg-green-600' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+                aria-label="Toggle biometric authentication"
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform ${
+                    biometricEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
           </div>
         </div>
       </div>

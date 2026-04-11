@@ -2,15 +2,17 @@ import React, { useState, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
-  Animated, Dimensions,
+  Animated, Dimensions, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '../hooks/useRedux';
 import { loginUser } from '../store/authSlice';
 import Toast from 'react-native-toast-message';
+import { LANGUAGES } from '../i18n';
 
 const { width } = Dimensions.get('window');
 
@@ -18,14 +20,17 @@ export default function LoginScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { isLoading } = useAppSelector((state) => state.auth);
+  const { t, i18n } = useTranslation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [passFocused, setPassFocused] = useState(false);
+  const [langModal, setLangModal] = useState(false);
 
   const btnScale = useRef(new Animated.Value(1)).current;
+  const currentLang = LANGUAGES.find(l => l.code === i18n.language) || LANGUAGES[0];
 
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const passStrength = password.length < 6 ? 'weak' : password.length < 8 ? 'good' : 'strong';
@@ -34,7 +39,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Toast.show({ type: 'error', text1: 'Please fill all fields' });
+      Toast.show({ type: 'error', text1: t('auth.login.fillAllFields') });
       return;
     }
     Animated.sequence([
@@ -43,17 +48,38 @@ export default function LoginScreen() {
     ]).start();
     try {
       await dispatch(loginUser({ email, password })).unwrap();
-      Toast.show({ type: 'success', text1: 'Login successful!' });
+      Toast.show({ type: 'success', text1: t('auth.login.loginSuccess') });
       router.replace('/(tabs)');
     } catch (error: any) {
-      const msg = typeof error === 'string' ? error : error?.message || 'Login failed';
-      Toast.show({ type: 'error', text1: 'Login Failed', text2: msg, visibilityTime: 4000 });
+      const msg = typeof error === 'string' ? error : error?.message || t('auth.login.loginFailed');
+      Toast.show({ type: 'error', text1: t('auth.login.loginFailed'), text2: msg, visibilityTime: 4000 });
     }
+  };
+
+  const handleLanguageChange = (code: string) => {
+    i18n.changeLanguage(code);
+    setLangModal(false);
   };
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <LinearGradient colors={['#eff6ff', '#eef2ff', '#faf5ff']} style={styles.container}>
+
+        {/* Language Selector Button */}
+        <TouchableOpacity 
+          style={styles.langButton} 
+          onPress={() => setLangModal(true)}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.85)']}
+            style={styles.langButtonGradient}
+          >
+            <Text style={styles.langButtonFlag}>{currentLang.flag}</Text>
+            <Text style={styles.langButtonText}>{currentLang.code.toUpperCase()}</Text>
+            <Ionicons name="chevron-down" size={14} color="#6b7280" />
+          </LinearGradient>
+        </TouchableOpacity>
 
         {/* Blobs — pointerEvents none so they don't block touches */}
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -80,10 +106,10 @@ export default function LoginScreen() {
               >
                 <Ionicons name="heart" size={32} color="#fff" />
               </LinearGradient>
-              <Text style={styles.title}>Welcome Back</Text>
+              <Text style={styles.title}>{t('auth.login.title')}</Text>
               <View style={styles.subtitleRow}>
                 <Ionicons name="sparkles" size={14} color="#eab308" />
-                <Text style={styles.subtitle}>Sign in to FoodBridge</Text>
+                <Text style={styles.subtitle}>{t('auth.login.subtitle')}</Text>
               </View>
             </View>
 
@@ -93,7 +119,7 @@ export default function LoginScreen() {
               {/* Email */}
               <View style={styles.labelRow}>
                 <Ionicons name="mail" size={13} color="#2563eb" />
-                <Text style={styles.label}>Email Address</Text>
+                <Text style={styles.label}>{t('auth.login.email')}</Text>
               </View>
               <View style={[styles.inputWrap,
                 emailFocused && styles.inputFocusBlue,
@@ -102,7 +128,7 @@ export default function LoginScreen() {
                 <Ionicons name="mail-outline" size={18} color={emailFocused ? '#2563eb' : '#9ca3af'} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="you@example.com"
+                  placeholder={t('auth.login.emailPlaceholder')}
                   placeholderTextColor="#9ca3af"
                   value={email}
                   onChangeText={setEmail}
@@ -122,13 +148,13 @@ export default function LoginScreen() {
               {/* Password */}
               <View style={[styles.labelRow, { marginTop: 16 }]}>
                 <Ionicons name="lock-closed" size={13} color="#7c3aed" />
-                <Text style={styles.label}>Password</Text>
+                <Text style={styles.label}>{t('auth.login.password')}</Text>
               </View>
               <View style={[styles.inputWrap, passFocused && styles.inputFocusPurple]}>
                 <Ionicons name="lock-closed-outline" size={18} color={passFocused ? '#7c3aed' : '#9ca3af'} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter your password"
+                  placeholder={t('auth.login.passwordPlaceholder')}
                   placeholderTextColor="#9ca3af"
                   value={password}
                   onChangeText={setPassword}
@@ -149,7 +175,7 @@ export default function LoginScreen() {
                     <View style={[styles.strengthFill, { width: passWidth[passStrength] as any, backgroundColor: passColor[passStrength] }]} />
                   </View>
                   <Text style={[styles.strengthText, { color: passColor[passStrength] }]}>
-                    {passStrength.charAt(0).toUpperCase() + passStrength.slice(1)}
+                    {t(`auth.register.${passStrength}`)}
                   </Text>
                 </View>
               )}
@@ -167,7 +193,7 @@ export default function LoginScreen() {
                     ) : (
                       <>
                         <Ionicons name="sparkles" size={18} color="#fff" />
-                        <Text style={styles.btnText}>Sign In</Text>
+                        <Text style={styles.btnText}>{t('auth.login.signIn')}</Text>
                       </>
                     )}
                   </LinearGradient>
@@ -177,20 +203,20 @@ export default function LoginScreen() {
               {/* Divider */}
               <View style={styles.divider}>
                 <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>New to FoodBridge?</Text>
+                <Text style={styles.dividerText}>{t('auth.login.newUser')}</Text>
                 <View style={styles.dividerLine} />
               </View>
 
               <TouchableOpacity onPress={() => router.push('/register')} style={styles.registerBtn}>
                 <Text style={styles.registerText}>
-                  Create Account <Text style={styles.registerArrow}>→</Text>
+                  {t('auth.login.createAccount')} <Text style={styles.registerArrow}>→</Text>
                 </Text>
               </TouchableOpacity>
             </View>
 
             {/* Stats */}
             <View style={styles.statsRow}>
-              {[{ v: '50K+', l: 'Meals', c: '#2563eb' }, { v: '200+', l: 'Donors', c: '#7c3aed' }, { v: '150+', l: 'NGOs', c: '#db2777' }].map((s, i) => (
+              {[{ v: '50K+', l: t('auth.login.meals'), c: '#2563eb' }, { v: '200+', l: t('auth.login.donors'), c: '#7c3aed' }, { v: '150+', l: t('auth.login.ngos'), c: '#db2777' }].map((s, i) => (
                 <View key={i} style={styles.statItem}>
                   <Text style={[styles.statVal, { color: s.c }]}>{s.v}</Text>
                   <Text style={styles.statLbl}>{s.l}</Text>
@@ -200,6 +226,40 @@ export default function LoginScreen() {
 
           </ScrollView>
         </KeyboardAvoidingView>
+
+        {/* Language Modal */}
+        <Modal visible={langModal} transparent animationType="slide" onRequestClose={() => setLangModal(false)}>
+          <TouchableOpacity 
+            style={styles.modalOverlay} 
+            activeOpacity={1} 
+            onPress={() => setLangModal(false)}
+          >
+            <View style={styles.modalSheet}>
+              <View style={styles.modalHandle} />
+              <Text style={styles.modalTitle}>{t('settings.selectLanguage')}</Text>
+              {LANGUAGES.map((lang) => (
+                <TouchableOpacity
+                  key={lang.code}
+                  style={[styles.langRow, i18n.language === lang.code && styles.langRowActive]}
+                  onPress={() => handleLanguageChange(lang.code)}
+                >
+                  <Text style={styles.langFlag}>{lang.flag}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.langNative, i18n.language === lang.code && { color: '#2563eb' }]}>
+                      {lang.nativeLabel}
+                    </Text>
+                    <Text style={styles.langLabel}>{lang.label}</Text>
+                  </View>
+                  {i18n.language === lang.code && (
+                    <View style={styles.langCheck}>
+                      <Ionicons name="checkmark" size={14} color="#fff" />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </LinearGradient>
     </SafeAreaView>
   );
@@ -207,6 +267,10 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  langButton: { position: 'absolute', top: 16, right: 16, zIndex: 10, borderRadius: 12, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 6 },
+  langButtonGradient: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, gap: 6, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)' },
+  langButtonFlag: { fontSize: 18 },
+  langButtonText: { fontSize: 13, fontWeight: '700', color: '#374151', letterSpacing: 0.5 },
   blob1: { position: 'absolute', top: -60, left: -60, width: 250, height: 250, borderRadius: 125, backgroundColor: '#bfdbfe', opacity: 0.5 },
   blob2: { position: 'absolute', top: 100, right: -80, width: 250, height: 250, borderRadius: 125, backgroundColor: '#ddd6fe', opacity: 0.5 },
   blob3: { position: 'absolute', bottom: -60, left: '20%', width: 250, height: 250, borderRadius: 125, backgroundColor: '#fbcfe8', opacity: 0.4 },
@@ -244,4 +308,14 @@ const styles = StyleSheet.create({
   statItem: { alignItems: 'center' },
   statVal: { fontSize: 20, fontWeight: '800' },
   statLbl: { fontSize: 11, color: '#9ca3af', marginTop: 2 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  modalSheet: { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40 },
+  modalHandle: { width: 40, height: 4, backgroundColor: '#e5e7eb', borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: '#1f2937', marginBottom: 20 },
+  langRow: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 14, marginBottom: 8, backgroundColor: '#f9fafb', gap: 14 },
+  langRowActive: { backgroundColor: '#eff6ff', borderWidth: 2, borderColor: '#2563eb' },
+  langFlag: { fontSize: 28 },
+  langNative: { fontSize: 16, fontWeight: '700', color: '#1f2937' },
+  langLabel: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+  langCheck: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#2563eb', justifyContent: 'center', alignItems: 'center' },
 });
