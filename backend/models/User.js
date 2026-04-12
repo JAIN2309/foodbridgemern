@@ -89,6 +89,11 @@ const userSchema = new mongoose.Schema({
       data: mongoose.Schema.Types.Mixed,
       timestamp: { type: Date, default: Date.now }
     }]
+  },
+  password_reset: {
+    otp: String,
+    otp_expiry: Date,
+    attempts: { type: Number, default: 0 }
   }
 }, {
   timestamps: true
@@ -99,8 +104,11 @@ userSchema.index({ location: '2dsphere' });
 
 // Hash password before saving
 userSchema.pre('save', async function(next) {
+  console.log('🔐 Pre-save hook triggered. Password modified:', this.isModified('password'));
   if (!this.isModified('password')) return next();
+  console.log('🔐 Hashing password...');
   this.password = await bcrypt.hash(this.password, 12);
+  console.log('✅ Password hashed successfully');
   next();
 });
 

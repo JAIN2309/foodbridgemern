@@ -350,6 +350,42 @@ const emailTemplates = {
         Thank you for using FoodBridge!<br>See you again soon. 👋
       </p>
     `)
+  }),
+
+  passwordResetOTP: (user, otp) => ({
+    subject: '🔐 Password Reset OTP - FoodBridge',
+    html: getEmailBase(`
+      <p class="greeting">Hello, ${user.contact_person}!</p>
+      <p class="message">You requested to reset your password. Use the OTP below to proceed:</p>
+      <div class="info-card" style="text-align: center;">
+        <h3>🔑 Your 6-Digit OTP</h3>
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 36px; font-weight: 800; letter-spacing: 8px; padding: 20px; border-radius: 12px; margin: 20px 0; font-family: 'Courier New', monospace; user-select: all; -webkit-user-select: all; -moz-user-select: all; -ms-user-select: all;">${otp}</div>
+        <p style="color: #10b981; font-size: 14px; font-weight: 600; margin: 15px 0 5px 0;">📋 Tap and hold the code above to copy</p>
+        <p class="message" style="color: #6b7280; font-size: 13px; margin-top: 5px;">This OTP is valid for 10 minutes</p>
+      </div>
+      <div class="info-card" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 4px solid #3b82f6; border-radius: 12px; padding: 25px; margin: 25px 0;">
+        <h3 style="margin: 0 0 15px 0; font-size: 16px; color: #1f2937; font-weight: 600;">📱 How to Use:</h3>
+        <ol style="margin: 0; padding-left: 20px; color: #4b5563; font-size: 14px; line-height: 1.8;">
+          <li><strong>Tap and hold</strong> the OTP code above</li>
+          <li>Select <strong>"Copy"</strong> from the menu</li>
+          <li>Open the FoodBridge app</li>
+          <li>Tap <strong>"Paste OTP from Clipboard"</strong> button</li>
+          <li>Enter your new password</li>
+        </ol>
+      </div>
+      <div class="info-card warning">
+        <h3>🔒 Security Tips</h3>
+        <ul style="margin: 10px 0; padding-left: 20px; color: #6b7280; font-size: 14px; line-height: 1.8;">
+          <li>Never share this OTP with anyone</li>
+          <li>FoodBridge will never ask for your OTP via phone or email</li>
+          <li>If you didn't request this, please ignore this email</li>
+        </ul>
+      </div>
+      <div class="divider"></div>
+      <p class="message" style="text-align: center; color: #6b7280; font-size: 14px;">
+        Need help? Contact us at <strong>support@foodbridge.com</strong>
+      </p>
+    `)
   })
 };
 

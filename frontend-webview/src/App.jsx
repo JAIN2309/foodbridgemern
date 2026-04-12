@@ -10,6 +10,7 @@ import './i18n'; // Initialize i18n
 import LandingPage from './pages/common/LandingPage';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import PasswordReset from './pages/auth/PasswordReset';
 import DonorDashboard from './pages/donor/Dashboard';
 import NGODashboard from './pages/ngo/Dashboard';
 import AdminDashboard from './pages/admin/Dashboard';
@@ -98,6 +99,9 @@ function App() {
           } />
           <Route path="/register" element={
             isAuthenticated ? <Navigate to="/dashboard" /> : <Register />
+          } />
+          <Route path="/password-reset" element={
+            isAuthenticated ? <Navigate to="/dashboard" /> : <PasswordReset />
           } />
           <Route path="/dashboard" element={
             <ProtectedRoute>

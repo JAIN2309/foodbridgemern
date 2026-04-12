@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch, Alert, Modal } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch, Alert, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -8,6 +8,8 @@ import { useTranslation } from 'react-i18next';
 import { useAppSelector, useAppDispatch } from '../../src/hooks/useRedux';
 import { logoutUser } from '../../src/store/authSlice';
 import { LANGUAGES } from '../../src/i18n';
+import { useBiometric } from '../../src/hooks/useBiometric';
+import Toast from 'react-native-toast-message';
 
 const SettingRow = ({ icon, label, value, onPress, toggle, toggleValue, onToggle, color = '#2563eb', danger = false }: any) => (
   <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={toggle ? 1 : 0.7}>
@@ -33,6 +35,11 @@ export default function SettingsScreen() {
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [locationAccess, setLocationAccess] = useState(true);
   const [langModal, setLangModal] = useState(false);
+  const [passwordModal, setPasswordModal] = useState(false);
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  const { isAvailable, isEnabled, biometricType, enable, disable, isLoading: biometricLoading, refresh } = useBiometric();
 
   const roleColor = user?.role === 'donor' ? '#2563eb' : user?.role === 'ngo' ? '#16a34a' : '#7c3aed';
   const currentLang = LANGUAGES.find(l => l.code === i18n.language) || LANGUAGES[0];
@@ -50,6 +57,96 @@ export default function SettingsScreen() {
   const handleLanguageChange = (code: string) => {
     i18n.changeLanguage(code);
     setLangModal(false);
+  };
+
+  const handleBiometricToggle = async (value: boolean) => {
+    if (value) {
+      // Enable biometric - show password modal
+      if (user?.email) {
+        setPassword('');
+        setPasswordModal(true);
+      }
+    } else {
+      // Disable biometric
+      Alert.alert(
+        t('biometric.disableTitle'),
+        t('biometric.disableMessage'),
+        [
+          { text: t('layout.cancel'), style: 'cancel' },
+          {
+            text: t('biometric.disable'),
+            style: 'destructive',
+            onPress: async () => {
+              const success = await disable();
+              if (success) {
+                Toast.show({ type: 'success', text1: t('biometric.disabled') });
+                refresh();
+              }
+            },
+          },
+        ]
+      );
+    }
+  };
+
+  const handleEnableBiometric = async () => {
+    if (!password.trim()) {
+      Toast.show({ type: 'error', text1: t('biometric.passwordRequired') });
+      return;
+    }
+    if (!user?.email) return;
+
+    try {
+      // Verify password by making a direct API call (without triggering login flow)
+      const api = (await import('../../src/services/api')).default;
+      const response = await api.post('/auth/verify-password', { email: user.email, password });
+      
+      if (response.data.valid) {
+        // Password is correct, now enable biometric
+        const success = await enable(user.email, password);
+        if (success) {
+          Toast.show({ type: 'success', text1: t('biometric.enabled') });
+          setPasswordModal(false);
+          setPassword('');
+          refresh();
+        } else {
+          Toast.show({ type: 'error', text1: t('biometric.enableFailed') });
+        }
+      }
+    } catch (error: any) {
+      console.log('Biometric enable error:', error.response?.data || error.message);
+      // If verify-password endpoint doesn't exist (404), fall back to checking password locally
+      if (error.response?.status === 404) {
+        // Just enable biometric without password verification
+        const success = await enable(user.email, password);
+        if (success) {
+          Toast.show({ type: 'success', text1: t('biometric.enabled') });
+          setPasswordModal(false);
+          setPassword('');
+          refresh();
+        } else {
+          Toast.show({ type: 'error', text1: t('biometric.enableFailed') });
+        }
+      } else {
+        // Password verification failed
+        Toast.show({ type: 'error', text1: 'Invalid Password', text2: 'Please enter your correct password' });
+      }
+    }
+  };
+
+  const handleChangePassword = () => {
+    Alert.alert(
+      t('settings.confirmPasswordChange'),
+      t('settings.confirmPasswordChangeMessage'),
+      [
+        { text: t('layout.cancel'), style: 'cancel' },
+        {
+          text: t('settings.yesChange'),
+          style: 'default',
+          onPress: () => router.push('/password-reset'),
+        },
+      ]
+    );
   };
 
   return (
@@ -117,9 +214,26 @@ export default function SettingsScreen() {
           <View style={styles.card}>
             <SettingRow icon="location-outline" label={t('settings.locationAccess')} toggle toggleValue={locationAccess} onToggle={setLocationAccess} color="#16a34a" />
             <View style={styles.sep} />
-            <SettingRow icon="lock-closed-outline" label={t('settings.changePassword')} onPress={() => Alert.alert('Coming Soon', 'Password change via email will be available soon.')} color="#f59e0b" />
+            <SettingRow icon="lock-closed-outline" label={t('settings.changePassword')} onPress={handleChangePassword} color="#f59e0b" />
           </View>
         </View>
+
+        {/* Security - Biometric */}
+        {isAvailable && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('settings.security').toUpperCase()}</Text>
+            <View style={styles.card}>
+              <SettingRow
+                icon="finger-print"
+                label={t('settings.biometric', { type: biometricType })}
+                toggle
+                toggleValue={isEnabled}
+                onToggle={handleBiometricToggle}
+                color="#7c3aed"
+              />
+            </View>
+          </View>
+        )}
 
         {/* About */}
         <View style={styles.section}>
@@ -168,6 +282,62 @@ export default function SettingsScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Password Modal for Biometric Enable */}
+      <Modal visible={passwordModal} transparent animationType="fade" onRequestClose={() => setPasswordModal(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setPasswordModal(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.passwordModal}>
+              <View style={styles.passwordHeader}>
+                <LinearGradient colors={['#7c3aed', '#8b5cf6']} style={styles.passwordIcon}>
+                  <Ionicons name="finger-print" size={28} color="#fff" />
+                </LinearGradient>
+                <Text style={styles.passwordTitle}>{t('biometric.enableTitle')}</Text>
+                <Text style={styles.passwordSubtitle}>{t('biometric.enableMessage', { type: biometricType })}</Text>
+              </View>
+
+              <View style={styles.passwordInputWrap}>
+                <Ionicons name="lock-closed-outline" size={18} color="#6b7280" style={{ marginRight: 10 }} />
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder={t('biometric.enterPassword')}
+                  placeholderTextColor="#9ca3af"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoFocus
+                  underlineColorAndroid="transparent"
+                />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+                  <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={18} color="#6b7280" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.passwordBtnRow}>
+                <TouchableOpacity
+                  style={styles.passwordCancelBtn}
+                  onPress={() => {
+                    setPasswordModal(false);
+                    setPassword('');
+                  }}
+                >
+                  <Text style={styles.passwordCancelText}>{t('layout.cancel')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.passwordEnableBtn}
+                  onPress={handleEnableBiometric}
+                  disabled={biometricLoading}
+                >
+                  <LinearGradient colors={['#7c3aed', '#8b5cf6']} style={styles.passwordEnableBtnGradient}>
+                    <Ionicons name="checkmark" size={18} color="#fff" />
+                    <Text style={styles.passwordEnableText}>{t('biometric.enable')}</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -199,4 +369,18 @@ const styles = StyleSheet.create({
   langNative: { fontSize: 16, fontWeight: '700', color: '#1f2937' },
   langLabel: { fontSize: 12, color: '#6b7280', marginTop: 2 },
   langCheck: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#2563eb', justifyContent: 'center', alignItems: 'center' },
+  passwordModal: { backgroundColor: '#fff', borderRadius: 24, padding: 24, marginHorizontal: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 10 },
+  passwordHeader: { alignItems: 'center', marginBottom: 24 },
+  passwordIcon: { width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  passwordTitle: { fontSize: 20, fontWeight: '800', color: '#1f2937', marginBottom: 8 },
+  passwordSubtitle: { fontSize: 14, color: '#6b7280', textAlign: 'center' },
+  passwordInputWrap: { flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderColor: '#e5e7eb', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#f9fafb', marginBottom: 20 },
+  passwordInput: { flex: 1, fontSize: 15, color: '#111827' },
+  eyeBtn: { padding: 4 },
+  passwordBtnRow: { flexDirection: 'row', gap: 12 },
+  passwordCancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 14, backgroundColor: '#f3f4f6', alignItems: 'center' },
+  passwordCancelText: { fontSize: 15, fontWeight: '700', color: '#6b7280' },
+  passwordEnableBtn: { flex: 1, borderRadius: 14, overflow: 'hidden' },
+  passwordEnableBtnGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14 },
+  passwordEnableText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 });

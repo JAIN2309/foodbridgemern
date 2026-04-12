@@ -185,4 +185,163 @@ const updateProfile = async (req, res) => {
   }
 };
 
-module.exports = { register, login, getProfile, logout, updateProfile };
+// Verify password without logging in (for biometric setup)
+const verifyPassword = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Find user
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    // Check password
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    // Password is correct
+    res.json({ message: 'Password verified', valid: true });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Request password reset OTP
+const requestPasswordReset = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Find user
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'No account found with this email' });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Save OTP with 10 minutes expiry
+    user.password_reset = {
+      otp,
+      otp_expiry: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      attempts: 0
+    };
+    await user.save();
+
+    // Send OTP email
+    try {
+      await sendEmail(user.email, emailTemplates.passwordResetOTP(user, otp));
+      res.json({ message: 'OTP sent to your email', email: user.email });
+    } catch (emailError) {
+      console.error('OTP email failed:', emailError);
+      res.status(500).json({ message: 'Failed to send OTP email' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Verify OTP
+const verifyOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if OTP exists
+    if (!user.password_reset?.otp) {
+      return res.status(400).json({ message: 'No OTP request found. Please request a new OTP.' });
+    }
+
+    // Check OTP expiry
+    if (new Date() > user.password_reset.otp_expiry) {
+      return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
+    }
+
+    // Check attempts
+    if (user.password_reset.attempts >= 5) {
+      return res.status(400).json({ message: 'Too many failed attempts. Please request a new OTP.' });
+    }
+
+    // Verify OTP
+    if (user.password_reset.otp !== otp) {
+      user.password_reset.attempts += 1;
+      await user.save();
+      return res.status(400).json({ message: 'Invalid OTP. Please try again.' });
+    }
+
+    // OTP verified
+    res.json({ message: 'OTP verified successfully', verified: true });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Reset password
+const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    console.log('🔑 Password reset request for:', email);
+
+    // Validate password
+    if (!newPassword || newPassword.length < 8 || newPassword.length > 25) {
+      return res.status(400).json({ message: 'Password must be between 8 and 25 characters' });
+    }
+
+    // Password strength validation
+    const hasUpperCase = /[A-Z]/.test(newPassword);
+    const hasLowerCase = /[a-z]/.test(newPassword);
+    const hasNumber = /[0-9]/.test(newPassword);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
+
+    if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
+      return res.status(400).json({ 
+        message: 'Password must contain uppercase, lowercase, number and special character' 
+      });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    console.log('🔍 Found user:', user.email);
+
+    // Verify OTP one more time
+    if (!user.password_reset?.otp || user.password_reset.otp !== otp) {
+      console.log('❌ Invalid OTP');
+      return res.status(400).json({ message: 'Invalid or expired OTP' });
+    }
+
+    if (new Date() > user.password_reset.otp_expiry) {
+      console.log('❌ OTP expired');
+      return res.status(400).json({ message: 'OTP expired' });
+    }
+
+    console.log('✅ OTP verified, updating password...');
+    console.log('🔒 Old password hash (first 20 chars):', user.password.substring(0, 20));
+
+    // Update password - the pre-save hook will hash it
+    user.password = newPassword;
+    user.password_reset = undefined; // Clear OTP data
+    
+    await user.save();
+    
+    console.log('🔒 New password hash (first 20 chars):', user.password.substring(0, 20));
+    console.log('✅ Password reset successful for:', email);
+
+    res.json({ message: 'Password reset successful' });
+  } catch (error) {
+    console.error('❌ Password reset error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { register, login, getProfile, logout, updateProfile, verifyPassword, requestPasswordReset, verifyOTP, resetPassword };

@@ -16,8 +16,16 @@ const Login = () => {
   const { register, handleSubmit, watch, formState: { errors } } = useForm();
   const [showPassword, setShowPassword] = useState(false);
   const [isTyping, setIsTyping] = useState({ email: false, password: false });
-  const { isAvailable, isEnabled, authenticate } = useBiometric();
+  const { isAvailable, authenticate, getCredentials, getBiometricUsers } = useBiometric();
   const [isBiometricLoading, setIsBiometricLoading] = useState(false);
+  const [biometricUsers, setBiometricUsers] = useState([]);
+
+  useEffect(() => {
+    if (isAvailable) {
+      const users = getBiometricUsers();
+      setBiometricUsers(users);
+    }
+  }, [isAvailable]);
 
   const watchedEmail = watch('email');
   const watchedPassword = watch('password');
@@ -31,11 +39,10 @@ const Login = () => {
     try {
       await dispatch(loginUser(data)).unwrap();
       
-      // ALWAYS save credentials if biometric is available (even if not enabled yet)
-      // This way when user enables biometric later, credentials are already saved
+      // Save credentials if biometric is available
       if (isAvailable) {
-        localStorage.setItem('biometricEmail', data.email);
-        localStorage.setItem('biometricPassword', data.password);
+        localStorage.setItem(`biometric_${data.email}_email`, data.email);
+        localStorage.setItem(`biometric_${data.email}_password`, data.password);
       }
       
       toast.success(t('auth.login.loginSuccess') || 'Login successful!');
@@ -44,14 +51,13 @@ const Login = () => {
     }
   };
 
-  const handleBiometricLogin = async () => {
+  const handleBiometricLogin = async (userEmail) => {
     setIsBiometricLoading(true);
     try {
-      // Check if credentials are saved
-      const savedEmail = localStorage.getItem('biometricEmail');
-      const savedPassword = localStorage.getItem('biometricPassword');
+      // Get credentials for this user
+      const credentials = getCredentials(userEmail);
       
-      if (!savedEmail || !savedPassword) {
+      if (!credentials) {
         toast.error(t('biometric.noCredentials'), {
           duration: 4000,
           icon: '🔑',
@@ -61,11 +67,11 @@ const Login = () => {
       }
 
       // Authenticate with biometric
-      const result = await authenticate();
+      const result = await authenticate(userEmail);
       
       if (result.success) {
         // Use saved credentials to login
-        await dispatch(loginUser({ email: savedEmail, password: savedPassword })).unwrap();
+        await dispatch(loginUser(credentials)).unwrap();
         toast.success(t('biometric.loginSuccess'));
       } else {
         toast.error(t('biometric.authFailed') + ': ' + (result.error || 'Unknown error'));
@@ -322,8 +328,8 @@ const Login = () => {
               </span>
             </button>
 
-            {/* Biometric Login Button */}
-            {isAvailable && isEnabled && (
+            {/* Biometric Login Buttons */}
+            {isAvailable && biometricUsers.length > 0 && (
               <>
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
@@ -334,31 +340,30 @@ const Login = () => {
                   </div>
                 </div>
                 
-                <button
-                  type="button"
-                  onClick={handleBiometricLogin}
-                  disabled={isBiometricLoading}
-                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 px-6 rounded-xl font-semibold text-lg shadow-xl hover:shadow-2xl transform hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none relative overflow-hidden group"
-                >
-                  <span className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-green-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-                  <span className="relative flex items-center justify-center gap-2">
-                    {isBiometricLoading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                        {t('biometric.authenticating')}
-                      </>
-                    ) : (
-                      <>
-                        <Fingerprint className="w-5 h-5" />
-                        {t('biometric.loginButton')}
-                      </>
-                    )}
-                  </span>
-                </button>
-                
-                <p className="text-xs text-center text-gray-500">
-                  {t('biometric.credentialsSaved')}
-                </p>
+                <div className="space-y-3">
+                  {biometricUsers.map((userEmail) => (
+                    <button
+                      key={userEmail}
+                      type="button"
+                      onClick={() => handleBiometricLogin(userEmail)}
+                      disabled={isBiometricLoading}
+                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 px-6 rounded-xl font-semibold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none relative overflow-hidden group"
+                    >
+                      <span className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-green-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                      <span className="relative flex flex-col items-center justify-center gap-1">
+                        <div className="flex items-center gap-2">
+                          {isBiometricLoading ? (
+                            <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                          ) : (
+                            <Fingerprint className="w-5 h-5" />
+                          )}
+                          <span>{t('biometric.loginButton')}</span>
+                        </div>
+                        <span className="text-xs opacity-90">{userEmail}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </>
             )}
 

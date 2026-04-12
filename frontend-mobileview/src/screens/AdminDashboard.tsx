@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, ActivityIndicator, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import Toast from 'react-native-toast-message';
@@ -127,165 +129,156 @@ export default function AdminDashboard() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{t('dashboard.admin.title')}</Text>
-        <Text style={styles.subtitle}>{t('dashboard.admin.dashboardSubtitle')}</Text>
-      </View>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      {/* Gradient Header */}
+      <LinearGradient colors={['#7c3aed', '#8b5cf6']} style={styles.header}>
+        <View>
+          <Text style={styles.greeting}>{t('dashboard.admin.greeting')} 👋</Text>
+          <Text style={styles.headerSub}>{t('dashboard.admin.dashboardSubtitle')}</Text>
+        </View>
+        <View style={styles.headerAvatar}>
+          <Ionicons name="shield-checkmark" size={24} color="#7c3aed" />
+        </View>
+      </LinearGradient>
 
       {/* Stats Cards */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false} 
-        style={styles.statsContainer}
-        contentContainerStyle={styles.statsContent}
-      >
-        <View style={styles.statCard}>
-          <Ionicons name="people" size={24} color="#3b82f6" />
-          <Text style={styles.statValue}>{stats.users.total}</Text>
-          <Text style={styles.statLabel}>{t('dashboard.admin.totalUsers')}</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Ionicons name="checkmark-circle" size={24} color="#10b981" />
-          <Text style={styles.statValue}>{stats.users.verified}</Text>
-          <Text style={styles.statLabel}>{t('dashboard.admin.verified')}</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Ionicons name="time" size={24} color="#f59e0b" />
-          <Text style={styles.statValue}>{stats.users.pending}</Text>
-          <Text style={styles.statLabel}>{t('dashboard.admin.pending')}</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Ionicons name="restaurant" size={24} color="#8b5cf6" />
-          <Text style={styles.statValue}>{stats.meals_served}</Text>
-          <Text style={styles.statLabel}>{t('dashboard.admin.meals')}</Text>
-        </View>
-      </ScrollView>
+      <View style={styles.statsRow}>
+        {[
+          { icon: 'people', value: stats.users.total, label: t('dashboard.admin.totalUsers'), color: '#3b82f6' },
+          { icon: 'checkmark-circle', value: stats.users.verified, label: t('dashboard.admin.verified'), color: '#10b981' },
+          { icon: 'time', value: stats.users.pending, label: t('dashboard.admin.pending'), color: '#f59e0b' },
+          { icon: 'restaurant', value: stats.meals_served, label: t('dashboard.admin.meals'), color: '#8b5cf6' },
+        ].map((s, i) => (
+          <View key={i} style={styles.statCard}>
+            <View style={[styles.statIcon, { backgroundColor: s.color + '18' }]}>
+              <Ionicons name={s.icon as any} size={18} color={s.color} />
+            </View>
+            <Text style={[styles.statVal, { color: s.color }]}>{s.value}</Text>
+            <Text style={styles.statLbl}>{s.label}</Text>
+          </View>
+        ))}
+      </View>
 
       {/* Tabs */}
       <View style={styles.tabs}>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'overview' && styles.activeTab]}
-          onPress={() => setActiveTab('overview')}
-        >
-          <Text style={[styles.tabText, activeTab === 'overview' && styles.activeTabText]}>
-            {t('dashboard.admin.overview')}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'verify' && styles.activeTab]}
-          onPress={() => setActiveTab('verify')}
-        >
-          <Text style={[styles.tabText, activeTab === 'verify' && styles.activeTabText]}>
-            {t('dashboard.admin.verify')} ({pendingUsers.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'users' && styles.activeTab]}
-          onPress={() => setActiveTab('users')}
-        >
-          <Text style={[styles.tabText, activeTab === 'users' && styles.activeTabText]}>
-            {t('dashboard.admin.users')}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'analytics' && styles.activeTab]}
-          onPress={() => setActiveTab('analytics')}
-        >
-          <Text style={[styles.tabText, activeTab === 'analytics' && styles.activeTabText]}>
-            {t('dashboard.admin.analytics')}
-          </Text>
-        </TouchableOpacity>
+        {[
+          { key: 'overview', icon: 'grid', label: t('dashboard.admin.overview') },
+          { key: 'verify', icon: 'checkmark-circle', label: `${t('dashboard.admin.verify')} (${pendingUsers.length})` },
+          { key: 'users', icon: 'people', label: t('dashboard.admin.users') },
+          { key: 'analytics', icon: 'stats-chart', label: t('dashboard.admin.analytics') },
+        ].map((tab) => (
+          <TouchableOpacity key={tab.key} style={[styles.tab, activeTab === tab.key && styles.activeTab]} onPress={() => setActiveTab(tab.key)}>
+            <Ionicons name={tab.icon as any} size={16} color={activeTab === tab.key ? '#7c3aed' : '#9ca3af'} />
+            <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>{tab.label}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       {/* Content */}
       <ScrollView 
         style={styles.content}
+        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        showsVerticalScrollIndicator={false}
       >
         {isLoading && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#2563eb" />
-            <Text style={styles.loadingText}>{t('dashboard.admin.loadingData')}</Text>
+            <LinearGradient colors={['#eff6ff', '#faf5ff']} style={styles.loadingBox}>
+              <ActivityIndicator size="large" color="#7c3aed" />
+              <Text style={styles.loadingText}>{t('dashboard.admin.loadingData')}</Text>
+            </LinearGradient>
           </View>
         )}
 
         {activeTab === 'overview' && (
           <View style={styles.tabContent}>
-            <View style={styles.overviewGrid}>
-              <View style={styles.overviewCard}>
-                <Text style={styles.cardTitle}>{t('dashboard.admin.donationStats')}</Text>
-                <View style={styles.cardContent}>
-                  <View style={styles.statRow}>
-                    <Text style={styles.statRowLabel}>{t('dashboard.admin.totalDonations')}:</Text>
-                    <Text style={styles.statRowValue}>{stats.donations.total}</Text>
-                  </View>
-                  <View style={styles.statRow}>
-                    <Text style={styles.statRowLabel}>{t('dashboard.admin.active')}:</Text>
-                    <Text style={styles.statRowValue}>{stats.donations.active}</Text>
-                  </View>
-                  <View style={styles.statRow}>
-                    <Text style={styles.statRowLabel}>{t('dashboard.admin.completed')}:</Text>
-                    <Text style={styles.statRowValue}>{stats.donations.completed}</Text>
-                  </View>
+            <View style={styles.overviewCard}>
+              <View style={styles.cardHeader}>
+                <View style={[styles.cardIcon, { backgroundColor: '#3b82f618' }]}>
+                  <Ionicons name="bar-chart" size={20} color="#3b82f6" />
                 </View>
+                <Text style={styles.cardTitle}>{t('dashboard.admin.donationStats')}</Text>
               </View>
-
-              <View style={styles.overviewCard}>
-                <Text style={styles.cardTitle}>{t('dashboard.admin.userStats')}</Text>
-                <View style={styles.cardContent}>
-                  <View style={styles.statRow}>
-                    <Text style={styles.statRowLabel}>{t('dashboard.admin.totalUsers')}:</Text>
-                    <Text style={styles.statRowValue}>{stats.users.total}</Text>
-                  </View>
-                  <View style={styles.statRow}>
-                    <Text style={styles.statRowLabel}>{t('dashboard.admin.verified')}:</Text>
-                    <Text style={styles.statRowValue}>{stats.users.verified}</Text>
-                  </View>
-                  <View style={styles.statRow}>
-                    <Text style={styles.statRowLabel}>{t('dashboard.admin.pending')}:</Text>
-                    <Text style={styles.statRowValue}>{stats.users.pending}</Text>
-                  </View>
+              <View style={styles.cardContent}>
+                <View style={styles.statRow}>
+                  <Text style={styles.statRowLabel}>{t('dashboard.admin.totalDonations')}</Text>
+                  <Text style={[styles.statRowValue, { color: '#3b82f6' }]}>{stats.donations.total}</Text>
+                </View>
+                <View style={styles.sep} />
+                <View style={styles.statRow}>
+                  <Text style={styles.statRowLabel}>{t('dashboard.admin.active')}</Text>
+                  <Text style={[styles.statRowValue, { color: '#10b981' }]}>{stats.donations.active}</Text>
+                </View>
+                <View style={styles.sep} />
+                <View style={styles.statRow}>
+                  <Text style={styles.statRowLabel}>{t('dashboard.admin.completed')}</Text>
+                  <Text style={[styles.statRowValue, { color: '#8b5cf6' }]}>{stats.donations.completed}</Text>
                 </View>
               </View>
             </View>
 
-            <View style={styles.progressSection}>
-              <Text style={styles.cardTitle}>{t('dashboard.admin.platformHealth')}</Text>
-              <View style={styles.progressItem}>
-                <Text style={styles.progressLabel}>{t('dashboard.admin.userVerificationRate')}</Text>
-                <View style={styles.progressBar}>
-                  <View 
-                    style={[
-                      styles.progressFill, 
-                      { 
-                        width: `${stats.users.total ? (stats.users.verified / stats.users.total) * 100 : 0}%`,
-                        backgroundColor: '#3b82f6'
-                      }
-                    ]} 
-                  />
+            <View style={styles.overviewCard}>
+              <View style={styles.cardHeader}>
+                <View style={[styles.cardIcon, { backgroundColor: '#10b98118' }]}>
+                  <Ionicons name="people" size={20} color="#10b981" />
                 </View>
-                <Text style={styles.progressText}>
-                  {stats.users.verified} {t('dashboard.admin.of')} {stats.users.total} {t('dashboard.admin.verified').toLowerCase()}
-                </Text>
+                <Text style={styles.cardTitle}>{t('dashboard.admin.userStats')}</Text>
               </View>
-              
-              <View style={styles.progressItem}>
-                <Text style={styles.progressLabel}>{t('dashboard.admin.donationSuccessRate')}</Text>
-                <View style={styles.progressBar}>
-                  <View 
-                    style={[
-                      styles.progressFill, 
-                      { 
-                        width: `${stats.donations.total ? (stats.donations.completed / stats.donations.total) * 100 : 0}%`,
-                        backgroundColor: '#10b981'
-                      }
-                    ]} 
-                  />
+              <View style={styles.cardContent}>
+                <View style={styles.statRow}>
+                  <Text style={styles.statRowLabel}>{t('dashboard.admin.totalUsers')}</Text>
+                  <Text style={[styles.statRowValue, { color: '#3b82f6' }]}>{stats.users.total}</Text>
                 </View>
-                <Text style={styles.progressText}>
-                  {stats.donations.completed} {t('dashboard.admin.of')} {stats.donations.total} {t('dashboard.admin.completed').toLowerCase()}
-                </Text>
+                <View style={styles.sep} />
+                <View style={styles.statRow}>
+                  <Text style={styles.statRowLabel}>{t('dashboard.admin.verified')}</Text>
+                  <Text style={[styles.statRowValue, { color: '#10b981' }]}>{stats.users.verified}</Text>
+                </View>
+                <View style={styles.sep} />
+                <View style={styles.statRow}>
+                  <Text style={styles.statRowLabel}>{t('dashboard.admin.pending')}</Text>
+                  <Text style={[styles.statRowValue, { color: '#f59e0b' }]}>{stats.users.pending}</Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.overviewCard}>
+              <View style={styles.cardHeader}>
+                <View style={[styles.cardIcon, { backgroundColor: '#8b5cf618' }]}>
+                  <Ionicons name="pulse" size={20} color="#8b5cf6" />
+                </View>
+                <Text style={styles.cardTitle}>{t('dashboard.admin.platformHealth')}</Text>
+              </View>
+              <View style={styles.cardContent}>
+                <View style={styles.progressItem}>
+                  <Text style={styles.progressLabel}>{t('dashboard.admin.userVerificationRate')}</Text>
+                  <View style={styles.progressBar}>
+                    <LinearGradient
+                      colors={['#3b82f6', '#2563eb']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={[styles.progressFill, { width: `${stats.users.total ? (stats.users.verified / stats.users.total) * 100 : 0}%` as any }]}
+                    />
+                  </View>
+                  <Text style={styles.progressText}>
+                    {stats.users.verified} {t('dashboard.admin.of')} {stats.users.total}
+                  </Text>
+                </View>
+                
+                <View style={styles.progressItem}>
+                  <Text style={styles.progressLabel}>{t('dashboard.admin.donationSuccessRate')}</Text>
+                  <View style={styles.progressBar}>
+                    <LinearGradient
+                      colors={['#10b981', '#059669']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={[styles.progressFill, { width: `${stats.donations.total ? (stats.donations.completed / stats.donations.total) * 100 : 0}%` as any }]}
+                    />
+                  </View>
+                  <Text style={styles.progressText}>
+                    {stats.donations.completed} {t('dashboard.admin.of')} {stats.donations.total}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
@@ -293,17 +286,22 @@ export default function AdminDashboard() {
 
         {activeTab === 'verify' && (
           <View style={styles.tabContent}>
-            <Text style={styles.sectionTitle}>{t('dashboard.admin.pendingVerifications')}</Text>
             {pendingUsers.length === 0 ? (
               <View style={styles.emptyState}>
-                <Ionicons name="checkmark-circle-outline" size={64} color="#d1d5db" />
-                <Text style={styles.emptyText}>{t('dashboard.admin.noPendingVerifications')}</Text>
+                <LinearGradient colors={['#eff6ff', '#faf5ff']} style={styles.emptyIcon}>
+                  <Ionicons name="checkmark-circle" size={48} color="#10b981" />
+                </LinearGradient>
+                <Text style={styles.emptyTitle}>{t('dashboard.admin.noPendingVerifications')}</Text>
+                <Text style={styles.emptyDesc}>All users are verified!</Text>
               </View>
             ) : (
               pendingUsers.map((user) => (
                 <View key={user._id} style={styles.userCard}>
-                  <View style={styles.userHeader}>
-                    <View style={styles.userInfo}>
+                  <View style={styles.userCardHeader}>
+                    <View style={[styles.userAvatar, { backgroundColor: getRoleColor(user.role) + '18' }]}>
+                      <Ionicons name="business" size={20} color={getRoleColor(user.role)} />
+                    </View>
+                    <View style={{ flex: 1 }}>
                       <Text style={styles.userName}>{user.organization_name}</Text>
                       <View style={[styles.roleBadge, { backgroundColor: getRoleColor(user.role) }]}>
                         <Text style={styles.roleText}>{user.role.toUpperCase()}</Text>
@@ -313,37 +311,43 @@ export default function AdminDashboard() {
                   
                   <View style={styles.userDetails}>
                     <View style={styles.detailRow}>
-                      <Ionicons name="mail" size={16} color="#6b7280" />
+                      <Ionicons name="mail" size={14} color="#6b7280" />
                       <Text style={styles.detailText}>{user.email}</Text>
                     </View>
                     <View style={styles.detailRow}>
-                      <Ionicons name="person" size={16} color="#6b7280" />
+                      <Ionicons name="person" size={14} color="#6b7280" />
                       <Text style={styles.detailText}>{user.contact_person}</Text>
                     </View>
                     <View style={styles.detailRow}>
-                      <Ionicons name="call" size={16} color="#6b7280" />
+                      <Ionicons name="call" size={14} color="#6b7280" />
                       <Text style={styles.detailText}>{user.phone}</Text>
                     </View>
                     <View style={styles.detailRow}>
-                      <Ionicons name="document-text" size={16} color="#6b7280" />
+                      <Ionicons name="document-text" size={14} color="#6b7280" />
                       <Text style={styles.detailText}>{user.license_number}</Text>
                     </View>
                   </View>
 
                   <View style={styles.actionButtons}>
                     <TouchableOpacity 
-                      style={[styles.actionButton, styles.approveButton]}
+                      style={styles.approveButton}
                       onPress={() => confirmVerification(user._id, true, user.organization_name)}
+                      activeOpacity={0.9}
                     >
-                      <Ionicons name="checkmark" size={16} color="#fff" />
-                      <Text style={styles.buttonText}>{t('dashboard.admin.approve')}</Text>
+                      <LinearGradient colors={['#10b981', '#059669']} style={styles.actionBtnGradient}>
+                        <Ionicons name="checkmark" size={18} color="#fff" />
+                        <Text style={styles.buttonText}>{t('dashboard.admin.approve')}</Text>
+                      </LinearGradient>
                     </TouchableOpacity>
                     <TouchableOpacity 
-                      style={[styles.actionButton, styles.rejectButton]}
+                      style={styles.rejectButton}
                       onPress={() => confirmVerification(user._id, false, user.organization_name)}
+                      activeOpacity={0.9}
                     >
-                      <Ionicons name="close" size={16} color="#fff" />
-                      <Text style={styles.buttonText}>{t('dashboard.admin.reject')}</Text>
+                      <LinearGradient colors={['#ef4444', '#dc2626']} style={styles.actionBtnGradient}>
+                        <Ionicons name="close" size={18} color="#fff" />
+                        <Text style={styles.buttonText}>{t('dashboard.admin.reject')}</Text>
+                      </LinearGradient>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -354,26 +358,29 @@ export default function AdminDashboard() {
 
         {activeTab === 'users' && (
           <View style={styles.tabContent}>
-            <Text style={styles.sectionTitle}>{t('dashboard.admin.allUsersTitle')} ({allUsers.length})</Text>
             {allUsers.length === 0 ? (
               <View style={styles.emptyState}>
-                <Ionicons name="people-outline" size={64} color="#d1d5db" />
-                <Text style={styles.emptyText}>{t('dashboard.admin.noUsersFound')}</Text>
+                <LinearGradient colors={['#eff6ff', '#faf5ff']} style={styles.emptyIcon}>
+                  <Ionicons name="people" size={48} color="#3b82f6" />
+                </LinearGradient>
+                <Text style={styles.emptyTitle}>{t('dashboard.admin.noUsersFound')}</Text>
               </View>
             ) : (
               allUsers.map((user) => (
                 <View key={user._id} style={styles.userCard}>
-                  <View style={styles.userHeader}>
-                    <View style={styles.userInfo}>
+                  <View style={styles.userCardHeader}>
+                    <View style={[styles.userAvatar, { backgroundColor: getRoleColor(user.role) + '18' }]}>
+                      <Ionicons name="business" size={20} color={getRoleColor(user.role)} />
+                    </View>
+                    <View style={{ flex: 1 }}>
                       <Text style={styles.userName}>{user.organization_name}</Text>
-                      <View style={styles.badgeContainer}>
+                      <View style={styles.badgeRow}>
                         <View style={[styles.roleBadge, { backgroundColor: getRoleColor(user.role) }]}>
                           <Text style={styles.roleText}>{user.role.toUpperCase()}</Text>
                         </View>
                         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(user.is_verified) }]}>
-                          <Text style={styles.statusText}>
-                            {getStatusText(user.is_verified)}
-                          </Text>
+                          <Ionicons name={user.is_verified ? 'checkmark-circle' : 'time'} size={10} color="#fff" />
+                          <Text style={styles.statusText}>{getStatusText(user.is_verified)}</Text>
                         </View>
                       </View>
                     </View>
@@ -381,15 +388,15 @@ export default function AdminDashboard() {
                   
                   <View style={styles.userDetails}>
                     <View style={styles.detailRow}>
-                      <Ionicons name="mail" size={16} color="#6b7280" />
+                      <Ionicons name="mail" size={14} color="#6b7280" />
                       <Text style={styles.detailText}>{user.email}</Text>
                     </View>
                     <View style={styles.detailRow}>
-                      <Ionicons name="person" size={16} color="#6b7280" />
+                      <Ionicons name="person" size={14} color="#6b7280" />
                       <Text style={styles.detailText}>{user.contact_person}</Text>
                     </View>
                     <View style={styles.detailRow}>
-                      <Ionicons name="calendar" size={16} color="#6b7280" />
+                      <Ionicons name="calendar" size={14} color="#6b7280" />
                       <Text style={styles.detailText}>
                         {t('dashboard.admin.joined')} {new Date(user.createdAt).toLocaleDateString()}
                       </Text>
@@ -403,39 +410,34 @@ export default function AdminDashboard() {
 
         {activeTab === 'analytics' && (
           <View style={styles.tabContent}>
-            <Text style={styles.sectionTitle}>{t('dashboard.admin.platformAnalytics')}</Text>
-            
-            <View style={styles.analyticsGrid}>
-              <View style={[styles.analyticsCard, { backgroundColor: '#3b82f6' }]}>
-                <Ionicons name="people" size={32} color="#fff" />
-                <Text style={styles.analyticsValue}>{stats.meals_served}</Text>
-                <Text style={styles.analyticsLabel}>{t('dashboard.admin.totalImpact')}</Text>
-                <Text style={styles.analyticsSubLabel}>{t('dashboard.admin.meals')}</Text>
-              </View>
-              
-              <View style={[styles.analyticsCard, { backgroundColor: '#10b981' }]}>
-                <Ionicons name="trending-up" size={32} color="#fff" />
-                <Text style={styles.analyticsValue}>
-                  {stats.donations.total ? 
-                    Math.round((stats.donations.completed / stats.donations.total) * 100) : 0}%
-                </Text>
-                <Text style={styles.analyticsLabel}>{t('dashboard.admin.successRate')}</Text>
-                <Text style={styles.analyticsSubLabel}>{t('dashboard.admin.completionRate')}</Text>
-              </View>
-              
-              <View style={[styles.analyticsCard, { backgroundColor: '#8b5cf6' }]}>
-                <Ionicons name="location" size={32} color="#fff" />
-                <Text style={styles.analyticsValue}>{stats.donations.active}</Text>
-                <Text style={styles.analyticsLabel}>{t('dashboard.admin.activeNow')}</Text>
-                <Text style={styles.analyticsSubLabel}>{t('dashboard.admin.liveDonations')}</Text>
-              </View>
-            </View>
+            {[
+              { icon: 'restaurant', value: stats.meals_served, label: t('dashboard.admin.totalImpact'), sub: t('dashboard.admin.meals'), colors: ['#3b82f6', '#2563eb'] as const },
+              { icon: 'trending-up', value: `${stats.donations.total ? Math.round((stats.donations.completed / stats.donations.total) * 100) : 0}%`, label: t('dashboard.admin.successRate'), sub: t('dashboard.admin.completionRate'), colors: ['#10b981', '#059669'] as const },
+              { icon: 'pulse', value: stats.donations.active, label: t('dashboard.admin.activeNow'), sub: t('dashboard.admin.liveDonations'), colors: ['#8b5cf6', '#7c3aed'] as const },
+            ].map((item, i) => (
+              <TouchableOpacity key={i} activeOpacity={0.9}>
+                <LinearGradient colors={item.colors} style={styles.analyticsCard}>
+                  <View style={styles.analyticsIcon}>
+                    <Ionicons name={item.icon as any} size={28} color="#fff" />
+                  </View>
+                  <Text style={styles.analyticsValue}>{item.value}</Text>
+                  <Text style={styles.analyticsLabel}>{item.label}</Text>
+                  <Text style={styles.analyticsSubLabel}>{item.sub}</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            ))}
 
-            <View style={styles.metricsSection}>
-              <Text style={styles.cardTitle}>{t('dashboard.admin.keyMetrics')}</Text>
+            <View style={styles.metricsCard}>
+              <View style={styles.cardHeader}>
+                <View style={[styles.cardIcon, { backgroundColor: '#f59e0b18' }]}>
+                  <Ionicons name="speedometer" size={20} color="#f59e0b" />
+                </View>
+                <Text style={styles.cardTitle}>{t('dashboard.admin.keyMetrics')}</Text>
+              </View>
+              
               <View style={styles.metricItem}>
                 <View style={styles.metricHeader}>
-                  <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+                  <View style={[styles.metricDot, { backgroundColor: '#10b981' }]} />
                   <Text style={styles.metricTitle}>{t('dashboard.admin.platformAdoption')}</Text>
                 </View>
                 <Text style={styles.metricValue}>
@@ -443,9 +445,11 @@ export default function AdminDashboard() {
                 </Text>
               </View>
               
+              <View style={styles.sep} />
+              
               <View style={styles.metricItem}>
                 <View style={styles.metricHeader}>
-                  <Ionicons name="flash" size={20} color="#f59e0b" />
+                  <View style={[styles.metricDot, { backgroundColor: '#f59e0b' }]} />
                   <Text style={styles.metricTitle}>{t('dashboard.admin.responseTime')}</Text>
                 </View>
                 <Text style={styles.metricValue}>
@@ -453,9 +457,11 @@ export default function AdminDashboard() {
                 </Text>
               </View>
               
+              <View style={styles.sep} />
+              
               <View style={styles.metricItem}>
                 <View style={styles.metricHeader}>
-                  <Ionicons name="shield-checkmark" size={20} color="#3b82f6" />
+                  <View style={[styles.metricDot, { backgroundColor: '#3b82f6' }]} />
                   <Text style={styles.metricTitle}>{t('dashboard.admin.trustScore')}</Text>
                 </View>
                 <Text style={styles.metricValue}>
@@ -466,314 +472,75 @@ export default function AdminDashboard() {
           </View>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1f2937',
-  },
-  subtitle: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 2,
-  },
-  statsContainer: {
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-  },
-  statsContent: {
-    paddingHorizontal: 12,
-    gap: 8,
-  },
-  statCard: {
-    backgroundColor: '#f9fafb',
-    padding: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    minWidth: 75,
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginTop: 4,
-  },
-  statLabel: {
-    fontSize: 9,
-    color: '#6b7280',
-    marginTop: 2,
-    textAlign: 'center',
-  },
-  tabs: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 2,
-    alignItems: 'center',
-  },
-  activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#2563eb',
-  },
-  tabText: {
-    fontSize: 10,
-    color: '#6b7280',
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  activeTabText: {
-    color: '#2563eb',
-  },
-  content: {
-    flex: 1,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#6b7280',
-    marginTop: 12,
-  },
-  tabContent: {
-    padding: 12,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 12,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#6b7280',
-    marginTop: 16,
-  },
-  overviewGrid: {
-    gap: 12,
-    marginBottom: 16,
-  },
-  overviewCard: {
-    backgroundColor: '#fff',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 10,
-  },
-  cardContent: {
-    gap: 8,
-  },
-  statRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  statRowLabel: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  statRowValue: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#1f2937',
-  },
-  progressSection: {
-    backgroundColor: '#fff',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  progressItem: {
-    marginBottom: 12,
-  },
-  progressLabel: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginBottom: 6,
-  },
-  progressBar: {
-    width: '100%',
-    height: 8,
-    backgroundColor: '#e5e7eb',
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: 4,
-  },
-  progressFill: {
-    height: '100%',
-  },
-  progressText: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  userCard: {
-    backgroundColor: '#fff',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  userHeader: {
-    marginBottom: 10,
-  },
-  userInfo: {
-    flexDirection: 'column',
-    gap: 8,
-  },
-  userName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1f2937',
-  },
-  badgeContainer: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  roleBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  roleText: {
-    color: '#fff',
-    fontSize: 9,
-    fontWeight: '600',
-  },
-  statusBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 9,
-    fontWeight: '600',
-  },
-  userDetails: {
-    gap: 6,
-    marginBottom: 12,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  detailText: {
-    fontSize: 12,
-    color: '#374151',
-    flex: 1,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 6,
-    gap: 4,
-  },
-  approveButton: {
-    backgroundColor: '#10b981',
-  },
-  rejectButton: {
-    backgroundColor: '#ef4444',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  analyticsGrid: {
-    gap: 10,
-    marginBottom: 16,
-  },
-  analyticsCard: {
-    padding: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  analyticsValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginTop: 6,
-  },
-  analyticsLabel: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.9)',
-    marginTop: 3,
-    textAlign: 'center',
-  },
-  analyticsSubLabel: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.7)',
-    marginTop: 1,
-    textAlign: 'center',
-  },
-  metricsSection: {
-    backgroundColor: '#fff',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  metricItem: {
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  metricHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 3,
-  },
-  metricTitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#374151',
-  },
-  metricValue: {
-    fontSize: 11,
-    color: '#6b7280',
-  },
+  container: { flex: 1, backgroundColor: '#f5f7fa' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 20 },
+  greeting: { fontSize: 20, fontWeight: '800', color: '#fff' },
+  headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  headerAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' },
+  statsRow: { flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 14, gap: 8, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  statCard: { flex: 1, alignItems: 'center', gap: 4 },
+  statIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  statVal: { fontSize: 18, fontWeight: '800' },
+  statLbl: { fontSize: 10, color: '#9ca3af', fontWeight: '600', textAlign: 'center' },
+  tabs: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  tab: { flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 12 },
+  activeTab: { borderBottomWidth: 2, borderBottomColor: '#7c3aed' },
+  tabText: { fontSize: 10, color: '#9ca3af', fontWeight: '600', textAlign: 'center' },
+  activeTabText: { color: '#7c3aed' },
+  content: { flex: 1 },
+  loadingContainer: { alignItems: 'center', paddingVertical: 60 },
+  loadingBox: { alignItems: 'center', padding: 32, borderRadius: 20, gap: 12 },
+  loadingText: { fontSize: 14, color: '#6b7280', fontWeight: '500' },
+  tabContent: { gap: 12 },
+  overviewCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
+  cardIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  cardTitle: { fontSize: 15, fontWeight: '700', color: '#1f2937' },
+  cardContent: { gap: 10 },
+  statRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  statRowLabel: { fontSize: 13, color: '#6b7280', fontWeight: '500' },
+  statRowValue: { fontSize: 16, fontWeight: '800' },
+  sep: { height: 1, backgroundColor: '#f3f4f6' },
+  progressItem: { marginBottom: 14 },
+  progressLabel: { fontSize: 13, color: '#6b7280', marginBottom: 8, fontWeight: '500' },
+  progressBar: { width: '100%', height: 10, backgroundColor: '#f3f4f6', borderRadius: 5, overflow: 'hidden', marginBottom: 6 },
+  progressFill: { height: '100%', borderRadius: 5 },
+  progressText: { fontSize: 12, color: '#9ca3af' },
+  emptyState: { alignItems: 'center', paddingVertical: 60, gap: 12 },
+  emptyIcon: { width: 96, height: 96, borderRadius: 28, justifyContent: 'center', alignItems: 'center' },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#1f2937' },
+  emptyDesc: { fontSize: 14, color: '#6b7280', textAlign: 'center' },
+  userCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
+  userCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  userAvatar: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  userName: { fontSize: 15, fontWeight: '700', color: '#1f2937', marginBottom: 6 },
+  badgeRow: { flexDirection: 'row', gap: 6 },
+  roleBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, alignSelf: 'flex-start' },
+  roleText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  statusText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+  userDetails: { gap: 8, marginBottom: 14 },
+  detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  detailText: { fontSize: 13, color: '#374151', flex: 1 },
+  actionButtons: { flexDirection: 'row', gap: 10 },
+  approveButton: { flex: 1, borderRadius: 12, overflow: 'hidden' },
+  rejectButton: { flex: 1, borderRadius: 12, overflow: 'hidden' },
+  actionBtnGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, gap: 6 },
+  buttonText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  analyticsCard: { padding: 20, borderRadius: 16, alignItems: 'center', marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  analyticsIcon: { marginBottom: 10 },
+  analyticsValue: { fontSize: 32, fontWeight: '800', color: '#fff', marginBottom: 6 },
+  analyticsLabel: { fontSize: 14, color: 'rgba(255,255,255,0.95)', fontWeight: '600', textAlign: 'center' },
+  analyticsSubLabel: { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 2, textAlign: 'center' },
+  metricsCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
+  metricItem: { paddingVertical: 12 },
+  metricHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  metricDot: { width: 8, height: 8, borderRadius: 4 },
+  metricTitle: { fontSize: 13, fontWeight: '600', color: '#374151' },
+  metricValue: { fontSize: 13, color: '#6b7280', marginLeft: 16 },
 });

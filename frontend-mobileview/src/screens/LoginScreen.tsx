@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
@@ -13,6 +13,8 @@ import { useAppDispatch, useAppSelector } from '../hooks/useRedux';
 import { loginUser } from '../store/authSlice';
 import Toast from 'react-native-toast-message';
 import { LANGUAGES } from '../i18n';
+import { useBiometric } from '../hooks/useBiometric';
+import { biometricAuth } from '../utils/biometricAuth';
 
 const { width } = Dimensions.get('window');
 
@@ -31,6 +33,17 @@ export default function LoginScreen() {
 
   const btnScale = useRef(new Animated.Value(1)).current;
   const currentLang = LANGUAGES.find(l => l.code === i18n.language) || LANGUAGES[0];
+  const { isAvailable, biometricType } = useBiometric();
+  const [biometricUsers, setBiometricUsers] = useState<string[]>([]);
+
+  useEffect(() => {
+    loadBiometricUsers();
+  }, []);
+
+  const loadBiometricUsers = async () => {
+    const users = await biometricAuth.getBiometricUsers();
+    setBiometricUsers(users);
+  };
 
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const passStrength = password.length < 6 ? 'weak' : password.length < 8 ? 'good' : 'strong';
@@ -48,8 +61,33 @@ export default function LoginScreen() {
     ]).start();
     try {
       await dispatch(loginUser({ email, password })).unwrap();
+      // Save credentials if biometric is available
+      if (isAvailable) {
+        await biometricAuth.saveCredentials(email, password);
+      }
       Toast.show({ type: 'success', text1: t('auth.login.loginSuccess') });
       router.replace('/(tabs)');
+    } catch (error: any) {
+      const msg = typeof error === 'string' ? error : error?.message || t('auth.login.loginFailed');
+      Toast.show({ type: 'error', text1: t('auth.login.loginFailed'), text2: msg, visibilityTime: 4000 });
+    }
+  };
+
+  const handleBiometricLogin = async (userEmail: string) => {
+    try {
+      const success = await biometricAuth.authenticate(t('biometric.loginPrompt'));
+      if (success) {
+        const credentials = await biometricAuth.getCredentials(userEmail);
+        if (credentials) {
+          await dispatch(loginUser(credentials)).unwrap();
+          Toast.show({ type: 'success', text1: t('auth.login.loginSuccess') });
+          router.replace('/(tabs)');
+        } else {
+          Toast.show({ type: 'error', text1: t('biometric.noCredentials') });
+        }
+      } else {
+        Toast.show({ type: 'error', text1: t('biometric.authenticationFailed') });
+      }
     } catch (error: any) {
       const msg = typeof error === 'string' ? error : error?.message || t('auth.login.loginFailed');
       Toast.show({ type: 'error', text1: t('auth.login.loginFailed'), text2: msg, visibilityTime: 4000 });
@@ -200,6 +238,28 @@ export default function LoginScreen() {
                 </TouchableOpacity>
               </Animated.View>
 
+              {/* Biometric Login Buttons */}
+              {biometricUsers.length > 0 && (
+                <View style={{ marginTop: 12, gap: 10 }}>
+                  {biometricUsers.map((userEmail) => (
+                    <TouchableOpacity
+                      key={userEmail}
+                      onPress={() => handleBiometricLogin(userEmail)}
+                      disabled={isLoading}
+                      activeOpacity={0.9}
+                    >
+                      <View style={styles.biometricBtn}>
+                        <Ionicons name="finger-print" size={20} color="#2563eb" />
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.biometricText}>{t('biometric.loginWith', { type: biometricType })}</Text>
+                          <Text style={styles.biometricEmail}>{userEmail}</Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
               {/* Divider */}
               <View style={styles.divider}>
                 <View style={styles.dividerLine} />
@@ -318,4 +378,7 @@ const styles = StyleSheet.create({
   langNative: { fontSize: 16, fontWeight: '700', color: '#1f2937' },
   langLabel: { fontSize: 12, color: '#6b7280', marginTop: 2 },
   langCheck: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#2563eb', justifyContent: 'center', alignItems: 'center' },
+  biometricBtn: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderRadius: 16, backgroundColor: '#eff6ff', borderWidth: 2, borderColor: '#2563eb' },
+  biometricText: { color: '#2563eb', fontSize: 15, fontWeight: '700' },
+  biometricEmail: { color: '#6b7280', fontSize: 12, marginTop: 2 },
 });

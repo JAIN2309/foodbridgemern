@@ -10,6 +10,7 @@ import { useLocation } from '../hooks/useLocation';
 import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 import { loadUser } from '../store/authSlice';
+import { BiometricGuard } from '../components/BiometricGuard';
 
 export default function DonorDashboard() {
   const { t } = useTranslation();
@@ -227,6 +228,7 @@ export default function DonorDashboard() {
           )}
 
           {activeTab === 'post' && (
+            <BiometricGuard>
             <View style={styles.form}>
               <View style={styles.formHeader}>
                 <LinearGradient colors={['#2563eb', '#7c3aed']} style={styles.formHeaderIcon}>
@@ -364,6 +366,7 @@ export default function DonorDashboard() {
                 </LinearGradient>
               </TouchableOpacity>
             </View>
+            </BiometricGuard>
           )}
 
         </ScrollView>

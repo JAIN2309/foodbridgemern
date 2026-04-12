@@ -1,38 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Moon, Sun, Globe, Check, Fingerprint, Shield } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Moon, Sun, Globe, Check, Fingerprint, Shield, Lock } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
-import { BiometricAuth } from '../../utils/biometricAuth';
+import { useBiometric } from '../../hooks/useBiometric';
 
 const Settings = () => {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
   const [darkMode, setDarkMode] = useState(false);
-  const [biometricEnabled, setBiometricEnabled] = useState(false);
-  const [biometricAvailable, setBiometricAvailable] = useState(false);
-  const [isCheckingBiometric, setIsCheckingBiometric] = useState(true);
+  const { isAvailable: biometricAvailable, isEnabled: biometricEnabled, isChecking: isCheckingBiometric, enable, disable, refresh } = useBiometric();
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showDisableConfirm, setShowDisableConfirm] = useState(false);
+  const [showPasswordChangeConfirm, setShowPasswordChangeConfirm] = useState(false);
+  const [password, setPassword] = useState('');
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     const isDark = savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
     setDarkMode(isDark);
     document.documentElement.classList.toggle('dark', isDark);
-
-    // Check biometric availability
-    checkBiometricAvailability();
-    
-    // Load biometric preference
-    const biometricPref = localStorage.getItem('biometricEnabled');
-    setBiometricEnabled(biometricPref === 'true');
   }, []);
-
-  const checkBiometricAvailability = async () => {
-    setIsCheckingBiometric(true);
-    const available = await BiometricAuth.isPlatformAuthenticatorAvailable();
-    setBiometricAvailable(available);
-    setIsCheckingBiometric(false);
-  };
 
   const toggleDarkMode = () => {
     const newDarkMode = !darkMode;
@@ -58,26 +48,54 @@ const Settings = () => {
     }
 
     if (!biometricEnabled) {
+      setShowPasswordModal(true);
+    } else {
+      setShowDisableConfirm(true);
+    }
+  };
+
+  const handleDisableBiometric = () => {
+    disable();
+    toast.success(t('biometric.disabledSuccess'));
+    setShowDisableConfirm(false);
+    refresh();
+  };
+
+  const handleEnableBiometric = async () => {
+    if (!password.trim()) {
+      toast.error(t('biometric.passwordRequired'));
+      return;
+    }
+
+    if (!user?.email) return;
+
+    try {
+      // Verify password first
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}/auth/verify-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email, password }),
+      });
+
+      if (!response.ok) {
+        toast.error(t('biometric.invalidPassword'));
+        return;
+      }
+
       // Enable biometric
-      const result = await BiometricAuth.register(
-        user?._id || 'user',
-        user?.organization_name || user?.email || 'User'
-      );
+      const result = await enable(user.email, password);
 
       if (result.success) {
-        localStorage.setItem('biometricEnabled', 'true');
-        localStorage.setItem('biometricCredentialId', result.credentialId);
-        setBiometricEnabled(true);
         toast.success(t('biometric.enabledSuccess'));
+        setShowPasswordModal(false);
+        setPassword('');
+        refresh();
       } else {
         toast.error(t('biometric.enableFailed') + ': ' + result.error);
       }
-    } else {
-      // Disable biometric
-      localStorage.removeItem('biometricEnabled');
-      localStorage.removeItem('biometricCredentialId');
-      setBiometricEnabled(false);
-      toast.success(t('biometric.disabledSuccess'));
+    } catch (error) {
+      console.error('Enable biometric error:', error);
+      toast.error(t('biometric.enableFailed'));
     }
   };
 
@@ -157,9 +175,27 @@ const Settings = () => {
           </div>
           
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            {/* Change Password */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
               <div className="flex items-center">
-                <Fingerprint className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" />
+                <Lock className="w-5 h-5 text-orange-600 dark:text-orange-400 mr-3" />
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-white">{t('settings.changePassword')}</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{t('settings.changePasswordDesc') || 'Reset your password via email'}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPasswordChangeConfirm(true)}
+                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors font-medium"
+              >
+                {t('settings.changePassword')}
+              </button>
+            </div>
+
+            {/* Biometric Authentication */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <div className="flex items-center">
+                <Fingerprint className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-3" />
                 <div>
                   <h4 className="font-medium text-gray-900 dark:text-white">{t('settings.biometric')}</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{t('settings.biometricDesc')}</p>
@@ -189,6 +225,79 @@ const Settings = () => {
           </div>
         </div>
       </div>
+
+      {/* Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+              {t('biometric.enableTitle')}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              {t('biometric.enterPassword')}
+            </p>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={t('biometric.passwordPlaceholder')}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white mb-4"
+              onKeyPress={(e) => e.key === 'Enter' && handleEnableBiometric()}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setPassword('');
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={handleEnableBiometric}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                {t('biometric.enable')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password Change Confirmation Modal */}
+      {showPasswordChangeConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Lock className="w-8 h-8 text-orange-600 dark:text-orange-400" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white text-center mb-2">
+              {t('settings.changePasswordConfirmTitle') || 'Change Password?'}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-6">
+              {t('settings.changePasswordConfirmMessage') || 'You will receive an OTP via email to verify and change your password.'}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowPasswordChangeConfirm(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={() => {
+                  setShowPasswordChangeConfirm(false);
+                  navigate('/password-reset');
+                }}
+                className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+              >
+                {t('common.continue') || 'Continue'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
