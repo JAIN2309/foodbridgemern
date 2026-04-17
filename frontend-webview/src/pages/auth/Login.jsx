@@ -16,16 +16,37 @@ const Login = () => {
   const { register, handleSubmit, watch, formState: { errors } } = useForm();
   const [showPassword, setShowPassword] = useState(false);
   const [isTyping, setIsTyping] = useState({ email: false, password: false });
-  const { isAvailable, authenticate, getCredentials, getBiometricUsers } = useBiometric();
+  const { isAvailable, authenticate, getCredentials, getBiometricUsers, removeBiometricUser } = useBiometric();
   const [isBiometricLoading, setIsBiometricLoading] = useState(false);
   const [biometricUsers, setBiometricUsers] = useState([]);
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
+  const [userToRemove, setUserToRemove] = useState(null);
 
   useEffect(() => {
     if (isAvailable) {
-      const users = getBiometricUsers();
-      setBiometricUsers(users);
+      loadBiometricUsers();
     }
   }, [isAvailable]);
+
+  const loadBiometricUsers = () => {
+    const users = getBiometricUsers();
+    setBiometricUsers(users);
+  };
+
+  const confirmRemoveBiometric = (userEmail) => {
+    setUserToRemove(userEmail);
+    setShowRemoveModal(true);
+  };
+
+  const handleRemoveBiometric = () => {
+    if (userToRemove) {
+      removeBiometricUser(userToRemove);
+      loadBiometricUsers();
+      toast.success(t('biometric.removed'));
+      setShowRemoveModal(false);
+      setUserToRemove(null);
+    }
+  };
 
   const watchedEmail = watch('email');
   const watchedPassword = watch('password');
@@ -341,7 +362,7 @@ const Login = () => {
             {/* Biometric Login Buttons */}
             {isAvailable && biometricUsers.length > 0 && (
               <>
-                <div className="relative">
+                <div className="relative mt-8">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-gray-300"></div>
                   </div>
@@ -350,28 +371,37 @@ const Login = () => {
                   </div>
                 </div>
                 
-                <div className="space-y-3">
+                <div className="space-y-3 mt-6">
                   {biometricUsers.map((userEmail) => (
-                    <button
-                      key={userEmail}
-                      type="button"
-                      onClick={() => handleBiometricLogin(userEmail)}
-                      disabled={isBiometricLoading}
-                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 px-6 rounded-xl font-semibold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none relative overflow-hidden group"
-                    >
-                      <span className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-green-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-                      <span className="relative flex flex-col items-center justify-center gap-1">
-                        <div className="flex items-center gap-2">
-                          {isBiometricLoading ? (
-                            <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                          ) : (
-                            <Fingerprint className="w-5 h-5" />
-                          )}
-                          <span>{t('biometric.loginButton')}</span>
-                        </div>
-                        <span className="text-xs opacity-90">{userEmail}</span>
-                      </span>
-                    </button>
+                    <div key={userEmail} className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleBiometricLogin(userEmail)}
+                        disabled={isBiometricLoading}
+                        className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 px-6 rounded-xl font-semibold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none relative overflow-hidden group"
+                      >
+                        <span className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-green-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                        <span className="relative flex flex-col items-center justify-center gap-1">
+                          <div className="flex items-center gap-2">
+                            {isBiometricLoading ? (
+                              <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                            ) : (
+                              <Fingerprint className="w-5 h-5" />
+                            )}
+                            <span>{t('biometric.loginButton')}</span>
+                          </div>
+                          <span className="text-xs opacity-90">{userEmail}</span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => confirmRemoveBiometric(userEmail)}
+                        className="w-14 bg-red-100 hover:bg-red-200 text-red-600 rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-105 border-2 border-red-300"
+                        title={t('biometric.remove')}
+                      >
+                        <X className="w-6 h-6" />
+                      </button>
+                    </div>
                   ))}
                 </div>
               </>
@@ -390,6 +420,42 @@ const Login = () => {
         </div>
         </div>
       </div>
+
+      {/* Remove Biometric Confirmation Modal */}
+      {showRemoveModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl animate-scale-in">
+            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 text-center mb-2">
+              {t('biometric.removeTitle')}
+            </h3>
+            <p className="text-gray-600 text-center mb-6">
+              {t('biometric.removeMessage', { email: userToRemove })}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowRemoveModal(false);
+                  setUserToRemove(null);
+                }}
+                className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={handleRemoveBiometric}
+                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-colors"
+              >
+                {t('biometric.remove')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

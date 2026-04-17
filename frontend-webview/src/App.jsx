@@ -16,6 +16,7 @@ import NGODashboard from './pages/ngo/Dashboard';
 import AdminDashboard from './pages/admin/Dashboard';
 import Profile from './pages/common/Profile';
 import Settings from './pages/common/Settings';
+import About from './pages/common/About';
 
 // Components
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -121,6 +122,13 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <Settings />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/about" element={
+            <ProtectedRoute>
+              <Layout>
+                <About />
               </Layout>
             </ProtectedRoute>
           } />

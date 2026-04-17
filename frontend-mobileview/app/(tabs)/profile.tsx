@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Alert, ActivityIndicator, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 import { useAppSelector, useAppDispatch } from '../../src/hooks/useRedux';
 import { updateProfile, loadUser } from '../../src/store/authSlice';
 import { useTranslation } from 'react-i18next';
@@ -38,6 +39,9 @@ export default function ProfileScreen() {
   const { user } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const [isEditing, setIsEditing] = useState(false);
+  const [profilePicture, setProfilePicture] = useState(user?.profile_picture || null);
+  const [uploadingPicture, setUploadingPicture] = useState(false);
+  const [imagePreviewModal, setImagePreviewModal] = useState(false);
   const [editData, setEditData] = useState({
     organization_name: user?.organization_name || '',
     phone: user?.phone || '',
@@ -55,8 +59,75 @@ export default function ProfileScreen() {
         address: user.address || '',
         contact_person: user.contact_person || '',
       });
+      setProfilePicture(user.profile_picture || null);
     }
   }, [user, isEditing]);
+
+  const handleImageUpload = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Please grant camera roll permissions to upload a profile picture.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.3,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets[0].base64) {
+      const base64String = `data:image/jpeg;base64,${result.assets[0].base64}`;
+      
+      // Check size (max 500KB base64)
+      if (base64String.length > 500000) {
+        Toast.show({ type: 'error', text1: '❌ Image Too Large', text2: 'Please select a smaller image' });
+        return;
+      }
+
+      setUploadingPicture(true);
+      try {
+        const api = (await import('../../src/services/api')).default;
+        const response = await api.post('/users/profile-picture', { image: base64String });
+        setProfilePicture(response.data.profile_picture);
+        Toast.show({ type: 'success', text1: '✅ Profile Picture Updated' });
+      } catch (error: any) {
+        const errorMsg = error.response?.status === 413 ? 'Image too large' : 'Could not upload profile picture';
+        Toast.show({ type: 'error', text1: '❌ Upload Failed', text2: errorMsg });
+      } finally {
+        setUploadingPicture(false);
+      }
+    }
+  };
+
+  const handleDeletePicture = () => {
+    Alert.alert(
+      'Remove Profile Picture',
+      'Are you sure you want to remove your profile picture?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            setUploadingPicture(true);
+            try {
+              const api = (await import('../../src/services/api')).default;
+              await api.delete('/users/profile-picture');
+              setProfilePicture(null);
+              Toast.show({ type: 'success', text1: '✅ Profile Picture Removed' });
+            } catch (error) {
+              Toast.show({ type: 'error', text1: '❌ Delete Failed' });
+            } finally {
+              setUploadingPicture(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   if (!user) return null;
 
@@ -82,9 +153,31 @@ export default function ProfileScreen() {
         {/* Gradient Header */}
         <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
           <View style={styles.avatarWrap}>
-            <View style={styles.avatar}>
-              <Ionicons name="person" size={40} color="#fff" />
-            </View>
+            <TouchableOpacity 
+              onPress={() => profilePicture ? setImagePreviewModal(true) : handleImageUpload()} 
+              onLongPress={handleImageUpload}
+              disabled={uploadingPicture} 
+              style={styles.avatar}
+            >
+              {profilePicture ? (
+                <Image source={{ uri: profilePicture }} style={styles.avatarImage} />
+              ) : (
+                <Ionicons name="person" size={40} color="#fff" />
+              )}
+              {uploadingPicture && (
+                <View style={styles.uploadingOverlay}>
+                  <ActivityIndicator size="small" color="#fff" />
+                </View>
+              )}
+              <View style={styles.cameraIcon}>
+                <Ionicons name="camera" size={14} color="#fff" />
+              </View>
+            </TouchableOpacity>
+            {profilePicture && (
+              <TouchableOpacity onPress={handleDeletePicture} disabled={uploadingPicture} style={styles.deleteIcon}>
+                <Ionicons name="trash" size={12} color="#fff" />
+              </TouchableOpacity>
+            )}
             {user.is_verified && (
               <View style={styles.verifiedBadge}>
                 <Ionicons name="checkmark" size={10} color="#fff" />
@@ -181,6 +274,61 @@ export default function ProfileScreen() {
 
         <View style={{ height: 32 }} />
       </ScrollView>
+
+      {/* Image Preview Modal */}
+      <Modal visible={imagePreviewModal} transparent animationType="fade" onRequestClose={() => setImagePreviewModal(false)}>
+        <TouchableOpacity 
+          style={styles.previewOverlay} 
+          activeOpacity={1} 
+          onPress={() => setImagePreviewModal(false)}
+        >
+          <View style={styles.previewContainer}>
+            <TouchableOpacity 
+              style={styles.previewCloseBtn} 
+              onPress={() => setImagePreviewModal(false)}
+            >
+              <Ionicons name="close" size={24} color="#fff" />
+            </TouchableOpacity>
+            
+            {profilePicture && (
+              <Image 
+                source={{ uri: profilePicture }} 
+                style={styles.previewImage}
+                resizeMode="contain"
+              />
+            )}
+            
+            <View style={styles.previewInfo}>
+              <Text style={styles.previewName}>{user?.organization_name}</Text>
+              <Text style={styles.previewEmail}>{user?.email}</Text>
+              
+              <View style={styles.previewActions}>
+                <TouchableOpacity 
+                  style={styles.previewActionBtn}
+                  onPress={() => {
+                    setImagePreviewModal(false);
+                    setTimeout(() => handleImageUpload(), 300);
+                  }}
+                >
+                  <Ionicons name="camera" size={20} color="#fff" />
+                  <Text style={styles.previewActionText}>{t('profile.changePhoto')}</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.previewActionBtn, styles.previewDeleteBtn]}
+                  onPress={() => {
+                    setImagePreviewModal(false);
+                    setTimeout(() => handleDeletePicture(), 300);
+                  }}
+                >
+                  <Ionicons name="trash" size={20} color="#fff" />
+                  <Text style={styles.previewActionText}>{t('profile.deletePhoto')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
     </BiometricGuard>
   );
@@ -190,7 +338,11 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', paddingTop: 36, paddingBottom: 28, paddingHorizontal: 24 },
   avatarWrap: { position: 'relative', marginBottom: 14 },
   avatar: { width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.25)', justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: 'rgba(255,255,255,0.5)' },
-  verifiedBadge: { position: 'absolute', bottom: 2, right: 2, width: 22, height: 22, borderRadius: 11, backgroundColor: '#10b981', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 44 },
+  uploadingOverlay: { position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 44, justifyContent: 'center', alignItems: 'center' },
+  cameraIcon: { position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: 14, backgroundColor: '#2563eb', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' },
+  deleteIcon: { position: 'absolute', top: 0, right: 0, width: 28, height: 28, borderRadius: 14, backgroundColor: '#ef4444', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' },
+  verifiedBadge: { position: 'absolute', bottom: 2, left: 2, width: 22, height: 22, borderRadius: 11, backgroundColor: '#10b981', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' },
   name: { fontSize: 22, fontWeight: '800', color: '#fff', marginBottom: 8 },
   rolePill: { backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 14, paddingVertical: 4, borderRadius: 20, marginBottom: 6 },
   roleText: { color: '#fff', fontSize: 11, fontWeight: '700', letterSpacing: 1 },
@@ -220,4 +372,15 @@ const styles = StyleSheet.create({
   progressFill: { height: '100%', borderRadius: 4 },
   verifyCard: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   verifyText: { fontSize: 16, fontWeight: '700' },
+  previewOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' },
+  previewContainer: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  previewCloseBtn: { position: 'absolute', top: 50, right: 20, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', zIndex: 10 },
+  previewImage: { width: '100%', height: '60%', borderRadius: 20 },
+  previewInfo: { marginTop: 24, alignItems: 'center', width: '100%' },
+  previewName: { fontSize: 24, fontWeight: '800', color: '#fff', marginBottom: 8 },
+  previewEmail: { fontSize: 14, color: 'rgba(255,255,255,0.7)', marginBottom: 24 },
+  previewActions: { flexDirection: 'row', gap: 12, width: '100%', paddingHorizontal: 20 },
+  previewActionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#2563eb', paddingVertical: 14, borderRadius: 14 },
+  previewDeleteBtn: { backgroundColor: '#ef4444' },
+  previewActionText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 });

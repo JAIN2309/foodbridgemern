@@ -30,6 +30,8 @@ export default function LoginScreen() {
   const [emailFocused, setEmailFocused] = useState(false);
   const [passFocused, setPassFocused] = useState(false);
   const [langModal, setLangModal] = useState(false);
+  const [removeConfirmModal, setRemoveConfirmModal] = useState(false);
+  const [userToRemove, setUserToRemove] = useState<string | null>(null);
 
   const btnScale = useRef(new Animated.Value(1)).current;
   const currentLang = LANGUAGES.find(l => l.code === i18n.language) || LANGUAGES[0];
@@ -70,6 +72,26 @@ export default function LoginScreen() {
     } catch (error: any) {
       const msg = typeof error === 'string' ? error : error?.message || t('auth.login.loginFailed');
       Toast.show({ type: 'error', text1: t('auth.login.loginFailed'), text2: msg, visibilityTime: 4000 });
+    }
+  };
+
+  const confirmRemoveBiometric = (userEmail: string) => {
+    setUserToRemove(userEmail);
+    setRemoveConfirmModal(true);
+  };
+
+  const handleRemoveBiometricUser = async () => {
+    if (!userToRemove) return;
+    
+    try {
+      await biometricAuth.disable(userToRemove);
+      await loadBiometricUsers();
+      Toast.show({ type: 'success', text1: t('biometric.removed') });
+    } catch (error) {
+      Toast.show({ type: 'error', text1: t('biometric.removeFailed') });
+    } finally {
+      setRemoveConfirmModal(false);
+      setUserToRemove(null);
     }
   };
 
@@ -251,22 +273,32 @@ export default function LoginScreen() {
 
               {/* Biometric Login Buttons */}
               {biometricUsers.length > 0 && (
-                <View style={{ marginTop: 12, gap: 10 }}>
+                <View style={{ marginTop: 40, gap: 12 }}>
                   {biometricUsers.map((userEmail) => (
-                    <TouchableOpacity
-                      key={userEmail}
-                      onPress={() => handleBiometricLogin(userEmail)}
-                      disabled={isLoading}
-                      activeOpacity={0.9}
-                    >
-                      <View style={styles.biometricBtn}>
-                        <Ionicons name="finger-print" size={20} color="#2563eb" />
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.biometricText}>{t('biometric.loginWith', { type: biometricType })}</Text>
-                          <Text style={styles.biometricEmail}>{userEmail}</Text>
+                    <View key={userEmail} style={{ flexDirection: 'row', gap: 8 }}>
+                      <TouchableOpacity
+                        onPress={() => handleBiometricLogin(userEmail)}
+                        disabled={isLoading}
+                        activeOpacity={0.9}
+                        style={{ flex: 1 }}
+                      >
+                        <View style={styles.biometricBtn}>
+                          <Ionicons name="finger-print" size={20} color="#2563eb" />
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.biometricText}>{t('biometric.loginWith', { type: biometricType })}</Text>
+                            <Text style={styles.biometricEmail}>{userEmail}</Text>
+                          </View>
                         </View>
-                      </View>
-                    </TouchableOpacity>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => confirmRemoveBiometric(userEmail)}
+                        disabled={isLoading}
+                        activeOpacity={0.9}
+                        style={styles.removeBtn}
+                      >
+                        <Ionicons name="close-circle" size={24} color="#ef4444" />
+                      </TouchableOpacity>
+                    </View>
                   ))}
                 </View>
               )}
@@ -331,6 +363,36 @@ export default function LoginScreen() {
             </View>
           </TouchableOpacity>
         </Modal>
+
+        {/* Remove Biometric Confirmation Modal */}
+        <Modal visible={removeConfirmModal} transparent animationType="fade" onRequestClose={() => setRemoveConfirmModal(false)}>
+          <View style={styles.confirmModalOverlay}>
+            <View style={styles.confirmModalContent}>
+              <View style={styles.confirmIconWrap}>
+                <Ionicons name="warning" size={48} color="#f59e0b" />
+              </View>
+              <Text style={styles.confirmTitle}>{t('biometric.removeTitle')}</Text>
+              <Text style={styles.confirmMessage}>{t('biometric.removeMessage', { email: userToRemove })}</Text>
+              <View style={styles.confirmButtons}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setRemoveConfirmModal(false);
+                    setUserToRemove(null);
+                  }}
+                  style={styles.confirmCancelBtn}
+                >
+                  <Text style={styles.confirmCancelText}>{t('layout.cancel')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleRemoveBiometricUser}
+                  style={styles.confirmRemoveBtn}
+                >
+                  <Text style={styles.confirmRemoveText}>{t('biometric.remove')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </LinearGradient>
     </SafeAreaView>
   );
@@ -392,6 +454,17 @@ const styles = StyleSheet.create({
   biometricBtn: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderRadius: 16, backgroundColor: '#eff6ff', borderWidth: 2, borderColor: '#2563eb' },
   biometricText: { color: '#2563eb', fontSize: 15, fontWeight: '700' },
   biometricEmail: { color: '#6b7280', fontSize: 12, marginTop: 2 },
+  removeBtn: { width: 48, height: 70, borderRadius: 16, backgroundColor: '#fee2e2', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#ef4444' },
   forgotBtn: { alignItems: 'flex-end', marginTop: 8 },
   forgotText: { fontSize: 13, fontWeight: '600', color: '#7c3aed' },
+  confirmModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  confirmModalContent: { backgroundColor: '#fff', borderRadius: 24, padding: 24, width: '100%', maxWidth: 400, alignItems: 'center' },
+  confirmIconWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#fef3c7', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  confirmTitle: { fontSize: 20, fontWeight: '800', color: '#1f2937', marginBottom: 8, textAlign: 'center' },
+  confirmMessage: { fontSize: 14, color: '#6b7280', marginBottom: 24, textAlign: 'center', lineHeight: 20 },
+  confirmButtons: { flexDirection: 'row', gap: 12, width: '100%' },
+  confirmCancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#f3f4f6', alignItems: 'center' },
+  confirmCancelText: { fontSize: 15, fontWeight: '700', color: '#6b7280' },
+  confirmRemoveBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#ef4444', alignItems: 'center' },
+  confirmRemoveText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 });

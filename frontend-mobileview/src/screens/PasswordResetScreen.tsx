@@ -153,9 +153,13 @@ export default function PasswordResetScreen() {
 
   const handlePasteOTP = async () => {
     const text = await Clipboard.getStringAsync();
-    if (text && /^\d{6}$/.test(text)) {
-      setOtp(text);
+    const cleanedText = text.trim().replace(/[^0-9]/g, '');
+    if (cleanedText && /^\d{6}$/.test(cleanedText)) {
+      setOtp(cleanedText);
       Toast.show({ type: 'success', text1: t('passwordReset.otpPasted') });
+      // Auto-verify after pasting
+      setAutoVerifying(true);
+      setTimeout(() => handleVerifyOTP(cleanedText), 300);
     } else {
       Toast.show({ type: 'error', text1: t('passwordReset.invalidClipboard') });
     }

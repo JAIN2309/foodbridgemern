@@ -424,7 +424,12 @@
     "disableMessage": "Are you sure you want to disable biometric authentication?",
     "passwordRequired": "Password is required",
     "invalidPassword": "Invalid password",
-    "enabled": "Biometric enabled"
+    "enabled": "Biometric enabled",
+    "removed": "Biometric login removed",
+    "removeFailed": "Failed to remove biometric login",
+    "removeTitle": "Remove Biometric Login?",
+    "removeMessage": "Are you sure you want to remove biometric login for {{email}}? You will need to set it up again to use this feature.",
+    "remove": "Remove"
   },
   "passwordReset": {
     "title": "Reset Password",

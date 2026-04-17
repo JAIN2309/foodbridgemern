@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { User, Mail, Phone, ArrowLeft, Building, MapPin, Edit3, Check, X } from 'lucide-react';
+import { User, Mail, Phone, ArrowLeft, Building, MapPin, Edit3, Check, X, Camera, Trash2 } from 'lucide-react';
 import { updateProfile } from '../../store/slices/authSlice';
 import BiometricGuard from '../../components/common/BiometricGuard';
 
@@ -14,6 +14,9 @@ const Profile = () => {
   const navigate = useNavigate();
   const { user, isLoading } = useSelector((state) => state.auth);
   const [isEditing, setIsEditing] = useState(false);
+  const [profilePicture, setProfilePicture] = useState(user?.profile_picture || null);
+  const [uploadingPicture, setUploadingPicture] = useState(false);
+  const fileInputRef = useRef(null);
   
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
     defaultValues: {
@@ -35,8 +38,91 @@ const Profile = () => {
         address: user.address || ''
       };
       reset(defaultValues);
+      setProfilePicture(user.profile_picture || null);
     }
   }, [user?.id, reset]);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 500KB)
+    if (file.size > 500 * 1024) {
+      toast.error('Image size should be less than 500KB');
+      return;
+    }
+
+    setUploadingPicture(true);
+    try {
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64String = reader.result;
+        
+        // Double check base64 size
+        if (base64String.length > 500000) {
+          toast.error('Image too large after conversion. Please select a smaller image.');
+          setUploadingPicture(false);
+          return;
+        }
+        
+        // Upload to backend
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}/users/profile-picture`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({ image: base64String })
+        });
+
+        if (!response.ok) {
+          if (response.status === 413) {
+            throw new Error('Image too large');
+          }
+          throw new Error('Upload failed');
+        }
+        
+        const data = await response.json();
+        setProfilePicture(data.profile_picture);
+        toast.success('Profile picture updated successfully');
+        setUploadingPicture(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      toast.error(error.message || 'Failed to upload profile picture');
+      setUploadingPicture(false);
+    }
+  };
+
+  const handleDeletePicture = async () => {
+    if (!window.confirm('Are you sure you want to remove your profile picture?')) return;
+
+    setUploadingPicture(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}/users/profile-picture`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) throw new Error('Delete failed');
+      
+      setProfilePicture(null);
+      toast.success('Profile picture removed successfully');
+    } catch (error) {
+      toast.error('Failed to remove profile picture');
+    } finally {
+      setUploadingPicture(false);
+    }
+  };
 
   const onSubmit = async (data) => {
     try {
@@ -226,6 +312,59 @@ const Profile = () => {
             </div>
           )}
         </form>
+      </div>
+
+      {/* Profile Picture Section */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Profile Picture</h2>
+        <div className="flex items-center gap-6">
+          <div className="relative">
+            <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center border-4 border-gray-200">
+              {profilePicture ? (
+                <img src={profilePicture} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-16 h-16 text-gray-400" />
+              )}
+            </div>
+            {uploadingPicture && (
+              <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+          </div>
+          <div className="flex-1">
+            <p className="text-sm text-gray-600 mb-4">
+              Upload a profile picture. Recommended size: 400x400px. Max size: 500KB.
+            </p>
+            <div className="flex gap-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingPicture}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                <Camera className="w-4 h-4 mr-2" />
+                {profilePicture ? 'Change Picture' : 'Upload Picture'}
+              </button>
+              {profilePicture && (
+                <button
+                  onClick={handleDeletePicture}
+                  disabled={uploadingPicture}
+                  className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">

@@ -78,10 +78,14 @@ export const biometricAuth = {
     // Remove user credentials locally
     await SecureStore.deleteItemAsync(getUserKey(email, 'password'));
     
-    // Disable on backend
+    // Only try to disable on backend if user is logged in
+    // (can't call authenticated endpoint from login screen)
     try {
       await biometricAPI.toggle(false);
-    } catch {}
+    } catch (error) {
+      // Silently fail if not authenticated - local removal is enough for login screen
+      console.log('Could not disable biometric on backend (user not logged in)');
+    }
     
     // Remove email from local biometric users list
     try {

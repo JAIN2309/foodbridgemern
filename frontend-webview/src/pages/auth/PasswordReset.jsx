@@ -147,9 +147,12 @@ export default function PasswordReset() {
   const handlePasteOTP = async () => {
     try {
       const text = await navigator.clipboard.readText();
-      if (text && /^\d{6}$/.test(text)) {
-        setOtp(text);
+      const cleanedText = text.trim().replace(/[^0-9]/g, '');
+      if (cleanedText && /^\d{6}$/.test(cleanedText)) {
+        setOtp(cleanedText);
         toast.success(t('passwordReset.otpPasted'));
+        // Auto-verify after pasting
+        setTimeout(() => handleVerifyOTP(null, cleanedText), 300);
       } else {
         toast.error(t('passwordReset.invalidClipboard'));
       }

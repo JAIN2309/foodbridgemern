@@ -254,6 +254,11 @@ export default {
     enterPassword: 'Enter Password',
     passwordRequired: 'Enter your password to enable biometric login',
     noCredentials: 'No saved credentials found',
+    removed: 'Biometric login removed',
+    removeFailed: 'Failed to remove biometric login',
+    removeTitle: 'Remove Biometric Login?',
+    removeMessage: 'Are you sure you want to remove biometric login for {{email}}? You will need to set it up again to use this feature.',
+    remove: 'Remove',
   },
   common: {
     loading: 'Loading...',

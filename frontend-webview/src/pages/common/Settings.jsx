@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Moon, Sun, Globe, Check, Fingerprint, Shield, Lock } from 'lucide-react';
+import { Moon, Sun, Globe, Check, Fingerprint, Shield, Lock, Info } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import { useBiometric } from '../../hooks/useBiometric';
@@ -221,6 +221,46 @@ const Settings = () => {
                   }`}
                 />
               </button>
+            </div>
+          </div>
+        </div>
+
+        {/* About Section */}
+        <div className="border-t dark:border-gray-700 pt-6">
+          <div className="flex items-center mb-4">
+            <Info className="w-5 h-5 text-gray-600 dark:text-gray-400 mr-2" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">{t('settings.about')}</h3>
+          </div>
+          
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 dark:bg-opacity-30 rounded-lg flex items-center justify-center mr-3">
+                  <Info className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-white">{t('settings.aboutApp')}</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{t('settings.aboutAppDesc') || 'Learn more about FoodBridge'}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/about')}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+              >
+                {t('settings.viewAbout') || 'View'}
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-gray-100 dark:bg-gray-600 rounded-lg flex items-center justify-center mr-3">
+                  <span className="text-lg">📱</span>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-white">{t('settings.appVersion')}</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Version 1.0.0</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

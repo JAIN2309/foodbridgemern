@@ -18,7 +18,7 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' })); // Increase payload limit for profile pictures
 app.use(logger); // Add logging middleware
 
 // MongoDB Connection

@@ -176,6 +176,53 @@ const getBiometricStatus = async (req, res) => {
   }
 };
 
+const uploadProfilePicture = async (req, res) => {
+  try {
+    const { image } = req.body; // Base64 encoded image
+    
+    if (!image) {
+      return res.status(400).json({ message: 'No image provided' });
+    }
+
+    // Encrypt the image data using simple base64 encoding (already encrypted from client)
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { profile_picture: image },
+      { new: true }
+    ).select('-password');
+
+    res.json({ 
+      message: 'Profile picture uploaded successfully',
+      profile_picture: user.profile_picture
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getProfilePicture = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('profile_picture');
+    res.json({ profile_picture: user.profile_picture });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const deleteProfilePicture = async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(
+      req.user.id,
+      { profile_picture: null },
+      { new: true }
+    );
+
+    res.json({ message: 'Profile picture deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getPendingVerifications,
   verifyUser,
@@ -184,5 +231,8 @@ module.exports = {
   getAllUsers,
   getHealthCheck,
   toggleBiometric,
-  getBiometricStatus
+  getBiometricStatus,
+  uploadProfilePicture,
+  getProfilePicture,
+  deleteProfilePicture
 };

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch, Alert, Modal, TextInput } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch, Alert, Modal, TextInput, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -31,11 +31,9 @@ export default function SettingsScreen() {
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
   const { t, i18n } = useTranslation();
-  const [notifications, setNotifications] = useState(true);
-  const [emailAlerts, setEmailAlerts] = useState(true);
-  const [locationAccess, setLocationAccess] = useState(true);
   const [langModal, setLangModal] = useState(false);
   const [passwordModal, setPasswordModal] = useState(false);
+  const [imagePreviewModal, setImagePreviewModal] = useState(false);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -155,11 +153,19 @@ export default function SettingsScreen() {
 
         {/* Header */}
         <LinearGradient colors={[roleColor, roleColor + 'cc']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
-          <View style={styles.avatarWrap}>
+          <TouchableOpacity 
+            style={styles.avatarWrap} 
+            onPress={() => user?.profile_picture && setImagePreviewModal(true)}
+            activeOpacity={user?.profile_picture ? 0.7 : 1}
+          >
             <LinearGradient colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.1)']} style={styles.avatar}>
-              <Ionicons name="person" size={36} color="#fff" />
+              {user?.profile_picture ? (
+                <Image source={{ uri: user.profile_picture }} style={styles.avatarImage} />
+              ) : (
+                <Ionicons name="person" size={36} color="#fff" />
+              )}
             </LinearGradient>
-          </View>
+          </TouchableOpacity>
           <Text style={styles.name}>{user?.organization_name}</Text>
           <View style={styles.rolePill}>
             <Text style={styles.roleText}>{user?.role?.toUpperCase()}</Text>
@@ -198,22 +204,10 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Notifications */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('settings.notificationsSection').toUpperCase()}</Text>
-          <View style={styles.card}>
-            <SettingRow icon="notifications-outline" label={t('settings.notifications')} toggle toggleValue={notifications} onToggle={setNotifications} color="#2563eb" />
-            <View style={styles.sep} />
-            <SettingRow icon="mail-outline" label={t('settings.emailAlerts')} toggle toggleValue={emailAlerts} onToggle={setEmailAlerts} color="#7c3aed" />
-          </View>
-        </View>
-
         {/* Privacy */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('settings.privacy').toUpperCase()}</Text>
           <View style={styles.card}>
-            <SettingRow icon="location-outline" label={t('settings.locationAccess')} toggle toggleValue={locationAccess} onToggle={setLocationAccess} color="#16a34a" />
-            <View style={styles.sep} />
             <SettingRow icon="lock-closed-outline" label={t('settings.changePassword')} onPress={handleChangePassword} color="#f59e0b" />
           </View>
         </View>
@@ -338,6 +332,37 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
+      {/* Image Preview Modal */}
+      <Modal visible={imagePreviewModal} transparent animationType="fade" onRequestClose={() => setImagePreviewModal(false)}>
+        <TouchableOpacity 
+          style={styles.previewOverlay} 
+          activeOpacity={1} 
+          onPress={() => setImagePreviewModal(false)}
+        >
+          <View style={styles.previewContainer}>
+            <TouchableOpacity 
+              style={styles.previewCloseBtn} 
+              onPress={() => setImagePreviewModal(false)}
+            >
+              <Ionicons name="close" size={24} color="#fff" />
+            </TouchableOpacity>
+            
+            {user?.profile_picture && (
+              <Image 
+                source={{ uri: user.profile_picture }} 
+                style={styles.previewImage}
+                resizeMode="contain"
+              />
+            )}
+            
+            <View style={styles.previewInfo}>
+              <Text style={styles.previewName}>{user?.organization_name}</Text>
+              <Text style={styles.previewEmail}>{user?.email}</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -345,7 +370,8 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   header: { padding: 32, alignItems: 'center', paddingTop: 40, paddingBottom: 36 },
   avatarWrap: { marginBottom: 14 },
-  avatar: { width: 84, height: 84, borderRadius: 42, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: 'rgba(255,255,255,0.4)' },
+  avatar: { width: 84, height: 84, borderRadius: 42, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: 'rgba(255,255,255,0.4)', overflow: 'hidden' },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 42 },
   name: { fontSize: 22, fontWeight: '800', color: '#fff', marginBottom: 8 },
   rolePill: { backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 14, paddingVertical: 4, borderRadius: 20, marginBottom: 6 },
   roleText: { color: '#fff', fontSize: 12, fontWeight: '700', letterSpacing: 1 },
@@ -383,4 +409,11 @@ const styles = StyleSheet.create({
   passwordEnableBtn: { flex: 1, borderRadius: 14, overflow: 'hidden' },
   passwordEnableBtnGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14 },
   passwordEnableText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  previewOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' },
+  previewContainer: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  previewCloseBtn: { position: 'absolute', top: 50, right: 20, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', zIndex: 10 },
+  previewImage: { width: '100%', height: '70%', borderRadius: 20 },
+  previewInfo: { marginTop: 24, alignItems: 'center' },
+  previewName: { fontSize: 24, fontWeight: '800', color: '#fff', marginBottom: 8 },
+  previewEmail: { fontSize: 14, color: 'rgba(255,255,255,0.7)' },
 });

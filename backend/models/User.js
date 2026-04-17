@@ -98,6 +98,10 @@ const userSchema = new mongoose.Schema({
   biometric_enabled: {
     type: Boolean,
     default: false
+  },
+  profile_picture: {
+    type: String, // Base64 encrypted image data
+    default: null
   }
 }, {
   timestamps: true
