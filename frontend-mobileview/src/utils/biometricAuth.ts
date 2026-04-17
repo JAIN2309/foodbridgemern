@@ -1,5 +1,6 @@
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
+import { biometricAPI } from '../services/api';
 
 const BIOMETRIC_USERS_KEY = 'biometricUsers'; // Stores list of emails with biometric enabled
 
@@ -41,24 +42,25 @@ export const biometricAuth = {
     }
   },
 
-  // Check if biometric is enabled for specific user
+  // Check if biometric is enabled for specific user (from backend)
   async isEnabled(email: string): Promise<boolean> {
     try {
-      const usersJson = await SecureStore.getItemAsync(BIOMETRIC_USERS_KEY);
-      if (!usersJson) return false;
-      const users: string[] = JSON.parse(usersJson);
-      return users.includes(email);
+      const response = await biometricAPI.getStatus();
+      return response.data.biometric_enabled;
     } catch {
       return false;
     }
   },
 
-  // Enable biometric authentication for specific user
+  // Enable biometric authentication for specific user (save to backend)
   async enable(email: string, password: string): Promise<void> {
-    // Save user credentials
+    // Save user credentials locally for biometric login
     await SecureStore.setItemAsync(getUserKey(email, 'password'), password);
     
-    // Add email to biometric users list
+    // Enable on backend
+    await biometricAPI.toggle(true);
+    
+    // Add email to local biometric users list
     try {
       const usersJson = await SecureStore.getItemAsync(BIOMETRIC_USERS_KEY);
       const users: string[] = usersJson ? JSON.parse(usersJson) : [];
@@ -71,12 +73,17 @@ export const biometricAuth = {
     }
   },
 
-  // Disable biometric authentication for specific user
+  // Disable biometric authentication for specific user (update backend)
   async disable(email: string): Promise<void> {
-    // Remove user credentials
+    // Remove user credentials locally
     await SecureStore.deleteItemAsync(getUserKey(email, 'password'));
     
-    // Remove email from biometric users list
+    // Disable on backend
+    try {
+      await biometricAPI.toggle(false);
+    } catch {}
+    
+    // Remove email from local biometric users list
     try {
       const usersJson = await SecureStore.getItemAsync(BIOMETRIC_USERS_KEY);
       if (usersJson) {

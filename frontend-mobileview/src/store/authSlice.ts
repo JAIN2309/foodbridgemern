@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import * as SecureStore from 'expo-secure-store';
 import api from '../services/api';
 import { AuthState, User } from '../types';
+import { biometricAuth } from '../utils/biometricAuth';
 
 export const loginUser = createAsyncThunk(
   'auth/login',
@@ -9,6 +10,16 @@ export const loginUser = createAsyncThunk(
     try {
       const response = await api.post('/auth/login', { email, password });
       await SecureStore.setItemAsync('token', response.data.token);
+      
+      // Sync biometric status from backend
+      if (response.data.biometric_enabled) {
+        const hasLocalCredentials = await biometricAuth.getCredentials(email);
+        if (!hasLocalCredentials) {
+          // Backend says enabled but no local credentials, save them
+          await biometricAuth.saveCredentials(email, password);
+        }
+      }
+      
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Login failed');
@@ -34,6 +45,18 @@ export const loadUser = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.get('/auth/profile');
+      
+      // Sync biometric status on app start
+      if (response.data.email) {
+        const backendStatus = response.data.biometric_enabled;
+        const hasLocalCredentials = await biometricAuth.getCredentials(response.data.email);
+        
+        // If backend disabled but local has credentials, clean up
+        if (!backendStatus && hasLocalCredentials) {
+          await biometricAuth.disable(response.data.email);
+        }
+      }
+      
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to load user');

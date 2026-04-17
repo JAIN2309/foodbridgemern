@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import api from '../../services/api';
+import api, { biometricAPI } from '../../services/api';
 
 // Async thunks
 export const loginUser = createAsyncThunk(
@@ -11,6 +11,16 @@ export const loginUser = createAsyncThunk(
       console.log('✅ LOGIN RESPONSE:', response.data);
       console.log('👤 USER DATA RECEIVED:', response.data.user);
       localStorage.setItem('token', response.data.token);
+      
+      // Sync biometric status from backend
+      if (response.data.biometric_enabled) {
+        const hasLocalCredentials = localStorage.getItem(`biometric_${email}_password`);
+        if (!hasLocalCredentials) {
+          localStorage.setItem(`biometric_${email}_password`, password);
+          localStorage.setItem(`biometric_${email}_email`, email);
+        }
+      }
+      
       return response.data;
     } catch (error) {
       console.error('❌ LOGIN ERROR:', error.response?.data || error.message);
@@ -82,6 +92,20 @@ export const loadUser = createAsyncThunk(
         role: response.data.role,
         is_verified: response.data.is_verified
       });
+      
+      // Sync biometric status on app start
+      if (response.data.email) {
+        const backendStatus = response.data.biometric_enabled;
+        const hasLocalCredentials = localStorage.getItem(`biometric_${response.data.email}_password`);
+        
+        // If backend disabled but local has credentials, clean up
+        if (!backendStatus && hasLocalCredentials) {
+          localStorage.removeItem(`biometric_${response.data.email}_credentialId`);
+          localStorage.removeItem(`biometric_${response.data.email}_email`);
+          localStorage.removeItem(`biometric_${response.data.email}_password`);
+        }
+      }
+      
       return response.data;
     } catch (error) {
       console.error('❌ LOAD USER ERROR:', error.response?.data || error.message);

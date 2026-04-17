@@ -218,6 +218,17 @@ export default function LoginScreen() {
                 </View>
               )}
 
+              {/* Forgot Password Link */}
+              <TouchableOpacity 
+                onPress={() => {
+                  console.log('🔑 Navigating to password reset...');
+                  router.push('/(auth)/password-reset');
+                }} 
+                style={styles.forgotBtn}
+              >
+                <Text style={styles.forgotText}>{t('auth.login.forgotPassword')}</Text>
+              </TouchableOpacity>
+
               {/* Button */}
               <Animated.View style={{ transform: [{ scale: btnScale }], marginTop: 24 }}>
                 <TouchableOpacity onPress={handleLogin} disabled={isLoading} activeOpacity={0.9}>
@@ -381,4 +392,6 @@ const styles = StyleSheet.create({
   biometricBtn: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderRadius: 16, backgroundColor: '#eff6ff', borderWidth: 2, borderColor: '#2563eb' },
   biometricText: { color: '#2563eb', fontSize: 15, fontWeight: '700' },
   biometricEmail: { color: '#6b7280', fontSize: 12, marginTop: 2 },
+  forgotBtn: { alignItems: 'flex-end', marginTop: 8 },
+  forgotText: { fontSize: 13, fontWeight: '600', color: '#7c3aed' },
 });

@@ -32,4 +32,10 @@ api.interceptors.response.use(
   }
 );
 
+// Biometric API functions
+export const biometricAPI = {
+  toggle: (enabled) => api.put('/users/biometric/toggle', { enabled }),
+  getStatus: () => api.get('/users/biometric/status')
+};
+
 export default api;

@@ -198,6 +198,7 @@ export default {
       meals: 'Meals',
       donors: 'Donors',
       ngos: 'NGOs',
+      forgotPassword: 'Forgot Password?',
     },
     register: {
       title: 'Create Account',

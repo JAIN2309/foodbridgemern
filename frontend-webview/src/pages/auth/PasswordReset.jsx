@@ -19,6 +19,7 @@ export default function PasswordReset() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [autoVerifying, setAutoVerifying] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Auto-send OTP for logged-in users
@@ -67,23 +68,32 @@ export default function PasswordReset() {
     }
   };
 
-  const handleVerifyOTP = async (e) => {
-    e.preventDefault();
-    if (!otp.trim() || otp.length !== 6) {
-      toast.error(t('passwordReset.enter6DigitOTP'));
+  const handleVerifyOTP = async (e, otpValue = null) => {
+    if (e) e.preventDefault();
+    const otpToVerify = otpValue || otp.trim();
+    const isAuto = otpValue !== null;
+    
+    if (!otpToVerify || otpToVerify.length !== 6) {
+      if (!isAuto) {
+        toast.error(t('passwordReset.enter6DigitOTP'));
+      }
+      if (isAuto) setAutoVerifying(false);
       return;
     }
 
-    setLoading(true);
+    if (isAuto) setAutoVerifying(true);
+    else setLoading(true);
+    
     try {
       const emailToUse = isLoggedIn ? user?.email : email;
-      await api.post('/auth/verify-otp', { email: emailToUse, otp: otp.trim() });
+      await api.post('/auth/verify-otp', { email: emailToUse, otp: otpToVerify });
       toast.success(t('passwordReset.otpVerified'));
       setStep('password');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Invalid OTP');
     } finally {
-      setLoading(false);
+      if (isAuto) setAutoVerifying(false);
+      else setLoading(false);
     }
   };
 
@@ -265,12 +275,24 @@ export default function PasswordReset() {
                     <input
                       type="text"
                       value={otp}
-                      onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+                        setOtp(value);
+                        if (value.length === 6) {
+                          setTimeout(() => handleVerifyOTP(null, value), 300);
+                        }
+                      }}
                       placeholder={t('passwordReset.enter6DigitOTP')}
                       className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors text-center text-2xl tracking-widest font-mono"
                       maxLength={6}
+                      disabled={autoVerifying || loading}
                       required
                     />
+                    {autoVerifying && (
+                      <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
+                        <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -287,10 +309,10 @@ export default function PasswordReset() {
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || autoVerifying}
                   className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mb-4"
                 >
-                  {loading ? (
+                  {loading || autoVerifying ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
@@ -305,8 +327,8 @@ export default function PasswordReset() {
                 <button
                   type="button"
                   onClick={handleRequestOTP}
-                  disabled={loading}
-                  className="w-full text-gray-600 hover:text-gray-800 font-semibold py-2"
+                  disabled={loading || autoVerifying}
+                  className="w-full text-gray-600 hover:text-gray-800 font-semibold py-2 disabled:opacity-50"
                 >
                   {t('passwordReset.resendOTP')}
                 </button>

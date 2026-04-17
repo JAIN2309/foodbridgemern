@@ -24,6 +24,7 @@ export default function PasswordResetScreen() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [autoVerifying, setAutoVerifying] = useState(false);
 
   // Auto-send OTP for logged-in users
   useEffect(() => {
@@ -74,16 +75,23 @@ export default function PasswordResetScreen() {
     }
   };
 
-  const handleVerifyOTP = async () => {
-    if (!otp.trim() || otp.length !== 6) {
-      Toast.show({ type: 'error', text1: t('passwordReset.enter6DigitOTP') });
+  const handleVerifyOTP = async (otpValue?: string) => {
+    const otpToVerify = otpValue || otp.trim();
+    const isAuto = !!otpValue;
+    
+    if (!otpToVerify || otpToVerify.length !== 6) {
+      if (!isAuto) {
+        Toast.show({ type: 'error', text1: t('passwordReset.enter6DigitOTP') });
+      }
+      setAutoVerifying(false);
       return;
     }
 
-    setLoading(true);
+    if (!isAuto) setLoading(true);
+    
     try {
       const emailToUse = isLoggedIn ? user?.email : email;
-      await api.post('/auth/verify-otp', { email: emailToUse, otp: otp.trim() });
+      await api.post('/auth/verify-otp', { email: emailToUse, otp: otpToVerify });
       Toast.show({ type: 'success', text1: t('passwordReset.otpVerified') });
       setStep('password');
     } catch (error: any) {
@@ -94,6 +102,7 @@ export default function PasswordResetScreen() {
       });
     } finally {
       setLoading(false);
+      setAutoVerifying(false);
     }
   };
 
@@ -256,10 +265,24 @@ export default function PasswordResetScreen() {
                   placeholder={t('passwordReset.enter6DigitOTP')}
                   placeholderTextColor="#9ca3af"
                   value={otp}
-                  onChangeText={(text) => setOtp(text.replace(/[^0-9]/g, '').slice(0, 6))}
+                  onChangeText={(text) => {
+                    const numericText = text.replace(/[^0-9]/g, '').slice(0, 6);
+                    setOtp(numericText);
+                    
+                    // Auto-verify when 6 digits are entered
+                    if (numericText.length === 6 && !autoVerifying && !loading) {
+                      console.log('✅ 6 digits entered, auto-verifying...');
+                      setAutoVerifying(true);
+                      setTimeout(() => handleVerifyOTP(numericText), 300);
+                    }
+                  }}
                   keyboardType="number-pad"
                   maxLength={6}
+                  editable={!loading && !autoVerifying}
                 />
+                {autoVerifying && (
+                  <ActivityIndicator size="small" color="#667eea" />
+                )}
               </View>
 
               <TouchableOpacity onPress={handlePasteOTP} style={styles.pasteBtn}>
@@ -267,7 +290,7 @@ export default function PasswordResetScreen() {
                 <Text style={styles.pasteBtnText}>{t('passwordReset.pasteOTP')}</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={handleVerifyOTP} disabled={loading} style={styles.btnWrap}>
+              <TouchableOpacity onPress={() => handleVerifyOTP()} disabled={loading || autoVerifying} style={styles.btnWrap}>
                 <LinearGradient colors={['#667eea', '#764ba2']} style={styles.btn}>
                   {loading ? (
                     <ActivityIndicator color="#fff" />
@@ -280,7 +303,7 @@ export default function PasswordResetScreen() {
                 </LinearGradient>
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={handleRequestOTP} disabled={loading} style={styles.resendBtn}>
+              <TouchableOpacity onPress={handleRequestOTP} disabled={loading || autoVerifying} style={styles.resendBtn}>
                 <Text style={styles.resendText}>{t('passwordReset.resendOTP')}</Text>
               </TouchableOpacity>
             </>

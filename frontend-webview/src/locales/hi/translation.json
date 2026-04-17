@@ -19,7 +19,8 @@
       "good": "अच्छा",
       "strong": "मजबूत",
       "loginSuccess": "लॉगिन सफल!",
-      "loginFailed": "लॉगिन असफल"
+      "loginFailed": "लॉगिन असफल",
+      "forgotPassword": "पासवर्ड भूल गए?"
     },
     "register": {
       "title": "FoodBridge में शामिल हों",

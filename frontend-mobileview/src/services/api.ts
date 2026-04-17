@@ -2,7 +2,7 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { LocationData } from './mapService';
 
-const API_BASE_URL = 'http://10.139.232.65:5001/api'; // Host Wi-Fi IP
+const API_BASE_URL = 'http://10.228.29.65:5001/api'; // Host Wi-Fi IP
 
 console.log('🔧 API Base URL:', API_BASE_URL);
 
@@ -52,6 +52,12 @@ export const mapAPI = {
   
   calculateDistance: (lat1: number, lon1: number, lat2: number, lon2: number) =>
     api.post('/map/distance', { lat1, lon1, lat2, lon2 })
+};
+
+// Biometric API functions
+export const biometricAPI = {
+  toggle: (enabled: boolean) => api.put('/users/biometric/toggle', { enabled }),
+  getStatus: () => api.get('/users/biometric/status')
 };
 
 export default api;

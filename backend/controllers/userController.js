@@ -149,11 +149,40 @@ const getHealthCheck = async (req, res) => {
   }
 };
 
+const toggleBiometric = async (req, res) => {
+  try {
+    const { enabled } = req.body;
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { biometric_enabled: enabled },
+      { new: true }
+    ).select('-password');
+
+    res.json({ 
+      message: `Biometric ${enabled ? 'enabled' : 'disabled'} successfully`,
+      biometric_enabled: user.biometric_enabled
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getBiometricStatus = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('biometric_enabled');
+    res.json({ biometric_enabled: user.biometric_enabled });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getPendingVerifications,
   verifyUser,
   getAdminStats,
   getAllActiveDonations,
   getAllUsers,
-  getHealthCheck
+  getHealthCheck,
+  toggleBiometric,
+  getBiometricStatus
 };

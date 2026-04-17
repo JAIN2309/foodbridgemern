@@ -94,6 +94,10 @@ const userSchema = new mongoose.Schema({
     otp: String,
     otp_expiry: Date,
     attempts: { type: Number, default: 0 }
+  },
+  biometric_enabled: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

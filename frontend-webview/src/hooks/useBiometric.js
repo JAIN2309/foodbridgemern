@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BiometricAuth } from '../utils/biometricAuth';
+import { biometricAPI } from '../services/api';
 import { useSelector } from 'react-redux';
 
 export const useBiometric = () => {
@@ -32,21 +33,25 @@ export const useBiometric = () => {
     return `biometric_${user.email}_${suffix}`;
   };
 
-  const loadPreference = () => {
-    const enabledKey = getUserKey('enabled');
-    if (!enabledKey) return;
-    const enabled = localStorage.getItem(enabledKey) === 'true';
-    setIsEnabled(enabled);
+  const loadPreference = async () => {
+    try {
+      const response = await biometricAPI.getStatus();
+      setIsEnabled(response.data.biometric_enabled);
+    } catch {
+      setIsEnabled(false);
+    }
   };
 
   const enable = async (email, password) => {
     const result = await BiometricAuth.register(email, email);
     if (result.success) {
-      // Store per-user settings
-      localStorage.setItem(`biometric_${email}_enabled`, 'true');
+      // Store credentials locally
       localStorage.setItem(`biometric_${email}_credentialId`, result.credentialId);
       localStorage.setItem(`biometric_${email}_email`, email);
       localStorage.setItem(`biometric_${email}_password`, password);
+      
+      // Enable on backend
+      await biometricAPI.toggle(true);
       
       // Add to biometric users list
       const usersJson = localStorage.getItem('biometricUsers');
@@ -61,14 +66,18 @@ export const useBiometric = () => {
     return result;
   };
 
-  const disable = () => {
+  const disable = async () => {
     if (!user?.email) return;
     
-    // Remove user-specific settings
-    localStorage.removeItem(`biometric_${user.email}_enabled`);
+    // Remove user-specific settings locally
     localStorage.removeItem(`biometric_${user.email}_credentialId`);
     localStorage.removeItem(`biometric_${user.email}_email`);
     localStorage.removeItem(`biometric_${user.email}_password`);
+    
+    // Disable on backend
+    try {
+      await biometricAPI.toggle(false);
+    } catch {}
     
     // Remove from biometric users list
     const usersJson = localStorage.getItem('biometricUsers');

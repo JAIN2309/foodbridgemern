@@ -198,6 +198,7 @@ export default {
       meals: 'भोजन',
       donors: 'दाता',
       ngos: 'एनजीओ',
+      forgotPassword: 'पासवर्ड भूल गए?',
     },
     register: {
       title: 'खाता बनाएं',

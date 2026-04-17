@@ -98,7 +98,8 @@ const login = async (req, res) => {
     
     res.json({
       token,
-      user: userProfile
+      user: userProfile,
+      biometric_enabled: user.biometric_enabled
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

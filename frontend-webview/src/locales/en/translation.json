@@ -19,7 +19,8 @@
       "good": "Good",
       "strong": "Strong",
       "loginSuccess": "Login successful!",
-      "loginFailed": "Login failed"
+      "loginFailed": "Login failed",
+      "forgotPassword": "Forgot Password?"
     },
     "register": {
       "title": "Join FoodBridge",

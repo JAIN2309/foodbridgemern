@@ -198,6 +198,7 @@ export default {
       meals: 'ભોજન',
       donors: 'દાતાઓ',
       ngos: 'એનજીઓ',
+      forgotPassword: 'પાસવર્ડ ભૂલી ગયા?',
     },
     register: {
       title: 'એકાઉન્ટ બનાવો',

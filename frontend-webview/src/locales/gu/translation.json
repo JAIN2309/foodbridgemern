@@ -19,7 +19,8 @@
       "good": "સારો",
       "strong": "મજબૂત",
       "loginSuccess": "લૉગિન સફળ!",
-      "loginFailed": "લૉગિન અસફળ"
+      "loginFailed": "લૉગિન અસફળ",
+      "forgotPassword": "પાસવર્ડ ભૂલી ગયા?"
     },
     "register": {
       "title": "FoodBridge માં જોડાઓ",

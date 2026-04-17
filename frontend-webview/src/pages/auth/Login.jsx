@@ -306,6 +306,16 @@ const Login = () => {
               )}
             </div>
 
+            {/* Forgot Password Link */}
+            <div className="text-right">
+              <Link 
+                to="/password-reset" 
+                className="text-sm font-semibold text-purple-600 hover:text-purple-700 transition-colors duration-200"
+              >
+                {t('auth.login.forgotPassword')}
+              </Link>
+            </div>
+
             {/* Submit Button */}
             <button
               type="submit"

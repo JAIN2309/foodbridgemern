@@ -5,7 +5,9 @@ const {
   getAdminStats,
   getAllActiveDonations,
   getAllUsers,
-  getHealthCheck
+  getHealthCheck,
+  toggleBiometric,
+  getBiometricStatus
 } = require('../controllers/userController');
 const { auth, requireRole } = require('../middleware/auth');
 
@@ -18,5 +20,9 @@ router.put('/:userId/verify', auth, requireRole(['admin']), verifyUser);
 router.get('/stats', auth, requireRole(['admin']), getAdminStats);
 router.get('/donations/all', auth, requireRole(['admin']), getAllActiveDonations);
 router.get('/all', auth, requireRole(['admin']), getAllUsers);
+
+// Biometric routes
+router.put('/biometric/toggle', auth, toggleBiometric);
+router.get('/biometric/status', auth, getBiometricStatus);
 
 module.exports = router;
