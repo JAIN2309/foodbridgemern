@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Moon, Sun, Globe, Check, Fingerprint, Shield, Lock, Info } from 'lucide-react';
+import { Moon, Sun, Globe, Check, Fingerprint, Shield, Lock, Info, User } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import { useBiometric } from '../../hooks/useBiometric';
@@ -16,6 +16,7 @@ const Settings = () => {
   const [showDisableConfirm, setShowDisableConfirm] = useState(false);
   const [showPasswordChangeConfirm, setShowPasswordChangeConfirm] = useState(false);
   const [password, setPassword] = useState('');
+  const [imagePreviewModal, setImagePreviewModal] = useState(false);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -101,9 +102,19 @@ const Settings = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('settings.title')}</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">{t('settings.subtitle') || 'Manage your preferences and account settings'}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('settings.title')}</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">{t('settings.subtitle') || 'Manage your preferences and account settings'}</p>
+        </div>
+        {user?.profile_picture && (
+          <div 
+            onClick={() => setImagePreviewModal(true)}
+            className="w-16 h-16 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 flex items-center justify-center border-2 border-gray-200 dark:border-gray-600 cursor-pointer hover:opacity-90 transition-opacity"
+          >
+            <img src={user.profile_picture} alt="Profile" className="w-full h-full object-cover" />
+          </div>
+        )}
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-6">
@@ -334,6 +345,32 @@ const Settings = () => {
               >
                 {t('common.continue') || 'Continue'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Preview Modal */}
+      {imagePreviewModal && user?.profile_picture && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-95 z-50 flex items-center justify-center p-4"
+          onClick={() => setImagePreviewModal(false)}
+        >
+          <div className="relative max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setImagePreviewModal(false)}
+              className="absolute -top-12 right-0 text-white hover:text-gray-300 text-lg font-semibold"
+            >
+              {t('profile.close')}
+            </button>
+            <img 
+              src={user.profile_picture} 
+              alt="Profile Preview" 
+              className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+            />
+            <div className="mt-4 text-center text-white">
+              <p className="text-xl font-semibold">{user?.contact_person}</p>
+              <p className="text-gray-300">{user?.email}</p>
             </div>
           </div>
         </div>

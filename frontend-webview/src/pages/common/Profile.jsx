@@ -16,6 +16,7 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [profilePicture, setProfilePicture] = useState(user?.profile_picture || null);
   const [uploadingPicture, setUploadingPicture] = useState(false);
+  const [imagePreviewModal, setImagePreviewModal] = useState(false);
   const fileInputRef = useRef(null);
   
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
@@ -319,7 +320,10 @@ const Profile = () => {
         <h2 className="text-lg font-medium text-gray-900 mb-4">Profile Picture</h2>
         <div className="flex items-center gap-6">
           <div className="relative">
-            <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center border-4 border-gray-200">
+            <div 
+              onClick={() => profilePicture && setImagePreviewModal(true)}
+              className={`w-32 h-32 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center border-4 border-gray-200 ${profilePicture ? 'cursor-pointer hover:opacity-90' : ''}`}
+            >
               {profilePicture ? (
                 <img src={profilePicture} alt="Profile" className="w-full h-full object-cover" />
               ) : (
@@ -366,6 +370,54 @@ const Profile = () => {
           </div>
         </div>
       </div>
+
+      {/* Image Preview Modal */}
+      {imagePreviewModal && profilePicture && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-95 z-50 flex items-center justify-center p-4"
+          onClick={() => setImagePreviewModal(false)}
+        >
+          <div className="relative max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setImagePreviewModal(false)}
+              className="absolute -top-12 right-0 text-white hover:text-gray-300 text-lg font-semibold"
+            >
+              {t('profile.close')}
+            </button>
+            <img 
+              src={profilePicture} 
+              alt="Profile Preview" 
+              className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+            />
+            <div className="mt-4 text-center text-white">
+              <p className="text-xl font-semibold">{user?.contact_person}</p>
+              <p className="text-gray-300">{user?.email}</p>
+            </div>
+            <div className="flex gap-3 mt-6 justify-center">
+              <button
+                onClick={() => {
+                  setImagePreviewModal(false);
+                  fileInputRef.current?.click();
+                }}
+                className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Camera className="w-5 h-5 mr-2" />
+                {t('profile.changePhoto')}
+              </button>
+              <button
+                onClick={() => {
+                  setImagePreviewModal(false);
+                  handleDeletePicture();
+                }}
+                className="flex items-center px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                <Trash2 className="w-5 h-5 mr-2" />
+                {t('profile.deletePhoto')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-lg font-medium text-gray-900 mb-4">{t('profile.accountInfo')}</h2>

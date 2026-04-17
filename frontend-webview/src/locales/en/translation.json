@@ -255,7 +255,11 @@
     "phoneInvalid": "Enter valid 10-digit mobile number",
     "addressRequired": "Address is required",
     "profileUpdated": "Profile updated successfully!",
-    "updateFailed": "Failed to update profile"
+    "updateFailed": "Failed to update profile",
+    "viewPhoto": "View Photo",
+    "changePhoto": "Change Photo",
+    "deletePhoto": "Delete Photo",
+    "close": "Close"
   },
   "brand": {
     "tagline": "Connecting Hearts, Reducing Waste",

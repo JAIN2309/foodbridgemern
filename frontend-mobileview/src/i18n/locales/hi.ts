@@ -47,6 +47,10 @@ export default {
     posted: 'पोस्ट किया',
     success: 'सफलता',
     rating: 'रेटिंग',
+    viewPhoto: 'फोटो देखें',
+    changePhoto: 'फोटो बदलें',
+    deletePhoto: 'फोटो हटाएं',
+    close: 'बंद करें',
   },
   dashboard: {
     donor: {

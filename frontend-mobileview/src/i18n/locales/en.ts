@@ -47,6 +47,10 @@ export default {
     posted: 'Posted',
     success: 'Success',
     rating: 'Rating',
+    viewPhoto: 'View Photo',
+    changePhoto: 'Change Photo',
+    deletePhoto: 'Delete Photo',
+    close: 'Close',
   },
   dashboard: {
     donor: {
