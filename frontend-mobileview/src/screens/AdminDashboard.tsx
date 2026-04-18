@@ -131,7 +131,7 @@ export default function AdminDashboard() {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       {/* Gradient Header */}
-      <LinearGradient colors={['#7c3aed', '#8b5cf6']} style={styles.header}>
+      {/* <LinearGradient colors={['#7c3aed', '#8b5cf6']} style={styles.header}>
         <View>
           <Text style={styles.greeting}>{t('dashboard.admin.greeting')} 👋</Text>
           <Text style={styles.headerSub}>{t('dashboard.admin.dashboardSubtitle')}</Text>
@@ -139,7 +139,7 @@ export default function AdminDashboard() {
         <View style={styles.headerAvatar}>
           <Ionicons name="shield-checkmark" size={24} color="#7c3aed" />
         </View>
-      </LinearGradient>
+      </LinearGradient> */}
 
       {/* Stats Cards */}
       <View style={styles.statsRow}>

@@ -92,6 +92,10 @@ const Profile = () => {
         
         const data = await response.json();
         setProfilePicture(data.profile_picture);
+        
+        // Refresh user data from backend to update Redux store
+        await dispatch({ type: 'auth/loadUser/fulfilled', payload: { ...user, profile_picture: data.profile_picture } });
+        
         toast.success('Profile picture updated successfully');
         setUploadingPicture(false);
       };
@@ -117,6 +121,10 @@ const Profile = () => {
       if (!response.ok) throw new Error('Delete failed');
       
       setProfilePicture(null);
+      
+      // Refresh user data from backend to update Redux store
+      await dispatch({ type: 'auth/loadUser/fulfilled', payload: { ...user, profile_picture: null } });
+      
       toast.success('Profile picture removed successfully');
     } catch (error) {
       toast.error('Failed to remove profile picture');

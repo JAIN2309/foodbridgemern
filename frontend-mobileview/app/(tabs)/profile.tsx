@@ -92,6 +92,10 @@ export default function ProfileScreen() {
         const api = (await import('../../src/services/api')).default;
         const response = await api.post('/users/profile-picture', { image: base64String });
         setProfilePicture(response.data.profile_picture);
+        
+        // Refresh user data to update Redux store
+        await dispatch(loadUser());
+        
         Toast.show({ type: 'success', text1: '✅ Profile Picture Updated' });
       } catch (error: any) {
         const errorMsg = error.response?.status === 413 ? 'Image too large' : 'Could not upload profile picture';
@@ -117,6 +121,10 @@ export default function ProfileScreen() {
               const api = (await import('../../src/services/api')).default;
               await api.delete('/users/profile-picture');
               setProfilePicture(null);
+              
+              // Refresh user data to update Redux store
+              await dispatch(loadUser());
+              
               Toast.show({ type: 'success', text1: '✅ Profile Picture Removed' });
             } catch (error) {
               Toast.show({ type: 'error', text1: '❌ Delete Failed' });
