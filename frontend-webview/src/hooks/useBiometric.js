@@ -113,6 +113,25 @@ export const useBiometric = () => {
     return usersJson ? JSON.parse(usersJson) : [];
   };
 
+  const removeBiometricUser = (email) => {
+    // Remove user-specific credentials
+    localStorage.removeItem(`biometric_${email}_credentialId`);
+    localStorage.removeItem(`biometric_${email}_email`);
+    localStorage.removeItem(`biometric_${email}_password`);
+    
+    // Remove from biometric users list
+    const usersJson = localStorage.getItem('biometricUsers');
+    if (usersJson) {
+      const users = JSON.parse(usersJson);
+      const updatedUsers = users.filter(u => u !== email);
+      if (updatedUsers.length > 0) {
+        localStorage.setItem('biometricUsers', JSON.stringify(updatedUsers));
+      } else {
+        localStorage.removeItem('biometricUsers');
+      }
+    }
+  };
+
   return {
     isAvailable,
     isEnabled,
@@ -122,6 +141,7 @@ export const useBiometric = () => {
     authenticate,
     getCredentials,
     getBiometricUsers,
+    removeBiometricUser,
     refresh: loadPreference,
   };
 };

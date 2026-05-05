@@ -9,8 +9,9 @@
     "create-admin": "node scripts/createAdmin.js",
     "create-super-admin": "node scripts/createSuperAdmin.js",
     "get-ip": "node scripts/getNetworkIP.js"
-  },
+     },
   "dependencies": {
+    "argon2": "^0.31.2",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",

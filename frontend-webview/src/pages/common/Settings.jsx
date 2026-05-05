@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Moon, Sun, Globe, Check, Fingerprint, Shield, Lock, Info, User } from 'lucide-react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import toast from 'react-hot-toast';
 import { useBiometric } from '../../hooks/useBiometric';
+import { loadUser } from '../../store/slices/authSlice';
 
 const Settings = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const [darkMode, setDarkMode] = useState(false);
   const { isAvailable: biometricAvailable, isEnabled: biometricEnabled, isChecking: isCheckingBiometric, enable, disable, refresh } = useBiometric();
@@ -17,6 +19,21 @@ const Settings = () => {
   const [showPasswordChangeConfirm, setShowPasswordChangeConfirm] = useState(false);
   const [password, setPassword] = useState('');
   const [imagePreviewModal, setImagePreviewModal] = useState(false);
+
+  // Refresh user data when component mounts or when returning to this page
+  useEffect(() => {
+    dispatch(loadUser());
+  }, [dispatch]);
+
+  // Also refresh when window gains focus (user returns from another tab/page)
+  useEffect(() => {
+    const handleFocus = () => {
+      dispatch(loadUser());
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [dispatch]);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -344,6 +361,37 @@ const Settings = () => {
                 className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
               >
                 {t('common.continue') || 'Continue'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Disable Biometric Confirmation Modal */}
+      {showDisableConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Fingerprint className="w-8 h-8 text-red-600 dark:text-red-400" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white text-center mb-2">
+              {t('biometric.disableTitle')}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-6">
+              {t('biometric.disableMessage')}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDisableConfirm(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={handleDisableBiometric}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                {t('biometric.disable')}
               </button>
             </div>
           </div>
