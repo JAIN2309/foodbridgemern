@@ -27,6 +27,8 @@ const AdminDashboard = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [apiError, setApiError] = useState(null);
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     // Check URL parameters for tab
@@ -59,7 +61,7 @@ const AdminDashboard = () => {
       window.removeEventListener('dashboardTabChange', handleTabChange);
       window.removeEventListener('forceTabUpdate', handleForceUpdate);
     };
-  }, [location.search]);
+  }, [location.search, roleFilter]);
 
   const checkBackendHealth = async () => {
     try {
@@ -79,7 +81,7 @@ const AdminDashboard = () => {
         api.get('/users/pending'),
         api.get('/users/stats'),
         api.get('/users/donations/all'),
-        api.get('/users/all')
+        api.get(`/users/all?role=${roleFilter}`)
       ]);
       
       console.log('API responses:', {
@@ -336,7 +338,7 @@ const AdminDashboard = () => {
                             {donation.food_items.map(item => item.name).join(', ')}
                           </p>
                           <p className="text-sm text-gray-600">
-                            By {donation.donor_id.organization_name}
+                            By {donation.donor_id?.organization_name || 'Unknown'}
                           </p>
                         </div>
                       </div>
@@ -427,8 +429,8 @@ const AdminDashboard = () => {
                     <Marker
                       key={donation._id}
                       position={[
-                        donation.donor_id.location.coordinates[1],
-                        donation.donor_id.location.coordinates[0]
+                        donation.donor_id?.location?.coordinates?.[1] || 0,
+                        donation.donor_id?.location?.coordinates?.[0] || 0
                       ]}
                     >
                       <Popup>
@@ -437,7 +439,7 @@ const AdminDashboard = () => {
                             {donation.food_items.map(item => item.name).join(', ')}
                           </h4>
                           <p className="text-sm">
-                            By {donation.donor_id.organization_name}
+                            By {donation.donor_id?.organization_name || 'Unknown'}
                           </p>
                           <p className="text-sm">
                             Serves {donation.quantity_serves} people
@@ -537,10 +539,35 @@ const AdminDashboard = () => {
 
           {activeTab === 'users' && (
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <h3 className="text-lg font-medium">{t('dashboard.admin.allUsers')}</h3>
-                <div className="text-sm text-gray-500">
-                  {dataLoaded ? `${allUsers.length} ${t('dashboard.admin.usersFound')}` : t('dashboard.admin.loading')}
+                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 w-full md:w-auto">
+                  <input
+                    type="text"
+                    placeholder={t('dashboard.admin.searchUsers')}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full md:w-64"
+                  />
+                  <select
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="all">{t('dashboard.admin.allRoles')}</option>
+                    <option value="donor">{t('dashboard.admin.donorOnly')}</option>
+                    <option value="ngo">{t('dashboard.admin.ngoOnly')}</option>
+                    <option value="admin">{t('dashboard.admin.adminOnly')}</option>
+                  </select>
+                  <div className="text-sm text-gray-500 whitespace-nowrap">
+                    {dataLoaded ? `${allUsers.filter(user => {
+                      const query = searchQuery.toLowerCase();
+                      return user.organization_name?.toLowerCase().includes(query) ||
+                             user.email?.toLowerCase().includes(query) ||
+                             user.phone?.includes(query) ||
+                             user.contact_person?.toLowerCase().includes(query);
+                    }).length} ${t('dashboard.admin.usersFound')}` : t('dashboard.admin.loading')}
+                  </div>
                 </div>
               </div>
               {!dataLoaded ? (
@@ -579,7 +606,13 @@ const AdminDashboard = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {allUsers.map((user) => (
+                      {allUsers.filter(user => {
+                        const query = searchQuery.toLowerCase();
+                        return user.organization_name?.toLowerCase().includes(query) ||
+                               user.email?.toLowerCase().includes(query) ||
+                               user.phone?.includes(query) ||
+                               user.contact_person?.toLowerCase().includes(query);
+                      }).map((user) => (
                         <tr key={user._id} className="hover:bg-gray-50">
                           <td className="px-4 py-4">
                             <div>

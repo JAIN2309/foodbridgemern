@@ -13,6 +13,13 @@ const Profile = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user, isLoading } = useSelector((state) => state.auth);
+  
+  console.log('👤 User from Redux:', {
+    email: user?.email,
+    phone: user?.phone,
+    contact_person: user?.contact_person
+  });
+  
   const [isEditing, setIsEditing] = useState(false);
   const [profilePicture, setProfilePicture] = useState(user?.profile_picture || null);
   const [uploadingPicture, setUploadingPicture] = useState(false);
@@ -39,9 +46,29 @@ const Profile = () => {
         address: user.address || ''
       };
       reset(defaultValues);
-      setProfilePicture(user.profile_picture || null);
     }
-  }, [user?.id, reset]);
+    
+    // Fetch profile picture separately
+    const fetchProfilePicture = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}/users/profile-picture`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setProfilePicture(data.profile_picture);
+        }
+      } catch (error) {
+        console.error('Failed to fetch profile picture:', error);
+      }
+    };
+    
+    if (user) {
+      fetchProfilePicture();
+    }
+  }, [user?.id, reset, isEditing]);
 
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];

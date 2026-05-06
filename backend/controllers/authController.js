@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { sendEmail, emailTemplates } = require('../services/emailService');
+const { decryptUserFields } = require('../utils/userHelper');
 
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -110,7 +111,21 @@ const login = async (req, res) => {
 const getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
-    res.json(user);
+    console.log('👤 Raw user fields from DB:', {
+      email: user.email,
+      phone: user.phone,
+      contact_person: user.contact_person,
+      email_encrypted: user.email_encrypted ? 'exists' : 'null',
+      phone_encrypted: user.phone_encrypted ? 'exists' : 'null',
+      contact_person_encrypted: user.contact_person_encrypted ? 'exists' : 'null'
+    });
+    const decryptedUser = decryptUserFields(user);
+    console.log('👤 Decrypted user fields:', {
+      email: decryptedUser.email,
+      phone: decryptedUser.phone,
+      contact_person: decryptedUser.contact_person
+    });
+    res.json(decryptedUser);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -168,18 +183,28 @@ const updateProfile = async (req, res) => {
       };
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { $set: updateData },
-      { new: true, runValidators: true }
-    ).select('-password');
+    // Fetch user, update fields, and save to trigger pre-save hook
+    const user = await User.findById(userId).select('-password');
+    
+    // Update fields
+    Object.keys(updateData).forEach(key => {
+      user[key] = updateData[key];
+    });
+    
+    // Save to trigger pre-save hook for encryption
+    await user.save();
 
-    console.log('✅ Updated User org name:', updatedUser.organization_name);
-    console.log('✅ Preserved activity stats:', updatedUser.activity_stats);
+    // Refetch to trigger post-init hook for decryption
+    const userWithDecryption = await User.findById(userId).select('-password');
+    const decryptedUser = decryptUserFields(userWithDecryption);
+
+    console.log('✅ Updated User org name:', decryptedUser.organization_name);
+    console.log('✅ Updated User phone:', decryptedUser.phone);
+    console.log('✅ Preserved activity stats:', decryptedUser.activity_stats);
 
     res.json({
       message: 'Profile updated successfully',
-      user: updatedUser
+      user: decryptedUser
     });
   } catch (error) {
     console.error('❌ Update Profile Error:', error);

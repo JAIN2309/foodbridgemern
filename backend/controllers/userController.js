@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Donation = require('../models/Donation');
 const { sendEmail, emailTemplates } = require('../services/emailService');
+const { decryptUserFields } = require('../utils/userHelper');
 
 const getPendingVerifications = async (req, res) => {
   try {
@@ -10,8 +11,10 @@ const getPendingVerifications = async (req, res) => {
       role: { $ne: 'admin' }
     }).select('-password');
     
-    console.log(`Found ${users.length} pending users`);
-    res.json(users);
+    const decryptedUsers = users.map(user => decryptUserFields(user));
+    
+    console.log(`Found ${decryptedUsers.length} pending users`);
+    res.json(decryptedUsers);
   } catch (error) {
     console.error('getPendingVerifications error:', error);
     res.status(500).json({ message: error.message });
@@ -33,16 +36,18 @@ const verifyUser = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    const decryptedUser = decryptUserFields(user);
+
     // Send approval/rejection email
     try {
-      await sendEmail(user.email, emailTemplates.approval(user, approved));
+      await sendEmail(decryptedUser.email, emailTemplates.approval(decryptedUser, approved));
     } catch (emailError) {
       console.error('Approval email failed:', emailError);
     }
 
     res.json({ 
       message: `User ${approved ? 'approved' : 'rejected'} successfully`,
-      user 
+      user: decryptedUser
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -111,12 +116,36 @@ const getAllActiveDonations = async (req, res) => {
 const getAllUsers = async (req, res) => {
   try {
     console.log('getAllUsers called');
-    const users = await User.find({ role: { $ne: 'admin' } })
+    const { role } = req.query;
+    
+    // Build filter query
+    const filter = {};
+    if (role && role !== 'all') {
+      filter.role = role;
+    }
+    
+    const users = await User.find(filter)
       .select('-password')
       .sort({ createdAt: -1 });
     
-    console.log(`Found ${users.length} users:`, users.map(u => ({ id: u._id, org: u.organization_name, role: u.role })));
-    res.json(users);
+    console.log('Sample user before decrypt:', users[0] ? {
+      email: users[0].email,
+      phone: users[0].phone,
+      contact_person: users[0].contact_person,
+      email_encrypted: users[0].email_encrypted ? 'exists' : 'null',
+      phone_encrypted: users[0].phone_encrypted ? 'exists' : 'null'
+    } : 'no users');
+    
+    const decryptedUsers = users.map(user => decryptUserFields(user));
+    
+    console.log('Sample user after decrypt:', decryptedUsers[0] ? {
+      email: decryptedUsers[0].email,
+      phone: decryptedUsers[0].phone,
+      contact_person: decryptedUsers[0].contact_person
+    } : 'no users');
+    
+    console.log(`Found ${decryptedUsers.length} users`);
+    res.json(decryptedUsers);
   } catch (error) {
     console.error('getAllUsers error:', error);
     res.status(500).json({ message: error.message });
@@ -158,9 +187,11 @@ const toggleBiometric = async (req, res) => {
       { new: true }
     ).select('-password');
 
+    const decryptedUser = decryptUserFields(user);
+
     res.json({ 
       message: `Biometric ${enabled ? 'enabled' : 'disabled'} successfully`,
-      biometric_enabled: user.biometric_enabled
+      biometric_enabled: decryptedUser.biometric_enabled
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -203,7 +234,10 @@ const uploadProfilePicture = async (req, res) => {
 const getProfilePicture = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('profile_picture');
-    res.json({ profile_picture: user.profile_picture });
+    console.log('📸 Raw profile_picture from DB:', user.profile_picture ? user.profile_picture.substring(0, 100) : 'null');
+    const decryptedUser = decryptUserFields(user);
+    console.log('📸 Decrypted profile_picture:', decryptedUser.profile_picture ? decryptedUser.profile_picture.substring(0, 100) : 'null');
+    res.json({ profile_picture: decryptedUser.profile_picture });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

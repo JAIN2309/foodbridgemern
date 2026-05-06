@@ -9,12 +9,13 @@ const {
   syncOfflineActions
 } = require('../controllers/donationController');
 const { auth, requireRole, requireVerified } = require('../middleware/auth');
+const upload = require('../middleware/upload');
 const offlineService = require('../services/offlineService');
 
 const router = express.Router();
 
 // Donor routes
-router.post('/', auth, requireRole(['donor']), requireVerified, createDonation);
+router.post('/', auth, requireRole(['donor']), requireVerified, upload.single('photo'), createDonation);
 router.get('/history/donor', auth, requireRole(['donor']), getDonorHistory);
 
 // NGO routes

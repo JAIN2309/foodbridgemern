@@ -144,7 +144,8 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         console.log('📦 LOGIN FULFILLED - SETTING USER STATE:', action.payload.user);
         state.isLoading = false;
-        state.user = action.payload.user;
+        const { profile_picture, ...userWithoutPhoto } = action.payload.user;
+        state.user = userWithoutPhoto;
         state.token = action.payload.token;
         state.isAuthenticated = true;
         console.log('📋 CURRENT USER STATE:', state.user);
@@ -170,7 +171,8 @@ const authSlice = createSlice({
       })
       .addCase(registerUser.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.user;
+        const { profile_picture, ...userWithoutPhoto } = action.payload.user;
+        state.user = userWithoutPhoto;
         state.token = action.payload.token;
         state.isAuthenticated = true;
       })
@@ -186,7 +188,8 @@ const authSlice = createSlice({
       .addCase(updateProfile.fulfilled, (state, action) => {
         console.log('📦 UPDATE PROFILE FULFILLED - UPDATING USER STATE:', action.payload.user);
         state.isLoading = false;
-        state.user = action.payload.user;
+        const { profile_picture, ...userWithoutPhoto } = action.payload.user;
+        state.user = userWithoutPhoto;
         console.log('📋 UPDATED USER STATE:', state.user);
       })
       .addCase(updateProfile.rejected, (state, action) => {
@@ -207,7 +210,8 @@ const authSlice = createSlice({
       // Load User
       .addCase(loadUser.fulfilled, (state, action) => {
         console.log('📦 LOAD USER FULFILLED - SETTING USER STATE:', action.payload);
-        state.user = action.payload;
+        const { profile_picture, ...userWithoutPhoto } = action.payload;
+        state.user = userWithoutPhoto;
         state.isAuthenticated = true;
         console.log('📋 LOADED USER STATE:', state.user);
       })

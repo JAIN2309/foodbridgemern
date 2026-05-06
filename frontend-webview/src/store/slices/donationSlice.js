@@ -24,7 +24,16 @@ export const createDonation = createAsyncThunk(
   async (donationData, { rejectWithValue }) => {
     try {
       console.log('Creating donation with data:', donationData);
-      const response = await api.post('/donations', donationData);
+      
+      // Check if it's FormData (for file upload)
+      const isFormData = donationData instanceof FormData;
+      
+      const response = await api.post('/donations', donationData, {
+        headers: isFormData ? {
+          'Content-Type': 'multipart/form-data'
+        } : {}
+      });
+      
       console.log('Create donation response:', response.data);
       return response.data;
     } catch (error) {

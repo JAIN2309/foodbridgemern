@@ -157,12 +157,28 @@ userSchema.pre('save', async function(next) {
 
 // Decrypt sensitive fields after retrieval
 userSchema.post('init', function() {
-  if (this.email_encrypted) this.email = decrypt(this.email_encrypted);
-  if (this.phone_encrypted) this.phone = decrypt(this.phone_encrypted);
-  if (this.license_number_encrypted) this.license_number = decrypt(this.license_number_encrypted);
-  if (this.contact_person_encrypted) this.contact_person = decrypt(this.contact_person_encrypted);
-  if (this.profile_picture) this.profile_picture = decrypt(this.profile_picture);
-  if (this.password_reset?.otp) this.password_reset.otp = decrypt(this.password_reset.otp);
+  try {
+    if (this.email_encrypted) this.email = decrypt(this.email_encrypted);
+    if (this.phone_encrypted) this.phone = decrypt(this.phone_encrypted);
+    if (this.license_number_encrypted) this.license_number = decrypt(this.license_number_encrypted);
+    if (this.contact_person_encrypted) this.contact_person = decrypt(this.contact_person_encrypted);
+    if (this.profile_picture) {
+      try {
+        this.profile_picture = decrypt(this.profile_picture);
+      } catch (err) {
+        console.warn('⚠️ Failed to decrypt profile_picture, keeping original');
+      }
+    }
+    if (this.password_reset?.otp) {
+      try {
+        this.password_reset.otp = decrypt(this.password_reset.otp);
+      } catch (err) {
+        console.warn('⚠️ Failed to decrypt OTP, keeping original');
+      }
+    }
+  } catch (error) {
+    console.error('❌ Decryption error in post-init:', error.message);
+  }
 });
 
 // Compare password method - supports both Argon2 and bcrypt for migration

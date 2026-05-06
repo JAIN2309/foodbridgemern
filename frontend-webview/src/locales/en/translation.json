@@ -98,6 +98,9 @@
       "noDonations": "No donations yet.",
       "loadData": "Load Data",
       "postNewDonation": "Post New Food Donation",
+      "foodPhoto": "Food Photo",
+      "confirmDonation": "Confirm Food Donation",
+      "confirmDonationMessage": "For enhanced security, please authenticate to confirm your intent to post this food donation.",
       "foodItems": "Food Items",
       "foodItemsPlaceholder": "e.g., Rice, Dal, Vegetables (comma separated)",
       "foodCategory": "Food Category",
@@ -224,7 +227,12 @@
       "organization": "Organization",
       "role": "Role",
       "status": "Status",
-      "joined": "Joined"
+      "joined": "Joined",
+      "allRoles": "All Roles",
+      "donorOnly": "Donors Only",
+      "ngoOnly": "NGOs Only",
+      "adminOnly": "Admins Only",
+      "searchUsers": "Search by name, email, or phone..."
     }
   },
   "profile": {
@@ -406,6 +414,8 @@
     "logout": "Logout"
   },
   "biometric": {
+    "authenticate": "Authenticate",
+    "privacyNotice": "Your biometric data never leaves your device",
     "loginButton": "Login with Biometric",
     "authenticating": "Authenticating...",
     "credentialsSaved": "Your credentials are saved securely for quick biometric login",
@@ -541,5 +551,40 @@
     "joinCommunity": "Join our community and start bridging the gap between surplus and need",
     "getStartedNow": "Get Started Now",
     "footer": "Bridging hunger with hope."
+  },
+  "about": {
+    "tagline": "Connecting Hearts, Reducing Waste",
+    "mission": "Join India's leading platform connecting food donors with NGOs to eliminate food waste and feed those in need.",
+    "features": {
+      "title": "Why Choose FoodBridge?",
+      "zeroWaste": "Zero Food Waste",
+      "zeroWasteDesc": "Connect surplus food with those who need it most",
+      "realTime": "Real-Time Tracking",
+      "realTimeDesc": "Live updates on food availability and pickup status",
+      "verified": "Verified Network",
+      "verifiedDesc": "All donors and NGOs are verified for trust and safety",
+      "location": "Location-Based",
+      "locationDesc": "Find nearby food donations with smart geolocation"
+    },
+    "stats": {
+      "meals": "Meals Served",
+      "donors": "Active Donors",
+      "ngos": "NGO Partners",
+      "cities": "Cities Covered"
+    },
+    "howItWorks": "How It Works",
+    "steps": {
+      "register": "Register & get verified",
+      "post": "Post food donations",
+      "claim": "Claim available food",
+      "collect": "Collect & distribute"
+    },
+    "team": "Our Mission",
+    "teamDesc": "We're dedicated to bridging the gap between food surplus and food security. Every meal saved is a step towards ending hunger and reducing waste.",
+    "contact": "Contact Us",
+    "contactEmail": "support@foodbridge.com",
+    "version": "Version",
+    "madeWith": "Made with ❤️ to reduce food waste",
+    "rights": "© 2024 FoodBridge. All rights reserved."
   }
 }

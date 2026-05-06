@@ -48,10 +48,9 @@ const createDonation = async (req, res) => {
     console.log('User ID:', req.user._id);
     console.log('Request body:', JSON.stringify(req.body, null, 2));
     
-    const {
+    let {
       food_items,
       quantity_serves,
-      photo_url,
       coordinates,
       pickup_address,
       pickup_window_start,
@@ -60,6 +59,29 @@ const createDonation = async (req, res) => {
       safety_checklist = {},
       verification_photos = []
     } = req.body;
+
+    // Parse JSON strings from FormData
+    if (typeof food_items === 'string') {
+      food_items = JSON.parse(food_items);
+    }
+    if (typeof coordinates === 'string') {
+      coordinates = JSON.parse(coordinates);
+    }
+    if (typeof safety_checklist === 'string') {
+      safety_checklist = JSON.parse(safety_checklist);
+    }
+    if (typeof verification_photos === 'string') {
+      verification_photos = JSON.parse(verification_photos);
+    }
+
+    // Handle uploaded photo
+    let photo_url = 'https://via.placeholder.com/400x300';
+    if (req.file) {
+      // Convert buffer to base64 data URL
+      const base64Image = req.file.buffer.toString('base64');
+      photo_url = `data:${req.file.mimetype};base64,${base64Image}`;
+      console.log('📸 Photo uploaded, size:', req.file.size, 'bytes');
+    }
 
     // Validate food safety
     console.log('🔍 Validating food safety...');

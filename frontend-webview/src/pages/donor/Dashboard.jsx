@@ -17,7 +17,18 @@ const DonorDashboard = () => {
   const { userDonations, isLoading } = useSelector((state) => state.donations);
   const { location: geoLocation } = useGeolocation();
   const [activeTab, setActiveTab] = useState('overview');
-  const { register, handleSubmit, reset, formState: { errors } } = useForm();
+  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+    defaultValues: {
+      pickup_window_start: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().slice(0, 16),
+      pickup_window_end: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString().slice(0, 16),
+      expiry_date: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 16)
+    }
+  });
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [imageModal, setImageModal] = useState({ isOpen: false, imageUrl: null, title: '' });
+  const [showBiometricConfirm, setShowBiometricConfirm] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState(null);
 
   const [dataFetched, setDataFetched] = useState(false);
 
@@ -82,28 +93,113 @@ const DonorDashboard = () => {
       return;
     }
 
-    const donationData = {
-      ...data,
-      coordinates: [geoLocation.longitude, geoLocation.latitude],
-      food_items: data.food_items.split(',').map(item => ({
-        name: item.trim(),
-        category: data.food_category,
-        storage_conditions: data.storage_conditions,
-        preparation_time: data.preparation_time,
-        expiry_date: data.expiry_date
-      })),
-      photo_url: 'https://via.placeholder.com/400x300',
-    };
+    // Check if biometric is enabled
+    if (user?.biometric_enabled) {
+      // Store form data and show biometric confirmation
+      setPendingFormData(data);
+      setShowBiometricConfirm(true);
+      return;
+    }
+
+    // If biometric not enabled, proceed directly
+    await submitDonation(data);
+  };
+
+  const submitDonation = async (data) => {
+    // Create FormData for file upload
+    const formData = new FormData();
+    
+    // Add photo if selected
+    if (photoFile) {
+      formData.append('photo', photoFile);
+    }
+    
+    // Add other fields
+    formData.append('coordinates', JSON.stringify([geoLocation.longitude, geoLocation.latitude]));
+    formData.append('food_items', JSON.stringify(data.food_items.split(',').map(item => ({
+      name: item.trim(),
+      category: data.food_category,
+      storage_conditions: data.storage_conditions,
+      preparation_time: data.preparation_time,
+      expiry_date: data.expiry_date
+    }))));
+    formData.append('quantity_serves', data.quantity_serves);
+    formData.append('pickup_address', data.pickup_address);
+    formData.append('pickup_window_start', data.pickup_window_start);
+    formData.append('pickup_window_end', data.pickup_window_end);
+    formData.append('special_instructions', data.special_instructions || '');
 
     try {
-      const result = await dispatch(createDonation(donationData)).unwrap();
+      const result = await dispatch(createDonation(formData)).unwrap();
       toast.success('Food donation posted successfully!');
       reset();
+      setPhotoPreview(null);
+      setPhotoFile(null);
+      setShowBiometricConfirm(false);
+      setPendingFormData(null);
       setActiveTab('overview');
     } catch (error) {
       console.error('Donation creation error:', error);
       toast.error(error?.message || error || 'Failed to post donation');
     }
+  };
+
+  const handleBiometricConfirm = async () => {
+    try {
+      // Authenticate with biometric
+      const result = await window.navigator.credentials.get({
+        publicKey: {
+          challenge: new Uint8Array(32),
+          timeout: 60000,
+          userVerification: 'required'
+        }
+      });
+
+      if (result) {
+        toast.success('Biometric authentication successful!');
+        await submitDonation(pendingFormData);
+      }
+    } catch (error) {
+      console.error('Biometric authentication failed:', error);
+      toast.error('Biometric authentication failed. Please try again.');
+      setShowBiometricConfirm(false);
+    }
+  };
+
+  const handleBiometricCancel = () => {
+    setShowBiometricConfirm(false);
+    setPendingFormData(null);
+    toast.info('Donation posting cancelled');
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size must be less than 5MB');
+        return;
+      }
+      
+      setPhotoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removePhoto = () => {
+    setPhotoFile(null);
+    setPhotoPreview(null);
+  };
+
+  const openImageModal = (imageUrl, title) => {
+    setImageModal({ isOpen: true, imageUrl, title });
+  };
+
+  const closeImageModal = () => {
+    setImageModal({ isOpen: false, imageUrl: null, title: '' });
   };
 
   const getStatusColor = (status) => {
@@ -127,6 +223,54 @@ const DonorDashboard = () => {
 
   return (
     <div className="space-y-6">
+      {/* Image Modal */}
+      {imageModal.isOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          onClick={closeImageModal}
+        >
+          <div 
+            className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden"
+            style={{ width: '80vw', height: '80vh', maxWidth: '1200px' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 via-black/60 to-transparent p-6 z-10">
+              {imageModal.title && (
+                <h3 className="text-white text-2xl font-bold drop-shadow-lg pr-16">
+                  {imageModal.title}
+                </h3>
+              )}
+              <button
+                onClick={closeImageModal}
+                className="absolute top-6 right-6 w-12 h-12 flex items-center justify-center bg-red-500 hover:bg-red-600 rounded-full text-white transition-all shadow-lg"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Image Container */}
+            <div className="w-full h-full flex items-center justify-center p-8">
+              <img
+                src={imageModal.imageUrl}
+                alt="Food donation"
+                className="max-w-full max-h-full object-contain rounded-lg"
+                style={{ maxHeight: 'calc(80vh - 4rem)' }}
+              />
+            </div>
+
+            {/* Footer Info */}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent p-6">
+              <p className="text-white text-base font-medium text-center drop-shadow-lg">
+                Click outside or press ESC to close
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('dashboard.donor.title')}</h1>
@@ -246,27 +390,34 @@ const DonorDashboard = () => {
               ) : (
                 <div className="space-y-3">
                   {userDonations.slice(0, 5).map((donation) => (
-                    <div key={donation._id} className="flex items-center justify-between p-4 border dark:border-gray-700 rounded-lg">
-                      <div className="flex items-center space-x-3">
+                    <div key={donation._id} className="flex items-start justify-between p-4 border dark:border-gray-700 rounded-lg hover:shadow-md transition-shadow">
+                      <div className="flex items-start space-x-4 flex-1">
                         <img
                           src={donation.photo_url}
                           alt="Food"
-                          className="w-12 h-12 rounded-lg object-cover"
+                          className="w-20 h-20 rounded-lg object-cover flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => openImageModal(donation.photo_url, donation.food_items.map(item => item.name).join(', '))}
+                          onError={(e) => {
+                            e.target.src = 'https://via.placeholder.com/80x80?text=Food';
+                          }}
                         />
-                        <div>
-                          <p className="font-medium dark:text-white">
+                        <div className="flex-1">
+                          <p className="font-medium dark:text-white text-lg">
                             {donation.food_items.map(item => item.name).join(', ')}
                           </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                             {t('dashboard.donor.serves')} {donation.quantity_serves} {t('dashboard.donor.people')}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                            {donation.pickup_address}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(donation.status)}`}>
+                      <div className="text-right ml-4">
+                        <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(donation.status)}`}>
                           {t(`dashboard.donor.${donation.status}`)}
                         </span>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                           {new Date(donation.createdAt).toLocaleDateString()}
                         </p>
                       </div>
@@ -278,11 +429,121 @@ const DonorDashboard = () => {
           )}
 
           {activeTab === 'post' && (
-            <BiometricGuard screenName="Post Food Donation">
             <div className="space-y-6">
+              {/* Biometric Confirmation Modal */}
+              {showBiometricConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-6">
+                    {/* Icon */}
+                    <div className="flex justify-center">
+                      <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                        <svg className="w-10 h-10 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      </div>
+                    </div>
+
+                    {/* Title */}
+                    <div className="text-center">
+                      <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                        {t('dashboard.donor.confirmDonation')}
+                      </h3>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        {t('dashboard.donor.confirmDonationMessage')}
+                      </p>
+                    </div>
+
+                    {/* Donation Summary */}
+                    {pendingFormData && (
+                      <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600 dark:text-gray-400">{t('dashboard.donor.foodItems')}:</span>
+                          <span className="font-medium dark:text-white">{pendingFormData.food_items}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600 dark:text-gray-400">{t('dashboard.donor.serves')}:</span>
+                          <span className="font-medium dark:text-white">{pendingFormData.quantity_serves} {t('dashboard.donor.people')}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600 dark:text-gray-400">{t('dashboard.donor.foodCategory')}:</span>
+                          <span className="font-medium dark:text-white capitalize">{t(`dashboard.donor.${pendingFormData.food_category}`)}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Buttons */}
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleBiometricCancel}
+                        className="flex-1 py-3 px-4 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        {t('common.cancel')}
+                      </button>
+                      <button
+                        onClick={handleBiometricConfirm}
+                        className="flex-1 py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
+                        </svg>
+                        {t('biometric.authenticate')}
+                      </button>
+                    </div>
+
+                    {/* Info */}
+                    <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+                      🔒 {t('biometric.privacyNotice')}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <h3 className="text-lg font-medium dark:text-white">{t('dashboard.donor.postNewDonation')}</h3>
               
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" onClick={(e) => e.stopPropagation()}>
+                {/* Photo Upload Section */}
+                <div className="bg-gray-50 dark:bg-gray-700/50 p-6 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    {t('dashboard.donor.foodPhoto')} (Optional)
+                  </label>
+                  
+                  {!photoPreview ? (
+                    <div className="flex flex-col items-center justify-center py-8">
+                      <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-3">
+                        <Plus className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Upload a photo of your food donation</p>
+                      <label className="cursor-pointer px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePhotoChange}
+                          className="hidden"
+                        />
+                        Choose Photo
+                      </label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Max size: 5MB (JPG, PNG, GIF, WebP)</p>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <img
+                        src={photoPreview}
+                        alt="Food preview"
+                        className="w-full h-64 object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={removePhoto}
+                        className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dashboard.donor.foodItems')} *</label>
@@ -389,20 +650,15 @@ const DonorDashboard = () => {
                           validate: (value) => {
                             const selectedDate = new Date(value);
                             const now = new Date();
-                            if (selectedDate <= now) {
-                              return 'Start time must be in the future';
+                            const minTime = new Date(now.getTime() + 30 * 60 * 1000); // 30 minutes from now
+                            if (selectedDate < minTime) {
+                              return `Start time must be at least 30 minutes from now (after ${minTime.toLocaleString()})`;
                             }
                             return true;
                           }
                         })}
                         type="datetime-local"
-                        min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)}
                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        onBlur={(e) => {
-                          if (e.target.value) {
-                            e.target.blur();
-                          }
-                        }}
                         onChange={(e) => {
                           if (e.target.value) {
                             setTimeout(() => e.target.blur(), 100);
@@ -423,13 +679,16 @@ const DonorDashboard = () => {
                         validate: (value) => {
                           const startTime = document.querySelector('input[name="pickup_window_start"]')?.value;
                           if (startTime && new Date(value) <= new Date(startTime)) {
-                            return 'End time must be after start time';
+                            return 'End time must be at least 1 hour after start time';
+                          }
+                          const minDiff = 60 * 60 * 1000; // 1 hour
+                          if (startTime && (new Date(value) - new Date(startTime)) < minDiff) {
+                            return 'Pickup window must be at least 1 hour';
                           }
                           return true;
                         }
                       })}
                       type="datetime-local"
-                      min={new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().slice(0, 16)}
                       className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       onChange={(e) => {
                         if (e.target.value) {
@@ -450,13 +709,12 @@ const DonorDashboard = () => {
                         validate: (value) => {
                           const endTime = document.querySelector('input[name="pickup_window_end"]')?.value;
                           if (endTime && new Date(value) <= new Date(endTime)) {
-                            return 'Expiry time must be after pickup end time';
+                            return 'Expiry time must be at least 2 hours after pickup end time';
                           }
                           return true;
                         }
                       })}
                       type="datetime-local"
-                      min={new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString().slice(0, 16)}
                       className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       onChange={(e) => {
                         if (e.target.value) {
@@ -511,7 +769,6 @@ const DonorDashboard = () => {
                 </div>
               </form>
             </div>
-            </BiometricGuard>
           )}
 
           {activeTab === 'history' && (
@@ -524,31 +781,38 @@ const DonorDashboard = () => {
               ) : (
                 <div className="space-y-3">
                   {userDonations.map((donation) => (
-                    <div key={donation._id} className="flex items-center justify-between p-4 border dark:border-gray-700 rounded-lg">
-                      <div className="flex items-center space-x-3">
+                    <div key={donation._id} className="flex items-start justify-between p-4 border dark:border-gray-700 rounded-lg hover:shadow-md transition-shadow">
+                      <div className="flex items-start space-x-4 flex-1">
                         <img
                           src={donation.photo_url}
                           alt="Food"
-                          className="w-12 h-12 rounded-lg object-cover"
+                          className="w-24 h-24 rounded-lg object-cover flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => openImageModal(donation.photo_url, donation.food_items.map(item => item.name).join(', '))}
+                          onError={(e) => {
+                            e.target.src = 'https://via.placeholder.com/96x96?text=Food';
+                          }}
                         />
-                        <div>
-                          <p className="font-medium dark:text-white">
+                        <div className="flex-1">
+                          <p className="font-medium dark:text-white text-lg">
                             {donation.food_items.map(item => item.name).join(', ')}
                           </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                             {t('dashboard.donor.serves')} {donation.quantity_serves} {t('dashboard.donor.people')}
                           </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                            {donation.pickup_address}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                             {t('dashboard.donor.posted')}: {new Date(donation.createdAt).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(donation.status)}`}>
+                      <div className="text-right ml-4">
+                        <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(donation.status)}`}>
                           {t(`dashboard.donor.${donation.status}`)}
                         </span>
                         {donation.claimed_by && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                             {t('dashboard.donor.claimedBy')}: {donation.claimed_by.organization_name}
                           </p>
                         )}
