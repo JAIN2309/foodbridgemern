@@ -137,7 +137,26 @@
       "available": "available",
       "reserved": "reserved",
       "collected": "collected",
-      "expired": "expired"
+      "expired": "expired",
+      "greeting": "Hello",
+      "total": "Total",
+      "done": "Done",
+      "served": "Served",
+      "myDonations": "My Donations",
+      "noDonationsDesc": "Start making an impact by posting your first food donation",
+      "postTitle": "Post New Donation",
+      "foodInfo": "Food Information",
+      "optional": "Optional",
+      "addPhotoDesc": "Add a photo of your food donation",
+      "camera": "Camera",
+      "gallery": "Gallery",
+      "photoAdded": "Photo Added",
+      "pickupDetails": "Pickup Details",
+      "scheduleExpiry": "Schedule & Expiry",
+      "instructions": "Special Instructions",
+      "expiry": "Expiry",
+      "storage": "Storage",
+      "postBtn": "Post Donation"
     },
     "ngo": {
       "title": "NGO Dashboard",
@@ -170,6 +189,7 @@
       "markCollected": "Mark Collected"
     },
     "admin": {
+      "history":"History",
       "title": "Admin Dashboard",
       "subtitle": "Manage users, monitor donations, and view analytics",
       "autoRefresh": "Auto-refreshes every 30 seconds",
@@ -234,6 +254,54 @@
       "adminOnly": "Admins Only",
       "searchUsers": "Search by name, email, or phone..."
     }
+  },
+  "donationDetails": {
+    "postedOn": "Posted on",
+    "availableForPickup": "Available for Pickup",
+    "reservedByNGO": "Reserved by NGO",
+    "successfullyCollected": "Successfully Collected",
+    "tapToEnlarge": "Tap to enlarge",
+    "noPhotoAdded": "No Photo Added",
+    "noPhotoDesc": "No image was uploaded for this donation",
+    "people": "People",
+    "category": "Category",
+    "storage": "Storage",
+    "quality": "Quality",
+    "pickupInfo": "Pickup Information",
+    "address": "Address",
+    "pickupWindow": "Pickup Window",
+    "until": "until",
+    "expiryDate": "Expiry Date",
+    "additionalDetails": "Additional Details",
+    "specialInstructions": "Special Instructions",
+    "claimedBy": "Claimed By",
+    "vegetarian": "Veg",
+    "non-vegetarian": "Non-Veg",
+    "vegan": "Vegan",
+    "mixed": "Mixed",
+    "refrigerated": "Refrigerated",
+    "frozen": "Frozen",
+    "room_temperature": "Room Temp",
+    "hot_holding": "Hot"
+  },
+  "donationCard": {
+    "foodDonation": "Food donation",
+    "foodItems": "Food Items",
+    "noDescription": "No description",
+    "by": "By",
+    "claimedBy": "Claimed by",
+    "serves": "Serves",
+    "people": "people",
+    "expires": "Expires",
+    "viewDetails": "View Details",
+    "posted": "Posted",
+    "claimed": "Claimed",
+    "collected": "Collected"
+  },
+  "imagePreview": {
+    "closeInstruction": "Click outside or press ESC to close",
+    "fullView": "Full View",
+    "clickToEnlarge": "Click to enlarge"
   },
   "profile": {
     "title": "Profile Settings",
@@ -485,7 +553,9 @@
     "passwordLength": "Password must be 8-25 characters",
     "passwordMismatch": "Passwords do not match",
     "weakPassword": "Password must meet all requirements",
-    "invalidClipboard": "No valid OTP found in clipboard"
+    "invalidClipboard": "No valid OTP found in clipboard",
+    "confirmTitle": "Confirm Password Change",
+    "confirmMessage": "Are you sure you want to change your password? You will need to use the new password for future logins."
   },
   "layout": {
     "dashboard": "Dashboard",

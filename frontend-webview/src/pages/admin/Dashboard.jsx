@@ -14,6 +14,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import api from '../../services/api';
+import DonationCard from '../../components/common/DonationCard';
 import 'leaflet/dist/leaflet.css';
 
 const AdminDashboard = () => {
@@ -29,6 +30,8 @@ const AdminDashboard = () => {
   const [apiError, setApiError] = useState(null);
   const [roleFilter, setRoleFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [donationHistory, setDonationHistory] = useState([]);
+  const [historyStats, setHistoryStats] = useState({});
 
   useEffect(() => {
     // Check URL parameters for tab
@@ -77,24 +80,28 @@ const AdminDashboard = () => {
     setApiError(null);
     try {
       console.log('Fetching admin data...');
-      const [pendingRes, statsRes, donationsRes, usersRes] = await Promise.all([
+      const [pendingRes, statsRes, donationsRes, usersRes, historyRes] = await Promise.all([
         api.get('/users/pending'),
         api.get('/users/stats'),
         api.get('/users/donations/all'),
-        api.get(`/users/all?role=${roleFilter}`)
+        api.get(`/users/all?role=${roleFilter}`),
+        api.get('/donations/admin/history')
       ]);
       
       console.log('API responses:', {
         pending: pendingRes.data,
         stats: statsRes.data,
         donations: donationsRes.data,
-        users: usersRes.data
+        users: usersRes.data,
+        history: historyRes.data
       });
       
       setPendingUsers(pendingRes.data || []);
       setStats(statsRes.data || {});
       setActiveDonations(donationsRes.data || []);
       setAllUsers(usersRes.data || []);
+      setDonationHistory(historyRes.data?.donations || []);
+      setHistoryStats(historyRes.data?.statistics || {});
       setDataLoaded(true);
     } catch (error) {
       console.error('API Error:', error.response?.data || error.message);
@@ -277,6 +284,16 @@ const AdminDashboard = () => {
               }`}
             >
               {t('dashboard.admin.usersList')} ({allUsers.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'history'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              {t('dashboard.admin.history')} ({donationHistory.length})
             </button>
           </nav>
         </div>
@@ -648,6 +665,28 @@ const AdminDashboard = () => {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'history' && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Donation History</h3>
+              {donationHistory.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No donation history found</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {donationHistory.map((donation) => (
+                    <DonationCard
+                      key={donation._id}
+                      donation={donation}
+                      showDonor={true}
+                      showNGO={true}
+                    />
+                  ))}
                 </div>
               )}
             </div>

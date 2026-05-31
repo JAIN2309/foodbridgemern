@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -46,10 +46,12 @@ export default function AdminDashboard() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [roleFilter]);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -57,7 +59,7 @@ export default function AdminDashboard() {
       const [pendingRes, statsRes, usersRes] = await Promise.all([
         api.get('/users/pending'),
         api.get('/users/stats'),
-        api.get('/users/all')
+        api.get(`/users/all?role=${roleFilter}`)
       ]);
       
       setPendingUsers(pendingRes.data || []);
@@ -358,7 +360,50 @@ export default function AdminDashboard() {
 
         {activeTab === 'users' && (
           <View style={styles.tabContent}>
-            {allUsers.length === 0 ? (
+            <View style={styles.filterContainer}>
+              <View style={styles.searchContainer}>
+                <Ionicons name="search" size={18} color="#9ca3af" style={styles.searchIcon} />
+                <TextInput
+                  placeholder={t('dashboard.admin.searchUsers')}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  style={styles.searchInput}
+                  placeholderTextColor="#9ca3af"
+                />
+              </View>
+            </View>
+            <View style={styles.roleFilterRow}>
+              {['all', 'donor', 'ngo', 'admin'].map((role) => (
+                <TouchableOpacity
+                  key={role}
+                  style={[styles.roleFilterBtn, roleFilter === role && styles.roleFilterBtnActive]}
+                  onPress={() => setRoleFilter(role)}
+                >
+                  <Text style={[styles.roleFilterText, roleFilter === role && styles.roleFilterTextActive]}>
+                    {role === 'all' ? t('dashboard.admin.allRoles') :
+                     role === 'donor' ? t('dashboard.admin.donorOnly') :
+                     role === 'ngo' ? t('dashboard.admin.ngoOnly') :
+                     t('dashboard.admin.adminOnly')}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.userCount}>
+              {allUsers.filter(user => {
+                const query = searchQuery.toLowerCase();
+                return user.organization_name?.toLowerCase().includes(query) ||
+                       user.email?.toLowerCase().includes(query) ||
+                       user.phone?.includes(query) ||
+                       user.contact_person?.toLowerCase().includes(query);
+              }).length} {t('dashboard.admin.usersFound')}
+            </Text>
+            {allUsers.filter(user => {
+              const query = searchQuery.toLowerCase();
+              return user.organization_name?.toLowerCase().includes(query) ||
+                     user.email?.toLowerCase().includes(query) ||
+                     user.phone?.includes(query) ||
+                     user.contact_person?.toLowerCase().includes(query);
+            }).length === 0 ? (
               <View style={styles.emptyState}>
                 <LinearGradient colors={['#eff6ff', '#faf5ff']} style={styles.emptyIcon}>
                   <Ionicons name="people" size={48} color="#3b82f6" />
@@ -366,7 +411,13 @@ export default function AdminDashboard() {
                 <Text style={styles.emptyTitle}>{t('dashboard.admin.noUsersFound')}</Text>
               </View>
             ) : (
-              allUsers.map((user) => (
+              allUsers.filter(user => {
+                const query = searchQuery.toLowerCase();
+                return user.organization_name?.toLowerCase().includes(query) ||
+                       user.email?.toLowerCase().includes(query) ||
+                       user.phone?.includes(query) ||
+                       user.contact_person?.toLowerCase().includes(query);
+              }).map((user) => (
                 <View key={user._id} style={styles.userCard}>
                   <View style={styles.userCardHeader}>
                     <View style={[styles.userAvatar, { backgroundColor: getRoleColor(user.role) + '18' }]}>
@@ -543,4 +594,14 @@ const styles = StyleSheet.create({
   metricDot: { width: 8, height: 8, borderRadius: 4 },
   metricTitle: { fontSize: 13, fontWeight: '600', color: '#374151' },
   metricValue: { fontSize: 13, color: '#6b7280', marginLeft: 16 },
+  filterContainer: { marginBottom: 12 },
+  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 12, borderWidth: 1, borderColor: '#e5e7eb', height: 44 },
+  searchIcon: { marginRight: 8 },
+  searchInput: { flex: 1, fontSize: 14, color: '#1f2937', padding: 0 },
+  roleFilterRow: { flexDirection: 'row', gap: 8, marginTop: 12, flexWrap: 'wrap' },
+  roleFilterBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#f3f4f6', borderWidth: 1, borderColor: '#e5e7eb' },
+  roleFilterBtnActive: { backgroundColor: '#7c3aed', borderColor: '#7c3aed' },
+  roleFilterText: { fontSize: 12, fontWeight: '600', color: '#6b7280' },
+  roleFilterTextActive: { color: '#fff' },
+  userCount: { fontSize: 13, color: '#6b7280', marginTop: 12, marginBottom: 12, fontWeight: '500' },
 });

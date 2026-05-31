@@ -9,42 +9,53 @@ function decryptUserFields(user) {
   
   const userObj = user.toObject ? user.toObject() : user;
   
-  // Decrypt fields that are stored encrypted (contain : separator)
-  if (userObj.email && typeof userObj.email === 'string' && userObj.email.includes(':')) {
-    userObj.email = decrypt(userObj.email);
-  }
-  if (userObj.phone && typeof userObj.phone === 'string' && userObj.phone.includes(':')) {
-    userObj.phone = decrypt(userObj.phone);
-  }
-  if (userObj.license_number && typeof userObj.license_number === 'string' && userObj.license_number.includes(':')) {
-    userObj.license_number = decrypt(userObj.license_number);
-  }
-  if (userObj.contact_person && typeof userObj.contact_person === 'string' && userObj.contact_person.includes(':')) {
-    userObj.contact_person = decrypt(userObj.contact_person);
-  }
+  // Helper function to safely decrypt
+  const safeDecrypt = (value, fieldName) => {
+    if (!value || typeof value !== 'string') return value;
+    if (!value.includes(':')) return value; // Not encrypted
+    if (value.startsWith('data:')) return value; // Base64 image, not encrypted
+    
+    try {
+      return decrypt(value);
+    } catch (error) {
+      console.warn(`⚠️  Failed to decrypt ${fieldName}, using original value`);
+      return value; // Return original if decryption fails
+    }
+  };
   
-  // Also decrypt from _encrypted fields if they exist
+  // Decrypt from _encrypted fields first (preferred)
   if (userObj.email_encrypted) {
-    userObj.email = decrypt(userObj.email_encrypted);
-  }
-  if (userObj.phone_encrypted) {
-    userObj.phone = decrypt(userObj.phone_encrypted);
-  }
-  if (userObj.license_number_encrypted) {
-    userObj.license_number = decrypt(userObj.license_number_encrypted);
-  }
-  if (userObj.contact_person_encrypted) {
-    userObj.contact_person = decrypt(userObj.contact_person_encrypted);
+    userObj.email = safeDecrypt(userObj.email_encrypted, 'email');
+  } else if (userObj.email) {
+    userObj.email = safeDecrypt(userObj.email, 'email');
   }
   
-  // Decrypt profile picture if it's encrypted (contains :)
-  if (userObj.profile_picture && typeof userObj.profile_picture === 'string' && userObj.profile_picture.includes(':') && !userObj.profile_picture.startsWith('data:')) {
-    userObj.profile_picture = decrypt(userObj.profile_picture);
+  if (userObj.phone_encrypted) {
+    userObj.phone = safeDecrypt(userObj.phone_encrypted, 'phone');
+  } else if (userObj.phone) {
+    userObj.phone = safeDecrypt(userObj.phone, 'phone');
+  }
+  
+  if (userObj.license_number_encrypted) {
+    userObj.license_number = safeDecrypt(userObj.license_number_encrypted, 'license_number');
+  } else if (userObj.license_number) {
+    userObj.license_number = safeDecrypt(userObj.license_number, 'license_number');
+  }
+  
+  if (userObj.contact_person_encrypted) {
+    userObj.contact_person = safeDecrypt(userObj.contact_person_encrypted, 'contact_person');
+  } else if (userObj.contact_person) {
+    userObj.contact_person = safeDecrypt(userObj.contact_person, 'contact_person');
+  }
+  
+  // Decrypt profile picture if it's encrypted
+  if (userObj.profile_picture) {
+    userObj.profile_picture = safeDecrypt(userObj.profile_picture, 'profile_picture');
   }
   
   // Decrypt OTP if it's encrypted
-  if (userObj.password_reset?.otp && typeof userObj.password_reset.otp === 'string' && userObj.password_reset.otp.includes(':')) {
-    userObj.password_reset.otp = decrypt(userObj.password_reset.otp);
+  if (userObj.password_reset?.otp) {
+    userObj.password_reset.otp = safeDecrypt(userObj.password_reset.otp, 'otp');
   }
   
   return userObj;

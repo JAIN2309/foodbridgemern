@@ -46,19 +46,7 @@ export const BiometricGuard: React.FC<BiometricGuardProps> = ({ children, requir
     performAuth();
   };
 
-  // Re-authenticate when app comes to foreground
-  useEffect(() => {
-    if (!requireAuth || !isEnabled || !user?.email) return;
 
-    const subscription = AppState.addEventListener('change', (nextAppState) => {
-      if (nextAppState === 'active' && isAuthenticated) {
-        setIsAuthenticated(false);
-        performAuth();
-      }
-    });
-
-    return () => subscription.remove();
-  }, [isEnabled, requireAuth, isAuthenticated, user?.email]);
 
   const performAuth = async () => {
     setIsAuthenticating(true);

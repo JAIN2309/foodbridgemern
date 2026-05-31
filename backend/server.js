@@ -9,6 +9,7 @@ const donationRoutes = require('./routes/donations');
 const userRoutes = require('./routes/users');
 const mapRoutes = require('./routes/map');
 const { startCronJobs } = require('./services/cronService');
+const expiryScheduler = require('./jobs/expiryScheduler');
 
 const app = express();
 
@@ -41,6 +42,9 @@ connectDB();
 if (process.env.NODE_ENV !== 'production') {
   startCronJobs();
 }
+
+// Start expiry scheduler to mark expired donations (preserves history)
+expiryScheduler.start();
 
 // Mock Socket.io for Vercel compatibility
 const mockIO = {

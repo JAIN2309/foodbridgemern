@@ -137,7 +137,26 @@
       "available": "ઉપલબ્ધ",
       "reserved": "આરક્ષિત",
       "collected": "એકત્રિત",
-      "expired": "સમાપ્ત"
+      "expired": "સમાપ્ત",
+      "greeting": "નમસ્તે",
+      "total": "કુલ",
+      "done": "પૂર્ણ",
+      "served": "પીરસ્યું",
+      "myDonations": "મારા દાન",
+      "noDonationsDesc": "તમારું પ્રથમ ખોરાક દાન પોસ્ટ કરીને અસર બનાવવાનું શરૂ કરો",
+      "postTitle": "નવું દાન પોસ્ટ કરો",
+      "foodInfo": "ખોરાક માહિતી",
+      "optional": "વૈકલ્પિક",
+      "addPhotoDesc": "તમારા ખોરાક દાનનો ફોટો ઉમેરો",
+      "camera": "કેમેરા",
+      "gallery": "ગેલેરી",
+      "photoAdded": "ફોટો ઉમેર્યો",
+      "pickupDetails": "પિકઅપ વિગતો",
+      "scheduleExpiry": "સમયપત્રક અને સમાપ્તિ",
+      "instructions": "વિશેષ સૂચનાઓ",
+      "expiry": "સમાપ્તિ",
+      "storage": "સંગ્રહ",
+      "postBtn": "દાન પોસ્ટ કરો"
     },
     "ngo": {
       "title": "એનજીઓ ડેશબોર્ડ",
@@ -170,6 +189,7 @@
       "markCollected": "એકત્રિત તરીકે ચિહ્નિત કરો"
     },
     "admin": {
+      "history":"ઇતિહાસ",
       "title": "વ્યવસ્થાપક ડેશબોર્ડ",
       "subtitle": "વપરાશકર્તાઓનું સંચાલન કરો, દાનની દેખરેખ કરો, અને એનાલિટિક્સ જુઓ",
       "autoRefresh": "દર 30 સેકન્ડે ઓટો-રિફ્રેશ",
@@ -241,6 +261,54 @@
       "trustScore": "વિશ્વાસ સ્કોર",
       "meals": "ભોજન"
     }
+  },
+  "donationCard": {
+    "foodDonation": "ખોરાક દાન",
+    "foodItems": "ખોરાકની વસ્તુઓ",
+    "noDescription": "કોઈ વર્ણન નથી",
+    "by": "દ્વારા",
+    "claimedBy": "દ્વારા દાવો કરવામાં આવ્યો",
+    "serves": "પીરસે છે",
+    "people": "લોકો",
+    "expires": "સમાપ્ત થાય છે",
+    "viewDetails": "વિગતો જુઓ",
+    "posted": "પોસ્ટ કર્યું",
+    "claimed": "દાવો કર્યો",
+    "collected": "એકત્રિત"
+  },
+  "donationDetails": {
+    "postedOn": "પોસ્ટ કર્યું",
+    "availableForPickup": "પિકઅપ માટે ઉપલબ્ધ",
+    "reservedByNGO": "એનજીઓ દ્વારા આરક્ષિત",
+    "successfullyCollected": "સફળતાપૂર્વક એકત્રિત",
+    "tapToEnlarge": "મોટું કરવા માટે ટેપ કરો",
+    "noPhotoAdded": "કોઈ ફોટો ઉમેર્યો નથી",
+    "noPhotoDesc": "આ દાન માટે કોઈ છબી અપલોડ કરવામાં આવી ન હતી",
+    "people": "લોકો",
+    "category": "શ્રેણી",
+    "storage": "સંગ્રહ",
+    "quality": "ગુણવત્તા",
+    "pickupInfo": "પિકઅપ માહિતી",
+    "address": "સરનામું",
+    "pickupWindow": "પિકઅપ સમય",
+    "until": "સુધી",
+    "expiryDate": "સમાપ્તિ તારીખ",
+    "additionalDetails": "વધારાની વિગતો",
+    "specialInstructions": "વિશેષ સૂચનાઓ",
+    "claimedBy": "દ્વારા દાવો કરાયો",
+    "vegetarian": "શાકાહારી",
+    "non-vegetarian": "માંસાહારી",
+    "vegan": "વીગન",
+    "mixed": "મિશ્રિત",
+    "refrigerated": "પ્રશીતિત",
+    "frozen": "સ્થિર",
+    "room_temperature": "ઓરડાનું તાપમાન",
+    "hot_holding": "ગરમ"
+  },
+  "imagePreview": {
+    "closeInstruction": "બંધ કરવા માટે બહાર ક્લિક કરો અથવા ESC દબાવો",
+    "fullView": "સંપૂર્ણ દૃશ્ય",
+    "clickToEnlarge": "મોટું કરવા માટે ક્લિક કરો"
   },
   "profile": {
     "title": "પ્રોફાઇલ સેટિંગ્સ",
@@ -459,7 +527,9 @@
     "passwordLength": "પાસવર્ડ 8-25 અક્ષરોનો હોવો જોઈએ",
     "passwordMismatch": "પાસવર્ડ મેળ ખાતા નથી",
     "weakPassword": "પાસવર્ડ બધી આવશ્યકતાઓને પૂર્ણ કરવો જોઈએ",
-    "invalidClipboard": "ક્લિપબોર્ડમાં કોઈ માન્ય OTP મળ્યો નથી"
+    "invalidClipboard": "ક્લિપબોર્ડમાં કોઈ માન્ય OTP મળ્યો નથી",
+    "confirmTitle": "પાસવર્ડ પરિવર્તનની પુષ્ટિ કરો",
+    "confirmMessage": "શું તમે ખરેખર તમારો પાસવર્ડ બદલવા માંગો છો? ભવિષ્યના લોગિન માટે તમારે નવા પાસવર્ડનો ઉપયોગ કરવો પડશે."
   },
   "layout": {
     "dashboard": "ડેશબોર્ડ",

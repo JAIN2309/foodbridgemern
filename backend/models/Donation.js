@@ -97,8 +97,21 @@ const donationSchema = new mongoose.Schema({
   },
   expiresAt: {
     type: Date,
-    index: { expireAfterSeconds: 0 } // TTL index
-  }
+    // REMOVED TTL index - we'll handle expiry manually to preserve history
+    // index: { expireAfterSeconds: 0 } // This was auto-deleting documents!
+  },
+  // Audit trail fields
+  status_history: [{
+    status: String,
+    changed_at: { type: Date, default: Date.now },
+    changed_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    reason: String
+  }],
+  deletion_scheduled: {
+    type: Boolean,
+    default: false
+  },
+  deleted_at: Date
 }, {
   timestamps: true
 });
@@ -111,12 +124,25 @@ donationSchema.index({ status: 1, expiresAt: 1 });
 donationSchema.index({ donor_id: 1, status: 1 });
 donationSchema.index({ claimed_by: 1, status: 1 });
 
-// Pre-save middleware to set expiresAt based on pickup_window_end
+// Pre-save middleware to track status changes
 donationSchema.pre('save', function(next) {
-  // Always set expiresAt to pickup_window_end for TTL functionality
+  // Set expiresAt based on pickup_window_end
   if (this.pickup_window_end) {
     this.expiresAt = this.pickup_window_end;
   }
+  
+  // Track status changes in history
+  if (this.isModified('status')) {
+    if (!this.status_history) {
+      this.status_history = [];
+    }
+    this.status_history.push({
+      status: this.status,
+      changed_at: new Date(),
+      reason: 'Status updated'
+    });
+  }
+  
   next();
 });
 

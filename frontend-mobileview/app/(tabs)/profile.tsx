@@ -8,7 +8,6 @@ import { useAppSelector, useAppDispatch } from '../../src/hooks/useRedux';
 import { updateProfile, loadUser } from '../../src/store/authSlice';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
-import { BiometricGuard } from '../../src/components/BiometricGuard';
 
 const ROLE_COLORS: any = { donor: ['#2563eb', '#3b82f6'], ngo: ['#16a34a', '#22c55e'], admin: ['#7c3aed', '#8b5cf6'], super_admin: ['#db2777', '#ec4899'] };
 
@@ -71,7 +70,7 @@ export default function ProfileScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.3,
@@ -154,9 +153,8 @@ export default function ProfileScreen() {
   const rowProps = { isEditing, editData, setEditData, color: colors[0] };
 
   return (
-    <BiometricGuard>
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f7fa' }} edges={['bottom']}>
-        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f7fa' }} edges={['bottom']}>
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
         {/* Gradient Header */}
         <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
@@ -338,7 +336,6 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </Modal>
     </SafeAreaView>
-    </BiometricGuard>
   );
 }
 

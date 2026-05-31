@@ -2,19 +2,26 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { LocationData } from './mapService';
 
-const API_BASE_URL = 'http://10.228.29.65:5001/api'; // Host Wi-Fi IP
+const API_BASE_URL = 'http://10.17.24.65:5001/api'; // Your Computer IP
 
 console.log('🔧 API Base URL:', API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 30000, // 30 second timeout
 });
 
 api.interceptors.request.use(
   async (config) => {
     console.log('📤 API Request:', config.method?.toUpperCase(), config.url);
     if (config.data) {
-      console.log('📦 Request Data:', JSON.stringify(config.data));
+      // Don't log FormData details (too verbose)
+      if (config.data instanceof FormData) {
+        console.log('📦 Request Data: FormData (multipart)');
+        config.headers['Content-Type'] = 'multipart/form-data';
+      } else {
+        console.log('📦 Request Data:', JSON.stringify(config.data));
+      }
     }
     const token = await SecureStore.getItemAsync('token');
     if (token) {

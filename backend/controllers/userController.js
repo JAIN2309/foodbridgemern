@@ -128,21 +128,27 @@ const getAllUsers = async (req, res) => {
       .select('-password')
       .sort({ createdAt: -1 });
     
+    console.log('\n=== RAW USER DATA FROM DB ===');
     console.log('Sample user before decrypt:', users[0] ? {
       email: users[0].email,
       phone: users[0].phone,
       contact_person: users[0].contact_person,
-      email_encrypted: users[0].email_encrypted ? 'exists' : 'null',
-      phone_encrypted: users[0].phone_encrypted ? 'exists' : 'null'
+      email_encrypted: users[0].email_encrypted,
+      phone_encrypted: users[0].phone_encrypted,
+      contact_person_encrypted: users[0].contact_person_encrypted
     } : 'no users');
     
     const decryptedUsers = users.map(user => decryptUserFields(user));
     
+    console.log('\n=== AFTER DECRYPTION ===');
     console.log('Sample user after decrypt:', decryptedUsers[0] ? {
       email: decryptedUsers[0].email,
       phone: decryptedUsers[0].phone,
       contact_person: decryptedUsers[0].contact_person
     } : 'no users');
+    console.log('\n=== SENDING TO FRONTEND ===');
+    console.log('Total users:', decryptedUsers.length);
+    console.log('First user full data:', JSON.stringify(decryptedUsers[0], null, 2));
     
     console.log(`Found ${decryptedUsers.length} users`);
     res.json(decryptedUsers);

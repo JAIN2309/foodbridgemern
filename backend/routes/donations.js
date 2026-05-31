@@ -6,6 +6,7 @@ const {
   markCollected,
   getDonorHistory,
   getNGOHistory,
+  getAdminDonationHistory,
   syncOfflineActions
 } = require('../controllers/donationController');
 const { auth, requireRole, requireVerified } = require('../middleware/auth');
@@ -23,6 +24,9 @@ router.get('/nearby', auth, requireRole(['ngo']), requireVerified, getNearbyDona
 router.post('/:donationId/claim', auth, requireRole(['ngo']), requireVerified, claimDonation);
 router.post('/:donationId/collect', auth, requireRole(['ngo']), requireVerified, markCollected);
 router.get('/history/ngo', auth, requireRole(['ngo']), getNGOHistory);
+
+// Admin routes
+router.get('/admin/history', auth, requireRole(['admin']), getAdminDonationHistory);
 
 // Enhanced features
 router.post('/sync-offline', auth, syncOfflineActions);

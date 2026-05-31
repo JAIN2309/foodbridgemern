@@ -526,13 +526,149 @@ const getDonorHistory = async (req, res) => {
 
 const getNGOHistory = async (req, res) => {
   try {
-    const donations = await Donation.find({ claimed_by: req.user._id })
+    // Get ALL claimed donations including expired/completed ones
+    const donations = await Donation.find({ 
+      claimed_by: req.user._id,
+      deletion_scheduled: { $ne: true }
+    })
       .populate('donor_id', 'organization_name')
       .sort({ claimed_at: -1 });
     
     res.json(donations);
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// Admin: Get complete donation history with full audit trail
+const getAdminDonationHistory = async (req, res) => {
+  try {
+    const { 
+      status, 
+      startDate, 
+      endDate, 
+      donorId, 
+      ngoId,
+      page = 1,
+      limit = 50 
+    } = req.query;
+    
+    // Build query
+    const query = { deletion_scheduled: { $ne: true } };
+    
+    if (status) query.status = status;
+    if (donorId) query.donor_id = donorId;
+    if (ngoId) query.claimed_by = ngoId;
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) query.createdAt.$lte = new Date(endDate);
+    }
+    
+    // Get total count
+    const total = await Donation.countDocuments(query);
+    
+    // Get paginated donations with full details
+    const donations = await Donation.find(query)
+      .populate('donor_id', 'organization_name email phone contact_person trust_score')
+      .populate('claimed_by', 'organization_name email phone contact_person trust_score')
+      .populate('status_history.changed_by', 'organization_name')
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+    
+    // Calculate statistics
+    const stats = await Donation.aggregate([
+      { $match: query },
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 },
+          totalServes: { $sum: '$quantity_serves' }
+        }
+      }
+    ]);
+    
+    res.json({
+      donations,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / limit)
+      },
+      statistics: stats.reduce((acc, stat) => {
+        acc[stat._id] = {
+          count: stat.count,
+          totalServes: stat.totalServes
+        };
+        return acc;
+      }, {})
+    });
+  } catch (error) {
+    console.error('Admin donation history error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Background job to mark expired donations (instead of deleting)
+const markExpiredDonations = async () => {
+  try {
+    const now = new Date();
+    
+    // Find donations that should be expired
+    const expiredDonations = await Donation.find({
+      status: { $in: ['available', 'reserved'] },
+      expiresAt: { $lte: now },
+      deletion_scheduled: { $ne: true }
+    });
+    
+    console.log(`⏰ Found ${expiredDonations.length} donations to mark as expired`);
+    
+    // Mark each as expired (preserving history)
+    for (const donation of expiredDonations) {
+      donation.status = 'expired';
+      donation.status_history.push({
+        status: 'expired',
+        changed_at: now,
+        reason: 'Automatic expiry - pickup window ended'
+      });
+      await donation.save();
+    }
+    
+    console.log(`✅ Marked ${expiredDonations.length} donations as expired`);
+    return expiredDonations.length;
+  } catch (error) {
+    console.error('❌ Error marking expired donations:', error);
+    return 0;
+  }
+};
+
+// Optional: Clean up very old donations (e.g., after 90 days)
+const cleanupOldDonations = async (daysOld = 90) => {
+  try {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+    
+    // Only mark for deletion, don't actually delete
+    const result = await Donation.updateMany(
+      {
+        createdAt: { $lte: cutoffDate },
+        deletion_scheduled: { $ne: true }
+      },
+      {
+        $set: {
+          deletion_scheduled: true,
+          deleted_at: new Date()
+        }
+      }
+    );
+    
+    console.log(`🗑️ Marked ${result.modifiedCount} old donations for cleanup`);
+    return result.modifiedCount;
+  } catch (error) {
+    console.error('❌ Error cleaning up old donations:', error);
+    return 0;
   }
 };
 
@@ -543,6 +679,9 @@ module.exports = {
   markCollected,
   getDonorHistory,
   getNGOHistory,
+  getAdminDonationHistory,
   handleFailedPickup,
-  syncOfflineActions
+  syncOfflineActions,
+  markExpiredDonations,
+  cleanupOldDonations
 };

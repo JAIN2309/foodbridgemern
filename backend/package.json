@@ -8,7 +8,10 @@
     "fetch-users": "node scripts/fetchAllUsers.js",
     "create-admin": "node scripts/createAdmin.js",
     "create-super-admin": "node scripts/createSuperAdmin.js",
-    "get-ip": "node scripts/getNetworkIP.js"
+    "get-ip": "node scripts/getNetworkIP.js",
+    "fix-profile": "node scripts/fixProfileData.js",
+    "diagnose": "node scripts/diagnoseData.js",
+    "re-encrypt": "node scripts/reEncryptData.js"
   },
   "dependencies": {
     "argon2": "^0.31.2",

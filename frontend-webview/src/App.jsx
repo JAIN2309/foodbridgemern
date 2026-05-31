@@ -101,9 +101,7 @@ function App() {
           <Route path="/register" element={
             isAuthenticated ? <Navigate to="/dashboard" /> : <Register />
           } />
-          <Route path="/password-reset" element={
-            isAuthenticated ? <Navigate to="/dashboard" /> : <PasswordReset />
-          } />
+          <Route path="/password-reset" element={<PasswordReset />} />
           <Route path="/dashboard" element={
             <ProtectedRoute>
               <Layout>
