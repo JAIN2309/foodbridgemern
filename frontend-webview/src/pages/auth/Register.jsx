@@ -13,7 +13,7 @@ const Register = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const { isLoading, error } = useSelector((state) => state.auth);
-  const { location, loading: locationLoading } = useGeolocation();
+  const { location, error: locationError, loading: locationLoading, retry: retryLocation } = useGeolocation();
   const { register, handleSubmit, watch, formState: { errors } } = useForm();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -64,16 +64,18 @@ const Register = () => {
   };
 
   const validateFSSAI = (license) => {
-    // FSSAI License: 14-digit number starting with 1-9
     const fssaiRegex = /^[1-9][0-9]{13}$/;
     return fssaiRegex.test(license) || t('auth.register.fssaiInvalid');
   };
 
   const validateNGO = (registration) => {
-    // NGO Registration: Alphanumeric, 8-20 characters
     const ngoRegex = /^[A-Z0-9]{8,20}$/;
-    return ngoRegex.test(registration.toUpperCase()) || t('auth.register.ngoInvalid');
+    return ngoRegex.test((registration || '').toUpperCase()) || t('auth.register.ngoInvalid');
   };
+
+  // Always reads current role — avoids stale closure in react-hook-form validate
+  const validateLicense = (value) =>
+    selectedRole === 'donor' ? validateFSSAI(value) : validateNGO(value);
 
   const onSubmit = async (data) => {
     if (!location) {
@@ -389,11 +391,22 @@ const Register = () => {
                 </label>
                 <div className="relative">
                   <input
-                    {...register('license_number', { 
+                    {...register('license_number', {
                       required: t('auth.register.licenseRequired'),
-                      validate: selectedRole === 'donor' ? validateFSSAI : validateNGO
+                      validate: validateLicense,
+                      onChange: (e) => {
+                        if (selectedRole === 'donor') {
+                          // FSSAI: digits only, max 14
+                          e.target.value = e.target.value.replace(/\D/g, '').slice(0, 14);
+                        } else {
+                          // NGO: alphanumeric uppercase, max 20
+                          e.target.value = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 20);
+                        }
+                      }
                     })}
                     type="text"
+                    inputMode={selectedRole === 'donor' ? 'numeric' : 'text'}
+                    maxLength={selectedRole === 'donor' ? 14 : 20}
                     placeholder={selectedRole === 'donor' ? '12345678901234 (14 digits)' : 'NGO123ABC456 (8-20 chars)'}
                     className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-colors ${
                       errors.license_number ? 'border-red-300 focus:border-red-500' :
@@ -610,9 +623,18 @@ const Register = () => {
                      t('auth.register.locationRequired')}
                   </p>
                   {!location && !locationLoading && (
-                    <p className="text-xs text-red-600 mt-1">
-                      {t('auth.register.locationEnable')}
-                    </p>
+                    <div>
+                      <p className="text-xs text-red-600 mt-1">
+                        {locationError || t('auth.register.locationEnable')}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={retryLocation}
+                        className="mt-2 text-xs text-blue-600 underline hover:text-blue-800"
+                      >
+                        {t('auth.register.retryLocation')}
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>

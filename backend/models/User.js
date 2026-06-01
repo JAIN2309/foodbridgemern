@@ -81,7 +81,7 @@ const userSchema = new mongoose.Schema({
     donations_claimed: { type: Number, default: 0 },
     successful_pickups: { type: Number, default: 0 },
     failed_pickups: { type: Number, default: 0 },
-    response_time_avg: { type: Number, default: 0 } // minutes
+    response_time_avg: { type: Number, default: 0 }
   },
   offline_mode: {
     enabled: { type: Boolean, default: false },
@@ -103,6 +103,10 @@ const userSchema = new mongoose.Schema({
   },
   profile_picture: {
     type: String, // AES-256-GCM encrypted image data
+    default: null
+  },
+  last_login: {
+    type: Date,
     default: null
   },
   email_encrypted: String,

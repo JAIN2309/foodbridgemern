@@ -1,7 +1,10 @@
-const User = require('../models/User');
+const User     = require('../models/User');
 const Donation = require('../models/Donation');
+const redis    = require('../utils/redisClient');
 const { sendEmail, emailTemplates } = require('../services/emailService');
 const { decryptUserFields } = require('../utils/userHelper');
+
+const STATS_TTL = 300; // 5 minutes
 
 const getPendingVerifications = async (req, res) => {
   try {
@@ -45,7 +48,12 @@ const verifyUser = async (req, res) => {
       console.error('Approval email failed:', emailError);
     }
 
-    res.json({ 
+    // Invalidate stats cache so admin sees updated counts immediately
+    await redis.del('admin:stats');
+    // Invalidate user cache so the user's new is_verified state is reflected
+    await redis.del(`user:${userId}`);
+
+    res.json({
       message: `User ${approved ? 'approved' : 'rejected'} successfully`,
       user: decryptedUser
     });
@@ -56,37 +64,69 @@ const verifyUser = async (req, res) => {
 
 const getAdminStats = async (req, res) => {
   try {
-    console.log('getAdminStats called');
-    const totalDonations = await Donation.countDocuments();
-    const activeDonations = await Donation.countDocuments({ status: 'available' });
-    const completedDonations = await Donation.countDocuments({ status: 'collected' });
-    
-    const totalServed = await Donation.aggregate([
-      { $match: { status: 'collected' } },
-      { $group: { _id: null, total: { $sum: '$quantity_serves' } } }
+    const cached = await redis.get('admin:stats');
+    if (cached) {
+      console.log('⚡ Admin stats served from Redis cache');
+      return res.json(JSON.parse(cached));
+    }
+
+    const [
+      donationByStatus,
+      totalServed,
+      totalUsers,
+      verifiedUsers,
+      donorCount,
+      ngoCount,
+      servesPending
+    ] = await Promise.all([
+      Donation.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+      Donation.aggregate([
+        { $match: { status: 'collected' } },
+        { $group: { _id: null, total: { $sum: '$quantity_serves' } } }
+      ]),
+      User.countDocuments({ role: { $ne: 'admin' } }),
+      User.countDocuments({ is_verified: true, role: { $ne: 'admin' } }),
+      User.countDocuments({ role: 'donor' }),
+      User.countDocuments({ role: 'ngo' }),
+      Donation.aggregate([
+        { $match: { status: { $in: ['available', 'reserved'] } } },
+        { $group: { _id: null, total: { $sum: '$quantity_serves' } } }
+      ])
     ]);
 
-    const totalUsers = await User.countDocuments({ role: { $ne: 'admin' } });
-    const verifiedUsers = await User.countDocuments({ 
-      is_verified: true, 
-      role: { $ne: 'admin' } 
-    });
+    const byStatus = donationByStatus.reduce((acc, s) => {
+      acc[s._id] = s.count;
+      return acc;
+    }, {});
+
+    const total = Object.values(byStatus).reduce((a, b) => a + b, 0);
+    const completed = byStatus.collected || 0;
+    const active    = byStatus.available || 0;
+    const reserved  = byStatus.reserved  || 0;
+    const expired   = byStatus.expired   || 0;
 
     const stats = {
       donations: {
-        total: totalDonations,
-        active: activeDonations,
-        completed: completedDonations
+        total,
+        active,
+        reserved,
+        completed,
+        expired,
+        completion_rate: total > 0 ? Math.round((completed / total) * 100) : 0
       },
-      meals_served: totalServed[0]?.total || 0,
+      meals_served:  totalServed[0]?.total  || 0,
+      meals_pending: servesPending[0]?.total || 0,
       users: {
-        total: totalUsers,
-        verified: verifiedUsers,
-        pending: totalUsers - verifiedUsers
+        total:             totalUsers,
+        verified:          verifiedUsers,
+        pending:           totalUsers - verifiedUsers,
+        donors:            donorCount,
+        ngos:              ngoCount,
+        verification_rate: totalUsers > 0 ? Math.round((verifiedUsers / totalUsers) * 100) : 0
       }
     };
 
-    console.log('Stats:', stats);
+    await redis.set('admin:stats', JSON.stringify(stats), STATS_TTL);
     res.json(stats);
   } catch (error) {
     console.error('getAdminStats error:', error);
@@ -115,43 +155,36 @@ const getAllActiveDonations = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
   try {
-    console.log('getAllUsers called');
-    const { role } = req.query;
-    
-    // Build filter query
+    const { role, search, page = 1, limit = 10 } = req.query;
+
     const filter = {};
-    if (role && role !== 'all') {
-      filter.role = role;
+    if (role && role !== 'all') filter.role = role;
+    if (search) {
+      filter.$or = [
+        { organization_name: { $regex: search, $options: 'i' } },
+        { address: { $regex: search, $options: 'i' } }
+      ];
     }
-    
+
+    const total = await User.countDocuments(filter);
     const users = await User.find(filter)
       .select('-password')
-      .sort({ createdAt: -1 });
-    
-    console.log('\n=== RAW USER DATA FROM DB ===');
-    console.log('Sample user before decrypt:', users[0] ? {
-      email: users[0].email,
-      phone: users[0].phone,
-      contact_person: users[0].contact_person,
-      email_encrypted: users[0].email_encrypted,
-      phone_encrypted: users[0].phone_encrypted,
-      contact_person_encrypted: users[0].contact_person_encrypted
-    } : 'no users');
-    
+      .sort({ createdAt: -1 })
+      .skip((parseInt(page) - 1) * parseInt(limit))
+      .limit(parseInt(limit));
+
     const decryptedUsers = users.map(user => decryptUserFields(user));
-    
-    console.log('\n=== AFTER DECRYPTION ===');
-    console.log('Sample user after decrypt:', decryptedUsers[0] ? {
-      email: decryptedUsers[0].email,
-      phone: decryptedUsers[0].phone,
-      contact_person: decryptedUsers[0].contact_person
-    } : 'no users');
-    console.log('\n=== SENDING TO FRONTEND ===');
-    console.log('Total users:', decryptedUsers.length);
-    console.log('First user full data:', JSON.stringify(decryptedUsers[0], null, 2));
-    
-    console.log(`Found ${decryptedUsers.length} users`);
-    res.json(decryptedUsers);
+    console.log(`Found ${decryptedUsers.length} users (page ${page}/${Math.ceil(total / limit)})`);
+
+    res.json({
+      users: decryptedUsers,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / limit)
+      }
+    });
   } catch (error) {
     console.error('getAllUsers error:', error);
     res.status(500).json({ message: error.message });

@@ -1,5 +1,6 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const jwt   = require('jsonwebtoken');
+const User  = require('../models/User');
+const redis = require('../utils/redisClient');
 const { sendEmail, emailTemplates } = require('../services/emailService');
 const { decryptUserFields } = require('../utils/userHelper');
 
@@ -21,27 +22,73 @@ const register = async (req, res) => {
       address
     } = req.body;
 
+    // Only allow public registration for donor and ngo
+    if (!['donor', 'ngo'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role' });
+    }
+
+    // Validate email format
+    if (!email || !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email.trim())) {
+      return res.status(400).json({ message: 'Invalid email address' });
+    }
+
+    // Validate phone (Indian format)
+    if (!phone || !/^[6-9][0-9]{9}$/.test(phone.trim())) {
+      return res.status(400).json({ message: 'Invalid phone number' });
+    }
+
+    // Validate coordinates
+    if (!Array.isArray(coordinates) || coordinates.length !== 2) {
+      return res.status(400).json({ message: 'Invalid location coordinates' });
+    }
+    const [lng, lat] = coordinates.map(Number);
+    if (isNaN(lng) || isNaN(lat) || lng < -180 || lng > 180 || lat < -90 || lat > 90) {
+      return res.status(400).json({ message: 'Coordinates out of valid range' });
+    }
+
+    // Validate required text fields
+    if (!organization_name?.trim() || organization_name.trim().length < 2) {
+      return res.status(400).json({ message: 'Organization name is required' });
+    }
+    if (!contact_person?.trim() || contact_person.trim().length < 2) {
+      return res.status(400).json({ message: 'Contact person name is required' });
+    }
+    if (!address?.trim() || address.trim().length < 5) {
+      return res.status(400).json({ message: 'Valid address is required' });
+    }
+
+    // Validate license number format by role
+    if (role === 'donor') {
+      if (!license_number || !/^[1-9][0-9]{13}$/.test(license_number.trim())) {
+        return res.status(400).json({ message: 'Invalid FSSAI license number (14 digits required)' });
+      }
+    } else if (role === 'ngo') {
+      if (!license_number || !/^[A-Z0-9]{8,20}$/.test(license_number.trim().toUpperCase())) {
+        return res.status(400).json({ message: 'Invalid NGO registration number (8-20 alphanumeric)' });
+      }
+    }
+
     // Check if user exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: email.trim().toLowerCase() });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Create user
+    // Create user — admins can only be created via createAdmin script, never via registration
     const user = new User({
-      email,
+      email:             email.trim().toLowerCase(),
       password,
       role,
-      organization_name,
-      license_number,
-      contact_person,
-      phone,
+      organization_name: organization_name.trim(),
+      license_number:    license_number.trim(),
+      contact_person:    contact_person.trim(),
+      phone:             phone.trim(),
       location: {
         type: 'Point',
-        coordinates: coordinates // [longitude, latitude]
+        coordinates: [lng, lat]
       },
-      address,
-      is_verified: role === 'admin' // Auto-verify admin
+      address:     address.trim(),
+      is_verified: false  // always false — admin approves manually
     });
 
     await user.save();
@@ -85,7 +132,9 @@ const login = async (req, res) => {
     }
 
     const token = generateToken(user._id);
-    
+
+    await User.findByIdAndUpdate(user._id, { last_login: new Date() });
+
     // Send login email
     try {
       await sendEmail(user.email, emailTemplates.login(user));
@@ -133,17 +182,21 @@ const getProfile = async (req, res) => {
 
 const logout = async (req, res) => {
   try {
-    console.log('🚪 Logout API called for user:', req.user.email);
-    
-    // Send logout email
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+
+    if (token) {
+      // Blacklist the token until its natural expiry (7 days)
+      await redis.set(`blacklist:${token}`, '1', 7 * 24 * 60 * 60);
+      // Evict cached user so stale data isn't served
+      await redis.del(`user:${req.user._id || req.user.id}`);
+    }
+
     try {
-      console.log('📧 Sending logout email to:', req.user.email);
       await sendEmail(req.user.email, emailTemplates.logout(req.user));
-      console.log('✅ Logout email sent successfully');
     } catch (emailError) {
       console.error('❌ Logout email failed:', emailError.message);
     }
-    
+
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout API error:', error);
@@ -243,8 +296,9 @@ const requestPasswordReset = async (req, res) => {
 
     // Find user
     const user = await User.findOne({ email });
+    // Return same response whether email exists or not — prevents enumeration
     if (!user) {
-      return res.status(404).json({ message: 'No account found with this email' });
+      return res.json({ message: 'If an account exists, an OTP has been sent to your email.' });
     }
 
     // Generate 6-digit OTP
@@ -303,7 +357,11 @@ const verifyOTP = async (req, res) => {
       return res.status(400).json({ message: 'Invalid OTP. Please try again.' });
     }
 
-    // OTP verified
+    // Mark OTP as verified — resetPassword checks this flag
+    // Do NOT null the OTP here — resetPassword still needs to match it
+    user.password_reset.verified = true;
+    await user.save();
+
     res.json({ message: 'OTP verified successfully', verified: true });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -315,7 +373,6 @@ const resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
 
-    console.log('🔑 Password reset request for:', email);
 
     // Validate password
     if (!newPassword || newPassword.length < 8 || newPassword.length > 25) {
@@ -339,32 +396,26 @@ const resetPassword = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    console.log('🔍 Found user:', user.email);
 
     // Verify OTP one more time
     if (!user.password_reset?.otp || user.password_reset.otp !== otp) {
-      console.log('❌ Invalid OTP');
-      return res.status(400).json({ message: 'Invalid or expired OTP' });
+        return res.status(400).json({ message: 'Invalid or expired OTP' });
     }
 
     if (new Date() > user.password_reset.otp_expiry) {
-      console.log('❌ OTP expired');
       return res.status(400).json({ message: 'OTP expired' });
     }
 
-    console.log('✅ OTP verified, updating password...');
-    console.log('🔒 Old password hash (first 20 chars):', user.password.substring(0, 20));
 
-    // Update password - the pre-save hook will hash it
+    // Update password — pre-save hook hashes it
     user.password = newPassword;
-    user.password_reset = undefined; // Clear OTP data
-    
+    user.password_reset = undefined;
     await user.save();
-    
-    console.log('🔒 New password hash (first 20 chars):', user.password.substring(0, 20));
-    console.log('✅ Password reset successful for:', email);
 
-    res.json({ message: 'Password reset successful' });
+    // Evict Redis user cache so old cached user object is gone
+    await redis.del(`user:${user._id}`);
+
+    res.json({ message: 'Password reset successful. Please log in again.' });
   } catch (error) {
     console.error('❌ Password reset error:', error);
     res.status(500).json({ message: error.message });

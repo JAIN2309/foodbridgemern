@@ -24,7 +24,11 @@ export const loginUser = createAsyncThunk(
       return response.data;
     } catch (error) {
       console.error('❌ LOGIN ERROR:', error.response?.data || error.message);
-      return rejectWithValue(error.response?.data?.message || error.message || 'Login failed');
+      const data = error.response?.data;
+      if (data?.retryAfterMinutes) {
+        return rejectWithValue(`Too many login attempts. Try again in ${data.retryAfterMinutes} minute${data.retryAfterMinutes > 1 ? 's' : ''}.`);
+      }
+      return rejectWithValue(data?.message || error.message || 'Login failed');
     }
   }
 );

@@ -41,11 +41,11 @@ class ExpiryScheduler {
     
     setTimeout(() => {
       // Run cleanup
-      cleanupOldDonations(90); // Clean up donations older than 90 days
-      
+      cleanupOldDonations(365); // Clean up donations older than 365 days
+
       // Schedule daily cleanup
       this.cleanupInterval = setInterval(() => {
-        cleanupOldDonations(90);
+        cleanupOldDonations(365);
       }, 24 * 60 * 60 * 1000); // Once per day
     }, timeUntil2AM);
     

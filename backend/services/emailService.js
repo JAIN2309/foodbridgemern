@@ -1,14 +1,33 @@
 const nodemailer = require('nodemailer');
-require('dotenv').config();
 
-// SMTP Configuration
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
-  }
-});
+const SMTP_CONFIGURED =
+  process.env.SMTP_USER &&
+  process.env.SMTP_USER !== 'your_email@gmail.com' &&
+  process.env.SMTP_PASS &&
+  process.env.SMTP_PASS !== 'your_app_password';
+
+const transporter = SMTP_CONFIGURED
+  ? nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      }
+    })
+  : null;
+
+if (SMTP_CONFIGURED) {
+  transporter.verify((err) => {
+    if (err) {
+      console.error('❌ Email service failed to connect:', err.message);
+      console.error('   Check SMTP_USER and SMTP_PASS in .env');
+    } else {
+      console.log('✅ Email service connected successfully');
+    }
+  });
+} else {
+  console.warn('⚠️  Email service disabled — SMTP_USER/SMTP_PASS not configured in .env');
+}
 
 // Modern Email Base Template
 const getEmailBase = (content) => `
@@ -389,22 +408,23 @@ const emailTemplates = {
   })
 };
 
-// Send Email Function
 const sendEmail = async (to, template) => {
+  if (!SMTP_CONFIGURED || !transporter) {
+    console.warn(`⚠️  Email skipped (not configured): ${template.subject} → ${to}`);
+    return null;
+  }
   try {
-    console.log(`📧 Attempting to send email to: ${to}`);
-    console.log(`📨 Email subject: ${template.subject}`);
-    const mailOptions = {
+    console.log(`📧 Sending email to: ${to} | Subject: ${template.subject}`);
+    const result = await transporter.sendMail({
       from: `"FoodBridge 🍽️" <${process.env.SMTP_USER}>`,
       to,
       subject: template.subject,
       html: template.html
-    };
-    const result = await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent successfully:', result.messageId);
+    });
+    console.log(`✅ Email sent: ${result.messageId}`);
     return result;
   } catch (error) {
-    console.error('❌ Email sending failed:', error.message);
+    console.error(`❌ Email failed to ${to}:`, error.message);
     throw error;
   }
 };

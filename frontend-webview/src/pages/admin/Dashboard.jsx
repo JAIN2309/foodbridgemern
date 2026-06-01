@@ -4,14 +4,9 @@ import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import { 
-  Users, 
-  CheckCircle, 
-  XCircle, 
-  BarChart3, 
-  MapPin,
-  Clock,
-  TrendingUp
+import {
+  Users, CheckCircle, XCircle, MapPin, Clock, TrendingUp,
+  Package, ShieldCheck, Utensils, AlertCircle, BarChart3
 } from 'lucide-react';
 import api from '../../services/api';
 import DonationCard from '../../components/common/DonationCard';
@@ -32,13 +27,25 @@ const AdminDashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [donationHistory, setDonationHistory] = useState([]);
   const [historyStats, setHistoryStats] = useState({});
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyLimit] = useState(10);
+  const [historyPagination, setHistoryPagination] = useState({ total: 0, pages: 1 });
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersLimit] = useState(10);
+  const [usersPagination, setUsersPagination] = useState({ total: 0, pages: 1 });
+  const [usersLoading, setUsersLoading] = useState(false);
+
+  const VALID_TABS = ['overview', 'verify', 'map', 'analytics', 'users', 'history'];
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, userId: null, approved: null, userName: '' });
 
   useEffect(() => {
-    // Check URL parameters for tab
     const urlParams = new URLSearchParams(location.search);
     const tabParam = urlParams.get('tab');
-    if (tabParam) {
+    if (tabParam && VALID_TABS.includes(tabParam)) {
       setActiveTab(tabParam);
+    } else if (tabParam && !VALID_TABS.includes(tabParam)) {
+      setActiveTab('overview');
     }
     
     checkBackendHealth();
@@ -75,6 +82,47 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchUsersPage = async (page, role = roleFilter, search = searchQuery) => {
+    setUsersLoading(true);
+    try {
+      const params = new URLSearchParams({ page, limit: usersLimit, role });
+      if (search) params.set('search', search);
+      const res = await api.get(`/users/all?${params}`);
+      setAllUsers(res.data?.users || []);
+      setUsersPagination(res.data?.pagination || { total: 0, pages: 1 });
+    } catch (err) {
+      console.error('Users fetch error:', err);
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsersPage(usersPage);
+  }, [usersPage]);
+
+  useEffect(() => {
+    setUsersPage(1);
+    fetchUsersPage(1, roleFilter, searchQuery);
+  }, [roleFilter, searchQuery]);
+
+  const fetchHistoryPage = async (page) => {
+    setHistoryLoading(true);
+    try {
+      const res = await api.get(`/donations/admin/history?page=${page}&limit=${historyLimit}`);
+      setDonationHistory(res.data?.donations || []);
+      setHistoryPagination(res.data?.pagination || { total: 0, pages: 1 });
+    } catch (err) {
+      console.error('History fetch error:', err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (historyPage > 1) fetchHistoryPage(historyPage);
+  }, [historyPage]);
+
   const fetchData = async () => {
     setIsLoading(true);
     setApiError(null);
@@ -84,8 +132,8 @@ const AdminDashboard = () => {
         api.get('/users/pending'),
         api.get('/users/stats'),
         api.get('/users/donations/all'),
-        api.get(`/users/all?role=${roleFilter}`),
-        api.get('/donations/admin/history')
+        api.get(`/users/all?page=1&limit=${usersLimit}&role=${roleFilter}`),
+        api.get(`/donations/admin/history?page=1&limit=${historyLimit}`)
       ]);
       
       console.log('API responses:', {
@@ -99,9 +147,13 @@ const AdminDashboard = () => {
       setPendingUsers(pendingRes.data || []);
       setStats(statsRes.data || {});
       setActiveDonations(donationsRes.data || []);
-      setAllUsers(usersRes.data || []);
+      setAllUsers(usersRes.data?.users || []);
+      setUsersPagination(usersRes.data?.pagination || { total: 0, pages: 1 });
+      setUsersPage(1);
       setDonationHistory(historyRes.data?.donations || []);
       setHistoryStats(historyRes.data?.statistics || {});
+      setHistoryPagination(historyRes.data?.pagination || { total: 0, pages: 1 });
+      setHistoryPage(1);
       setDataLoaded(true);
     } catch (error) {
       console.error('API Error:', error.response?.data || error.message);
@@ -113,14 +165,22 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleVerifyUser = async (userId, approved) => {
+  const openConfirm = (userId, approved, userName) =>
+    setConfirmDialog({ open: true, userId, approved, userName });
+
+  const closeConfirm = () =>
+    setConfirmDialog({ open: false, userId: null, approved: null, userName: '' });
+
+  const handleVerifyUser = async () => {
+    const { userId, approved } = confirmDialog;
+    closeConfirm();
     setIsLoading(true);
     try {
       await api.put(`/users/${userId}/verify`, { approved });
-      toast.success(`User ${approved ? 'approved' : 'rejected'} successfully`);
-      fetchData(); // Refresh data
+      toast.success(approved ? t('dashboard.admin.approveSuccess') : t('dashboard.admin.rejectSuccess'));
+      fetchData();
     } catch (error) {
-      toast.error('Failed to update user status');
+      toast.error(t('dashboard.admin.verifyFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -136,6 +196,7 @@ const AdminDashboard = () => {
   };
 
   return (
+    <>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
@@ -283,7 +344,7 @@ const AdminDashboard = () => {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              {t('dashboard.admin.usersList')} ({allUsers.length})
+              {t('dashboard.admin.usersList')} ({usersPagination.total})
             </button>
             <button
               onClick={() => setActiveTab('history')}
@@ -299,6 +360,7 @@ const AdminDashboard = () => {
         </div>
 
         <div className="p-6">
+          {!VALID_TABS.includes(activeTab) && setActiveTab('overview')}
           {activeTab === 'overview' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -405,7 +467,7 @@ const AdminDashboard = () => {
                         </div>
                         <div className="flex space-x-2 ml-4">
                           <button
-                            onClick={() => handleVerifyUser(user._id, true)}
+                            onClick={() => openConfirm(user._id, true, user.organization_name)}
                             disabled={isLoading}
                             className="flex items-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
                           >
@@ -413,7 +475,7 @@ const AdminDashboard = () => {
                             {t('dashboard.admin.approve')}
                           </button>
                           <button
-                            onClick={() => handleVerifyUser(user._id, false)}
+                            onClick={() => openConfirm(user._id, false, user.organization_name)}
                             disabled={isLoading}
                             className="flex items-center px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
                           >
@@ -476,78 +538,132 @@ const AdminDashboard = () => {
           {activeTab === 'analytics' && (
             <div className="space-y-6">
               <h3 className="text-lg font-medium">{t('dashboard.admin.platformAnalytics')}</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-blue-100">{t('dashboard.admin.totalImpact')}</p>
-                      <p className="text-2xl font-bold">{stats.meals_served || 0}</p>
-                      <p className="text-blue-100">{t('dashboard.admin.mealsServed')}</p>
-                    </div>
-                    <Users className="w-8 h-8 text-blue-200" />
+
+              {/* Key metric cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Package className="w-4 h-4 text-blue-600" />
+                    <p className="text-xs text-blue-600 font-medium">{t('dashboard.admin.totalDonations')}</p>
                   </div>
+                  <p className="text-2xl font-bold text-blue-700">{stats.donations?.total ?? 0}</p>
+                  <p className="text-xs text-blue-400 mt-1">{stats.donations?.active ?? 0} {t('dashboard.admin.activeNow').toLowerCase()}</p>
                 </div>
-                
-                <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-green-100">{t('dashboard.admin.successRate')}</p>
-                      <p className="text-2xl font-bold">
-                        {stats.donations?.total ? 
-                          Math.round((stats.donations.completed / stats.donations.total) * 100) : 0}%
-                      </p>
-                      <p className="text-green-100">{t('dashboard.admin.completionRate')}</p>
-                    </div>
-                    <BarChart3 className="w-8 h-8 text-green-200" />
+
+                <div className="bg-green-50 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Utensils className="w-4 h-4 text-green-600" />
+                    <p className="text-xs text-green-600 font-medium">{t('dashboard.admin.mealsServed')}</p>
                   </div>
+                  <p className="text-2xl font-bold text-green-700">{stats.meals_served ?? 0}</p>
+                  <p className="text-xs text-green-400 mt-1">{stats.meals_pending ?? 0} pending</p>
                 </div>
-                
-                <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-purple-100">{t('dashboard.admin.activeNow')}</p>
-                      <p className="text-2xl font-bold">{stats.donations?.active || 0}</p>
-                      <p className="text-purple-100">{t('dashboard.admin.liveDonations')}</p>
-                    </div>
-                    <MapPin className="w-8 h-8 text-purple-200" />
+
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="w-4 h-4 text-purple-600" />
+                    <p className="text-xs text-purple-600 font-medium">{t('dashboard.admin.completionRate')}</p>
                   </div>
+                  <p className="text-2xl font-bold text-purple-700">{stats.donations?.completion_rate ?? 0}%</p>
+                  <p className="text-xs text-purple-400 mt-1">{stats.donations?.completed ?? 0} {t('dashboard.admin.completed').toLowerCase()}</p>
+                </div>
+
+                <div className="bg-orange-50 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <ShieldCheck className="w-4 h-4 text-orange-600" />
+                    <p className="text-xs text-orange-600 font-medium">{t('dashboard.admin.verificationRate')}</p>
+                  </div>
+                  <p className="text-2xl font-bold text-orange-700">{stats.users?.verification_rate ?? 0}%</p>
+                  <p className="text-xs text-orange-400 mt-1">{stats.users?.verified ?? 0} / {stats.users?.total ?? 0} users</p>
                 </div>
               </div>
 
-              <div className="bg-gray-50 p-6 rounded-lg">
-                <h4 className="font-medium mb-4">{t('dashboard.admin.platformHealth')}</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-2">{t('dashboard.admin.userVerificationRate')}</p>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full" 
-                        style={{ 
-                          width: `${stats.users?.total ? 
-                            (stats.users.verified / stats.users.total) * 100 : 0}%` 
-                        }}
-                      ></div>
+              {/* Donation status breakdown */}
+              <div className="bg-gray-50 rounded-lg p-5">
+                <h4 className="font-medium text-gray-700 mb-4 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4" /> {t('dashboard.admin.donationBreakdown')}
+                </h4>
+                {(() => {
+                  const items = [
+                    { label: t('dashboard.admin.active'),    value: stats.donations?.active    ?? 0, color: 'bg-blue-500' },
+                    { label: t('dashboard.admin.reserved'),  value: stats.donations?.reserved  ?? 0, color: 'bg-yellow-500' },
+                    { label: t('dashboard.admin.completed'), value: stats.donations?.completed ?? 0, color: 'bg-green-500' },
+                    { label: t('dashboard.admin.expired'),   value: stats.donations?.expired   ?? 0, color: 'bg-red-400' },
+                  ];
+                  const total = stats.donations?.total || 1;
+                  return (
+                    <div className="space-y-3">
+                      {items.map(({ label, value, color }) => (
+                        <div key={label}>
+                          <div className="flex justify-between text-sm text-gray-600 mb-1">
+                            <span>{label}</span>
+                            <span className="font-medium">{value} <span className="text-gray-400 font-normal">({Math.round((value / total) * 100)}%)</span></span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2.5">
+                            <div className={`${color} h-2.5 rounded-full transition-all duration-500`}
+                              style={{ width: `${Math.round((value / total) * 100)}%` }} />
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {stats.users?.verified || 0} {t('dashboard.admin.usersVerified').toLowerCase()}
-                    </p>
+                  );
+                })()}
+              </div>
+
+              {/* User breakdown */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-lg p-5">
+                  <h4 className="font-medium text-gray-700 mb-4 flex items-center gap-2">
+                    <Users className="w-4 h-4" /> {t('dashboard.admin.userBreakdown')}
+                  </h4>
+                  <div className="space-y-3">
+                    {[
+                      { label: t('dashboard.admin.donorOnly'),  value: stats.users?.donors  ?? 0, color: 'bg-blue-500' },
+                      { label: t('dashboard.admin.ngoOnly'),    value: stats.users?.ngos    ?? 0, color: 'bg-green-500' },
+                      { label: t('dashboard.admin.pending'),    value: stats.users?.pending ?? 0, color: 'bg-yellow-400' },
+                    ].map(({ label, value, color }) => {
+                      const total = (stats.users?.total || 1);
+                      return (
+                        <div key={label}>
+                          <div className="flex justify-between text-sm text-gray-600 mb-1">
+                            <span>{label}</span>
+                            <span className="font-medium">{value}</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2.5">
+                            <div className={`${color} h-2.5 rounded-full transition-all duration-500`}
+                              style={{ width: `${Math.round((value / total) * 100)}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                  
-                  <div>
-                    <p className="text-sm text-gray-600 mb-2">{t('dashboard.admin.donationSuccessRate')}</p>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-green-600 h-2 rounded-full" 
-                        style={{ 
-                          width: `${stats.donations?.total ? 
-                            (stats.donations.completed / stats.donations.total) * 100 : 0}%` 
-                        }}
-                      ></div>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-5">
+                  <h4 className="font-medium text-gray-700 mb-4 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" /> {t('dashboard.admin.platformHealth')}
+                  </h4>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between text-sm text-gray-600 mb-1">
+                        <span>{t('dashboard.admin.donationSuccessRate')}</span>
+                        <span className="font-semibold text-green-600">{stats.donations?.completion_rate ?? 0}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div className="bg-green-500 h-2.5 rounded-full transition-all duration-500"
+                          style={{ width: `${stats.donations?.completion_rate ?? 0}%` }} />
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {stats.donations?.completed || 0} {t('dashboard.admin.donationsCompleted').toLowerCase()}
-                    </p>
+                    <div>
+                      <div className="flex justify-between text-sm text-gray-600 mb-1">
+                        <span>{t('dashboard.admin.userVerificationRate')}</span>
+                        <span className="font-semibold text-blue-600">{stats.users?.verification_rate ?? 0}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div className="bg-blue-500 h-2.5 rounded-full transition-all duration-500"
+                          style={{ width: `${stats.users?.verification_rate ?? 0}%` }} />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -577,17 +693,11 @@ const AdminDashboard = () => {
                     <option value="admin">{t('dashboard.admin.adminOnly')}</option>
                   </select>
                   <div className="text-sm text-gray-500 whitespace-nowrap">
-                    {dataLoaded ? `${allUsers.filter(user => {
-                      const query = searchQuery.toLowerCase();
-                      return user.organization_name?.toLowerCase().includes(query) ||
-                             user.email?.toLowerCase().includes(query) ||
-                             user.phone?.includes(query) ||
-                             user.contact_person?.toLowerCase().includes(query);
-                    }).length} ${t('dashboard.admin.usersFound')}` : t('dashboard.admin.loading')}
+                    {dataLoaded ? `${usersPagination.total} ${t('dashboard.admin.usersFound')}` : t('dashboard.admin.loading')}
                   </div>
                 </div>
               </div>
-              {!dataLoaded ? (
+              {!dataLoaded || usersLoading ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
                   <p className="text-gray-500 mt-2">{t('dashboard.admin.loadingUsers')}</p>
@@ -620,16 +730,11 @@ const AdminDashboard = () => {
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('dashboard.admin.license')}</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('dashboard.admin.status')}</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('dashboard.admin.joined')}</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('dashboard.admin.lastLogin')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {allUsers.filter(user => {
-                        const query = searchQuery.toLowerCase();
-                        return user.organization_name?.toLowerCase().includes(query) ||
-                               user.email?.toLowerCase().includes(query) ||
-                               user.phone?.includes(query) ||
-                               user.contact_person?.toLowerCase().includes(query);
-                      }).map((user) => (
+                      {allUsers.map((user) => (
                         <tr key={user._id} className="hover:bg-gray-50">
                           <td className="px-4 py-4">
                             <div>
@@ -661,10 +766,62 @@ const AdminDashboard = () => {
                           <td className="px-4 py-4 text-sm text-gray-500">
                             {new Date(user.createdAt).toLocaleDateString()}
                           </td>
+                          <td className="px-4 py-4 text-sm text-gray-500">
+                            {user.last_login
+                              ? new Date(user.last_login).toLocaleString()
+                              : <span className="text-gray-300 italic">Never</span>}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  {/* Users pagination */}
+                  {usersPagination.pages > 1 && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+                      <p className="text-sm text-gray-500">
+                        {t('dashboard.admin.page')} {usersPage} {t('dashboard.admin.of')} {usersPagination.pages}
+                        &nbsp;·&nbsp; {usersPagination.total} {t('dashboard.admin.total').toLowerCase()}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setUsersPage(p => Math.max(1, p - 1))}
+                          disabled={usersPage === 1}
+                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                        >
+                          ← {t('dashboard.admin.prev')}
+                        </button>
+                        <div className="flex gap-1">
+                          {Array.from({ length: Math.min(5, usersPagination.pages) }, (_, i) => {
+                            let p;
+                            if (usersPagination.pages <= 5) p = i + 1;
+                            else if (usersPage <= 3) p = i + 1;
+                            else if (usersPage >= usersPagination.pages - 2) p = usersPagination.pages - 4 + i;
+                            else p = usersPage - 2 + i;
+                            return (
+                              <button
+                                key={p}
+                                onClick={() => setUsersPage(p)}
+                                className={`w-8 h-8 text-sm rounded-lg transition-colors ${
+                                  p === usersPage
+                                    ? 'bg-blue-600 text-white font-semibold'
+                                    : 'border border-gray-300 hover:bg-gray-50 text-gray-600'
+                                }`}
+                              >
+                                {p}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <button
+                          onClick={() => setUsersPage(p => Math.min(usersPagination.pages, p + 1))}
+                          disabled={usersPage === usersPagination.pages}
+                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                        >
+                          {t('dashboard.admin.next')} →
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -672,28 +829,172 @@ const AdminDashboard = () => {
 
           {activeTab === 'history' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Donation History</h3>
-              {donationHistory.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No donation history found</p>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">
+                  {t('dashboard.admin.history')}
+                  <span className="ml-2 text-sm font-normal text-gray-400">
+                    ({historyPagination.total} {t('dashboard.admin.total').toLowerCase()})
+                  </span>
+                </h3>
+              </div>
+
+              {historyLoading ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto" />
+                  <p className="text-gray-400 mt-2 text-sm">{t('dashboard.admin.loading')}</p>
+                </div>
+              ) : donationHistory.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-gray-400">{t('dashboard.admin.noDonationHistory')}</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {donationHistory.map((donation) => (
-                    <DonationCard
-                      key={donation._id}
-                      donation={donation}
-                      showDonor={true}
-                      showNGO={true}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {donationHistory.map((donation) => (
+                      <DonationCard
+                        key={donation._id}
+                        donation={donation}
+                        showDonor={true}
+                        showNGO={true}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Pagination controls */}
+                  {historyPagination.pages > 1 && (
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                      <p className="text-sm text-gray-500">
+                        {t('dashboard.admin.page')} {historyPage} {t('dashboard.admin.of')} {historyPagination.pages}
+                        &nbsp;·&nbsp; {historyPagination.total} {t('dashboard.admin.total').toLowerCase()}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
+                          disabled={historyPage === 1}
+                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                        >
+                          ← {t('dashboard.admin.prev')}
+                        </button>
+
+                        {/* Page number pills */}
+                        <div className="flex gap-1">
+                          {Array.from({ length: Math.min(5, historyPagination.pages) }, (_, i) => {
+                            let p;
+                            if (historyPagination.pages <= 5) {
+                              p = i + 1;
+                            } else if (historyPage <= 3) {
+                              p = i + 1;
+                            } else if (historyPage >= historyPagination.pages - 2) {
+                              p = historyPagination.pages - 4 + i;
+                            } else {
+                              p = historyPage - 2 + i;
+                            }
+                            return (
+                              <button
+                                key={p}
+                                onClick={() => setHistoryPage(p)}
+                                className={`w-8 h-8 text-sm rounded-lg transition-colors ${
+                                  p === historyPage
+                                    ? 'bg-blue-600 text-white font-semibold'
+                                    : 'border border-gray-300 hover:bg-gray-50 text-gray-600'
+                                }`}
+                              >
+                                {p}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <button
+                          onClick={() => setHistoryPage(p => Math.min(historyPagination.pages, p + 1))}
+                          disabled={historyPage === historyPagination.pages}
+                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                        >
+                          {t('dashboard.admin.next')} →
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
         </div>
       </div>
     </div>
+
+    {/* Confirmation Dialog */}
+    {confirmDialog.open && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        {/* Backdrop */}
+        <div
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          onClick={closeConfirm}
+        />
+
+        {/* Dialog */}
+        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fade-in">
+          {/* Icon */}
+          <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${
+            confirmDialog.approved ? 'bg-green-100' : 'bg-red-100'
+          }`}>
+            {confirmDialog.approved
+              ? <CheckCircle className="w-7 h-7 text-green-600" />
+              : <XCircle className="w-7 h-7 text-red-600" />
+            }
+          </div>
+
+          {/* Title */}
+          <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
+            {confirmDialog.approved
+              ? t('dashboard.admin.confirmApproveTitle')
+              : t('dashboard.admin.confirmRejectTitle')
+            }
+          </h3>
+
+          {/* Message */}
+          <p className="text-sm text-gray-600 text-center mb-1">
+            {confirmDialog.approved
+              ? t('dashboard.admin.confirmApproveMsg')
+              : t('dashboard.admin.confirmRejectMsg')
+            }
+          </p>
+          <p className="text-sm font-semibold text-gray-800 text-center mb-6">
+            "{confirmDialog.userName}"
+          </p>
+
+          {!confirmDialog.approved && (
+            <p className="text-xs text-red-500 text-center mb-4 bg-red-50 rounded-lg px-3 py-2">
+              {t('dashboard.admin.confirmRejectWarning')}
+            </p>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-3">
+            <button
+              onClick={closeConfirm}
+              className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
+            >
+              {t('dashboard.admin.cancel')}
+            </button>
+            <button
+              onClick={handleVerifyUser}
+              className={`flex-1 px-4 py-2.5 text-white rounded-xl font-medium transition-colors ${
+                confirmDialog.approved
+                  ? 'bg-green-600 hover:bg-green-700'
+                  : 'bg-red-600 hover:bg-red-700'
+              }`}
+            >
+              {confirmDialog.approved
+                ? t('dashboard.admin.confirmApprove')
+                : t('dashboard.admin.confirmReject')
+              }
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 

@@ -4,7 +4,7 @@
   "main": "api/index.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
+    "dev": "node --watch server.js",
     "fetch-users": "node scripts/fetchAllUsers.js",
     "create-admin": "node scripts/createAdmin.js",
     "create-super-admin": "node scripts/createSuperAdmin.js",
