@@ -22,7 +22,15 @@ export const loginUser = createAsyncThunk(
       
       return response.data;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Login failed');
+      const data = error.response?.data;
+      if (error.response?.status === 429) {
+        const mins = data?.retryAfterMinutes;
+        return rejectWithValue(
+          mins ? `Too many login attempts. Try again in ${mins} minute${mins > 1 ? 's' : ''}.`
+               : (data?.message || 'Too many attempts. Please wait.')
+        );
+      }
+      return rejectWithValue(data?.message || 'Login failed');
     }
   }
 );
@@ -35,7 +43,11 @@ export const registerUser = createAsyncThunk(
       await SecureStore.setItemAsync('token', response.data.token);
       return response.data;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Registration failed');
+      const data = error.response?.data;
+      if (error.response?.status === 429) {
+        return rejectWithValue(data?.message || 'Too many registration attempts. Try again later.');
+      }
+      return rejectWithValue(data?.message || 'Registration failed');
     }
   }
 );

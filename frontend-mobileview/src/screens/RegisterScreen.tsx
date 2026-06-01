@@ -35,11 +35,34 @@ export default function RegisterScreen() {
   const [formData, setFormData] = useState({
     email: '', password: '', role: 'donor',
     organization_name: '', contact_person: '', phone: '', address: '',
+    license_number: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [focused, setFocused] = useState('');
 
   const update = (key: string, val: string) => setFormData(p => ({ ...p, [key]: val }));
+
+  const handleLicenseChange = (val: string) => {
+    if (formData.role === 'donor') {
+      // FSSAI: digits only, max 14
+      update('license_number', val.replace(/\D/g, '').slice(0, 14));
+    } else {
+      // NGO: alphanumeric uppercase, max 20
+      update('license_number', val.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 20));
+    }
+  };
+
+  const validateLicense = (): string | null => {
+    const { license_number, role } = formData;
+    if (role === 'donor') {
+      if (!/^[1-9][0-9]{13}$/.test(license_number))
+        return t('auth.register.fssaiInvalid');
+    } else {
+      if (!/^[A-Z0-9]{8,20}$/.test(license_number))
+        return t('auth.register.ngoInvalid');
+    }
+    return null;
+  };
 
   const passStrength = formData.password.length < 6 ? 'weak' : formData.password.length < 8 ? 'good' : 'strong';
   const passColor = { weak: '#ef4444', good: '#eab308', strong: '#22c55e' };
@@ -48,6 +71,11 @@ export default function RegisterScreen() {
   const handleRegister = async () => {
     if (!formData.email || !formData.password || !formData.organization_name) {
       Toast.show({ type: 'error', text1: t('auth.register.fillRequired'), text2: t('auth.register.fillRequiredDesc') });
+      return;
+    }
+    const licenseError = validateLicense();
+    if (licenseError) {
+      Toast.show({ type: 'error', text1: t('auth.register.invalidLicense'), text2: licenseError });
       return;
     }
     try {
@@ -169,6 +197,41 @@ export default function RegisterScreen() {
                 </View>
               </View>
             ))}
+
+            {/* License Number (FSSAI / NGO) */}
+            <View style={{ marginBottom: 12 }}>
+              <View style={styles.labelRow}>
+                <Ionicons name="document-text-outline" size={13} color="#2563eb" />
+                <Text style={styles.label}>
+                  {formData.role === 'donor' ? t('auth.register.fssai') : t('auth.register.ngoReg')} *
+                </Text>
+              </View>
+              <View style={[styles.inputWrap, focused === 'license_number' && styles.inputFocusBlue]}>
+                <Ionicons name="card-outline" size={18} color={focused === 'license_number' ? '#2563eb' : '#9ca3af'} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder={formData.role === 'donor' ? '12345678901234 (14 digits)' : 'NGO123ABC (8-20 chars)'}
+                  placeholderTextColor="#9ca3af"
+                  value={formData.license_number}
+                  onChangeText={handleLicenseChange}
+                  keyboardType={formData.role === 'donor' ? 'numeric' : 'default'}
+                  autoCapitalize="characters"
+                  maxLength={formData.role === 'donor' ? 14 : 20}
+                  onFocus={() => setFocused('license_number')}
+                  onBlur={() => setFocused('')}
+                />
+                {formData.license_number.length > 0 && (
+                  <Ionicons
+                    name={validateLicense() === null ? 'checkmark-circle' : 'close-circle'}
+                    size={18}
+                    color={validateLicense() === null ? '#22c55e' : '#ef4444'}
+                  />
+                )}
+              </View>
+              <Text style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>
+                {formData.role === 'donor' ? t('auth.register.fssaiFormat') : t('auth.register.ngoFormat')}
+              </Text>
+            </View>
 
             {/* Submit */}
             <TouchableOpacity onPress={handleRegister} disabled={isLoading} activeOpacity={0.9} style={{ marginTop: 8 }}>

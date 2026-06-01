@@ -18,6 +18,7 @@ interface User {
   license_number: string;
   is_verified: boolean;
   createdAt: string;
+  last_login: string | null;
 }
 
 interface Stats {
@@ -25,13 +26,20 @@ interface Stats {
     total: number;
     verified: number;
     pending: number;
+    donors: number;
+    ngos: number;
+    verification_rate: number;
   };
   donations: {
     total: number;
     active: number;
+    reserved: number;
     completed: number;
+    expired: number;
+    completion_rate: number;
   };
   meals_served: number;
+  meals_pending: number;
 }
 
 export default function AdminDashboard() {
@@ -48,10 +56,12 @@ export default function AdminDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [roleFilter, setRoleFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersPagination, setUsersPagination] = useState({ total: 0, pages: 1 });
+  const USERS_PER_PAGE = 10;
 
-  useEffect(() => {
-    fetchData();
-  }, [roleFilter]);
+  useEffect(() => { fetchData(); }, [roleFilter]);
+  useEffect(() => { fetchUsersPage(usersPage); }, [usersPage]);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -59,21 +69,27 @@ export default function AdminDashboard() {
       const [pendingRes, statsRes, usersRes] = await Promise.all([
         api.get('/users/pending'),
         api.get('/users/stats'),
-        api.get(`/users/all?role=${roleFilter}`)
+        api.get(`/users/all?page=1&limit=${USERS_PER_PAGE}&role=${roleFilter}`)
       ]);
-      
       setPendingUsers(pendingRes.data || []);
       setStats(statsRes.data || stats);
-      setAllUsers(usersRes.data || []);
+      setAllUsers(usersRes.data?.users || []);
+      setUsersPagination(usersRes.data?.pagination || { total: 0, pages: 1 });
+      setUsersPage(1);
     } catch (error: any) {
-      Toast.show({
-        type: 'error',
-        text1: t('common.error'),
-        text2: error.response?.data?.message || error.message
-      });
+      Toast.show({ type: 'error', text1: t('common.error'), text2: error.response?.data?.message || error.message });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const fetchUsersPage = async (page: number) => {
+    if (page === 1) return; // handled by fetchData
+    try {
+      const res = await api.get(`/users/all?page=${page}&limit=${USERS_PER_PAGE}&role=${roleFilter}`);
+      setAllUsers(res.data?.users || []);
+      setUsersPagination(res.data?.pagination || { total: 0, pages: 1 });
+    } catch {}
   };
 
   const onRefresh = async () => {
@@ -389,21 +405,9 @@ export default function AdminDashboard() {
               ))}
             </View>
             <Text style={styles.userCount}>
-              {allUsers.filter(user => {
-                const query = searchQuery.toLowerCase();
-                return user.organization_name?.toLowerCase().includes(query) ||
-                       user.email?.toLowerCase().includes(query) ||
-                       user.phone?.includes(query) ||
-                       user.contact_person?.toLowerCase().includes(query);
-              }).length} {t('dashboard.admin.usersFound')}
+              {usersPagination.total} {t('dashboard.admin.usersFound')}
             </Text>
-            {allUsers.filter(user => {
-              const query = searchQuery.toLowerCase();
-              return user.organization_name?.toLowerCase().includes(query) ||
-                     user.email?.toLowerCase().includes(query) ||
-                     user.phone?.includes(query) ||
-                     user.contact_person?.toLowerCase().includes(query);
-            }).length === 0 ? (
+            {allUsers.length === 0 ? (
               <View style={styles.emptyState}>
                 <LinearGradient colors={['#eff6ff', '#faf5ff']} style={styles.emptyIcon}>
                   <Ionicons name="people" size={48} color="#3b82f6" />
@@ -411,50 +415,75 @@ export default function AdminDashboard() {
                 <Text style={styles.emptyTitle}>{t('dashboard.admin.noUsersFound')}</Text>
               </View>
             ) : (
-              allUsers.filter(user => {
-                const query = searchQuery.toLowerCase();
-                return user.organization_name?.toLowerCase().includes(query) ||
-                       user.email?.toLowerCase().includes(query) ||
-                       user.phone?.includes(query) ||
-                       user.contact_person?.toLowerCase().includes(query);
-              }).map((user) => (
-                <View key={user._id} style={styles.userCard}>
-                  <View style={styles.userCardHeader}>
-                    <View style={[styles.userAvatar, { backgroundColor: getRoleColor(user.role) + '18' }]}>
-                      <Ionicons name="business" size={20} color={getRoleColor(user.role)} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.userName}>{user.organization_name}</Text>
-                      <View style={styles.badgeRow}>
-                        <View style={[styles.roleBadge, { backgroundColor: getRoleColor(user.role) }]}>
-                          <Text style={styles.roleText}>{user.role.toUpperCase()}</Text>
-                        </View>
-                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(user.is_verified) }]}>
-                          <Ionicons name={user.is_verified ? 'checkmark-circle' : 'time'} size={10} color="#fff" />
-                          <Text style={styles.statusText}>{getStatusText(user.is_verified)}</Text>
+              <>
+                {allUsers.map((user) => (
+                  <View key={user._id} style={styles.userCard}>
+                    <View style={styles.userCardHeader}>
+                      <View style={[styles.userAvatar, { backgroundColor: getRoleColor(user.role) + '18' }]}>
+                        <Ionicons name="business" size={20} color={getRoleColor(user.role)} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.userName}>{user.organization_name}</Text>
+                        <View style={styles.badgeRow}>
+                          <View style={[styles.roleBadge, { backgroundColor: getRoleColor(user.role) }]}>
+                            <Text style={styles.roleText}>{user.role.toUpperCase()}</Text>
+                          </View>
+                          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(user.is_verified) }]}>
+                            <Ionicons name={user.is_verified ? 'checkmark-circle' : 'time'} size={10} color="#fff" />
+                            <Text style={styles.statusText}>{getStatusText(user.is_verified)}</Text>
+                          </View>
                         </View>
                       </View>
                     </View>
+                    <View style={styles.userDetails}>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="mail" size={14} color="#6b7280" />
+                        <Text style={styles.detailText}>{user.email}</Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="person" size={14} color="#6b7280" />
+                        <Text style={styles.detailText}>{user.contact_person}</Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="calendar" size={14} color="#6b7280" />
+                        <Text style={styles.detailText}>
+                          {t('dashboard.admin.joined')} {new Date(user.createdAt).toLocaleDateString()}
+                        </Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="time" size={14} color="#6b7280" />
+                        <Text style={styles.detailText}>
+                          {t('dashboard.admin.lastLogin')}{' '}
+                          {user.last_login ? new Date(user.last_login).toLocaleString() : t('dashboard.admin.neverLoggedIn')}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
-                  
-                  <View style={styles.userDetails}>
-                    <View style={styles.detailRow}>
-                      <Ionicons name="mail" size={14} color="#6b7280" />
-                      <Text style={styles.detailText}>{user.email}</Text>
-                    </View>
-                    <View style={styles.detailRow}>
-                      <Ionicons name="person" size={14} color="#6b7280" />
-                      <Text style={styles.detailText}>{user.contact_person}</Text>
-                    </View>
-                    <View style={styles.detailRow}>
-                      <Ionicons name="calendar" size={14} color="#6b7280" />
-                      <Text style={styles.detailText}>
-                        {t('dashboard.admin.joined')} {new Date(user.createdAt).toLocaleDateString()}
-                      </Text>
-                    </View>
+                ))}
+
+                {/* Pagination */}
+                {usersPagination.pages > 1 && (
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingHorizontal: 4 }}>
+                    <TouchableOpacity
+                      onPress={() => setUsersPage(p => Math.max(1, p - 1))}
+                      disabled={usersPage === 1}
+                      style={{ opacity: usersPage === 1 ? 0.4 : 1, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#e5e7eb', borderRadius: 8 }}
+                    >
+                      <Text style={{ fontWeight: '600', color: '#374151' }}>← {t('dashboard.admin.prev')}</Text>
+                    </TouchableOpacity>
+                    <Text style={{ fontSize: 13, color: '#6b7280' }}>
+                      {t('dashboard.admin.page')} {usersPage} {t('dashboard.admin.of')} {usersPagination.pages}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setUsersPage(p => Math.min(usersPagination.pages, p + 1))}
+                      disabled={usersPage === usersPagination.pages}
+                      style={{ opacity: usersPage === usersPagination.pages ? 0.4 : 1, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#e5e7eb', borderRadius: 8 }}
+                    >
+                      <Text style={{ fontWeight: '600', color: '#374151' }}>{t('dashboard.admin.next')} →</Text>
+                    </TouchableOpacity>
                   </View>
-                </View>
-              ))
+                )}
+              </>
             )}
           </View>
         )}
