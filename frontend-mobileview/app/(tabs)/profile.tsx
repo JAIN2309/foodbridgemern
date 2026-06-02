@@ -65,7 +65,7 @@ export default function ProfileScreen() {
   const handleImageUpload = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Please grant camera roll permissions to upload a profile picture.');
+      Alert.alert(t('profile.permissionRequired'), t('profile.permissionMessage'));
       return;
     }
 
@@ -82,7 +82,7 @@ export default function ProfileScreen() {
       
       // Check size (max 500KB base64)
       if (base64String.length > 500000) {
-        Toast.show({ type: 'error', text1: '❌ Image Too Large', text2: 'Please select a smaller image' });
+        Toast.show({ type: 'error', text1: t('profile.imageTooLarge'), text2: t('profile.imageTooLargeMsg') });
         return;
       }
 
@@ -95,10 +95,10 @@ export default function ProfileScreen() {
         // Refresh user data to update Redux store
         await dispatch(loadUser());
         
-        Toast.show({ type: 'success', text1: '✅ Profile Picture Updated' });
+        Toast.show({ type: 'success', text1: t('profile.pictureUpdated') });
       } catch (error: any) {
-        const errorMsg = error.response?.status === 413 ? 'Image too large' : 'Could not upload profile picture';
-        Toast.show({ type: 'error', text1: '❌ Upload Failed', text2: errorMsg });
+        const errorMsg = error.response?.status === 413 ? t('profile.imageTooLarge') : t('profile.uploadFailedMsg');
+        Toast.show({ type: 'error', text1: t('profile.uploadFailed'), text2: errorMsg });
       } finally {
         setUploadingPicture(false);
       }
@@ -107,12 +107,12 @@ export default function ProfileScreen() {
 
   const handleDeletePicture = () => {
     Alert.alert(
-      'Remove Profile Picture',
-      'Are you sure you want to remove your profile picture?',
+      t('profile.profilePicture'),
+      t('profile.confirmRemove'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Remove',
+          text: t('profile.removePicture'),
           style: 'destructive',
           onPress: async () => {
             setUploadingPicture(true);
@@ -124,9 +124,9 @@ export default function ProfileScreen() {
               // Refresh user data to update Redux store
               await dispatch(loadUser());
               
-              Toast.show({ type: 'success', text1: '✅ Profile Picture Removed' });
+              Toast.show({ type: 'success', text1: t('profile.pictureRemoved') });
             } catch (error) {
-              Toast.show({ type: 'error', text1: '❌ Delete Failed' });
+              Toast.show({ type: 'error', text1: t('profile.deleteFailed') });
             } finally {
               setUploadingPicture(false);
             }
@@ -144,9 +144,9 @@ export default function ProfileScreen() {
     try {
       await dispatch(updateProfile(editData)).unwrap();
       setIsEditing(false);
-      Toast.show({ type: 'success', text1: '✅ Profile Updated', text2: 'Your changes have been saved successfully.' });
+      Toast.show({ type: 'success', text1: t('profile.profileUpdated'), text2: t('profile.profileUpdatedMsg') });
     } catch {
-      Toast.show({ type: 'error', text1: '❌ Update Failed', text2: 'Could not save changes. Please try again.' });
+      Toast.show({ type: 'error', text1: t('profile.updateFailed'), text2: t('profile.updateFailedMsg') });
     }
   };
 
