@@ -99,6 +99,15 @@ const NGODashboard = () => {
     try {
       await dispatch(claimDonation(donationId)).unwrap();
       toast.success('Donation claimed successfully!');
+      // Re-fetch immediately so live feed removes the claimed donation
+      if (geoLocation) {
+        dispatch(fetchNearbyDonations({
+          longitude: geoLocation.longitude,
+          latitude: geoLocation.latitude,
+          maxDistance: 10000
+        }));
+      }
+      dispatch(fetchNGOHistory());
     } catch (error) {
       toast.error(error || 'Failed to claim donation');
     }

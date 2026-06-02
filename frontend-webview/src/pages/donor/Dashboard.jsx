@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { Plus, Clock, MapPin, Users } from 'lucide-react';
 import { createDonation, fetchDonorHistory } from '../../store/slices/donationSlice';
+import socketService from '../../services/socket';
 import { useGeolocation } from '../../hooks/useGeolocation';
 import BiometricGuard from '../../components/common/BiometricGuard';
 import DonationCard from '../../components/common/DonationCard';
@@ -38,13 +39,26 @@ const DonorDashboard = () => {
 
   const [dataFetched, setDataFetched] = useState(false);
 
-  // Auto-fetch data on mount if not already fetched
+  // Initial fetch
   useEffect(() => {
-    if (!dataFetched && !isLoading && userDonations.length === 0) {
+    dispatch(fetchDonorHistory());
+  }, [dispatch]);
+
+  // Auto-refresh every 30 seconds — keeps status in sync
+  useEffect(() => {
+    const interval = setInterval(() => {
       dispatch(fetchDonorHistory());
-      setDataFetched(true);
-    }
-  }, [dispatch, dataFetched, isLoading, userDonations.length]);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [dispatch]);
+
+  // Socket: refresh immediately when any NGO claims or collects a donation
+  useEffect(() => {
+    socketService.onDonationClaimed(() => {
+      dispatch(fetchDonorHistory());
+    });
+    return () => socketService.offAllListeners();
+  }, [dispatch]);
 
   // Check URL parameters for tab on mount
   React.useLayoutEffect(() => {

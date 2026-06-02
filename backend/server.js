@@ -13,7 +13,17 @@ const { startCronJobs } = require('./services/cronService');
 const expiryScheduler  = require('./jobs/expiryScheduler');
 const redis            = require('./utils/redisClient');
 
-const app = express();
+const http = require('http');
+const { Server } = require('socket.io');
+
+const app    = express();
+const server = http.createServer(app);
+const io     = new Server(server, {
+  cors: {
+    origin: process.env.CLIENT_URL || '*',
+    methods: ['GET', 'POST']
+  }
+});
 
 app.use(cors({
   origin: process.env.CLIENT_URL || '*',
@@ -29,18 +39,19 @@ app.use('/api/users', userRoutes);
 app.use('/api/map', mapRoutes);
 
 app.get('/', (req, res) => {
-  res.json({ message: 'FoodBridge API is running!', timestamp: new Date().toISOString() ,"Status": "OK"
-  });
+  res.json({ message: 'FoodBridge API is running!', timestamp: new Date().toISOString(), Status: 'OK' });
 });
 
-const mockIO = {
-  emit: (event, data) => console.log(`Socket event: ${event}`, data),
-  to: (room) => ({ emit: (event, data) => console.log(`Socket to ${room}: ${event}`, data) })
-};
-app.set('io', mockIO);
+// Real Socket.IO — clients join their own rooms so targeted events work
+io.on('connection', (socket) => {
+  socket.on('join-ngo-room',   (userId) => socket.join(`ngo-${userId}`));
+  socket.on('join-donor-room', (userId) => socket.join(`donor-${userId}`));
+  socket.on('disconnect', () => {});
+});
+
+app.set('io', io);
 
 async function start() {
-  // Redis — optional, app works without it
   await redis.connect();
 
   try {
@@ -59,7 +70,7 @@ async function start() {
 
   if (process.env.NODE_ENV !== 'production') {
     const PORT = process.env.PORT || 5001;
-    app.listen(PORT, '0.0.0.0', () => {
+    server.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
       console.log(`   Network: http://10.0.2.2:${PORT}`);
     });

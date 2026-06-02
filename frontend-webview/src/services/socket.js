@@ -18,6 +18,9 @@ class SocketService {
           if (role === 'ngo') {
             this.socket.emit('join-ngo-room', userId);
           }
+          if (role === 'donor') {
+            this.socket.emit('join-donor-room', userId);
+          }
         });
 
         this.socket.on('connect_error', (error) => {

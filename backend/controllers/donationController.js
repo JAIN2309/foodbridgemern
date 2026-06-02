@@ -2,6 +2,7 @@ const Donation = require('../models/Donation');
 const Transaction = require('../models/Transaction');
 const Logistics = require('../models/Logistics');
 const User = require('../models/User');
+const redis = require('../utils/redisClient');
 const { sendEmail, emailTemplates } = require('../services/emailService');
 const performanceService = require('../services/performanceService');
 
@@ -286,6 +287,12 @@ const claimDonation = async (req, res) => {
       }
     }, 30 * 60 * 1000); // 30 minutes
 
+    // Invalidate nearby cache so NGOs see updated status immediately
+    if (donation.location?.coordinates) {
+      const [lng, lat] = donation.location.coordinates;
+      await performanceService.invalidateLocationCache(lng, lat);
+    }
+
     const io = req.app.get('io');
     io.to(`donor-${donation.donor_id._id}`).emit('donation-claimed', {
       donation: donation,
@@ -410,8 +417,15 @@ const markCollected = async (req, res) => {
       console.error('Completion notification emails failed:', emailError);
     }
 
-    res.json({ 
-      message: 'Donation marked as collected', 
+    // Invalidate cache + clear admin stats cache so counts update
+    if (donation.location?.coordinates) {
+      const [lng, lat] = donation.location.coordinates;
+      await performanceService.invalidateLocationCache(lng, lat);
+    }
+    await redis.del('admin:stats');
+
+    res.json({
+      message: 'Donation marked as collected',
       donation,
       rating_submitted: !!rating
     });

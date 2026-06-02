@@ -220,8 +220,9 @@ const getHealthCheck = async (req, res) => {
 const toggleBiometric = async (req, res) => {
   try {
     const { enabled } = req.body;
+    const userId = req.user._id || req.user.id;
     const user = await User.findByIdAndUpdate(
-      req.user.id,
+      userId,
       { biometric_enabled: enabled },
       { new: true }
     ).select('-password');
@@ -239,7 +240,9 @@ const toggleBiometric = async (req, res) => {
 
 const getBiometricStatus = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('biometric_enabled');
+    const userId = req.user._id || req.user.id;
+    const user = await User.findById(userId).select('biometric_enabled');
+    if (!user) return res.status(404).json({ message: 'User not found' });
     res.json({ biometric_enabled: user.biometric_enabled });
   } catch (error) {
     res.status(500).json({ message: error.message });
