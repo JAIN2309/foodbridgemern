@@ -118,7 +118,7 @@ const Profile = () => {
         // Refresh user data from backend to update Redux store
         await dispatch({ type: 'auth/loadUser/fulfilled', payload: { ...user, profile_picture: data.profile_picture } });
         
-        toast.success('Profile picture updated successfully');
+        toast.success(t('profile.pictureUpdated'));
         setUploadingPicture(false);
       };
       reader.readAsDataURL(file);
@@ -129,7 +129,7 @@ const Profile = () => {
   };
 
   const handleDeletePicture = async () => {
-    if (!window.confirm('Are you sure you want to remove your profile picture?')) return;
+    if (!window.confirm(t('profile.confirmRemove'))) return;
 
     setUploadingPicture(true);
     try {
@@ -147,7 +147,7 @@ const Profile = () => {
       // Refresh user data from backend to update Redux store
       await dispatch({ type: 'auth/loadUser/fulfilled', payload: { ...user, profile_picture: null } });
       
-      toast.success('Profile picture removed successfully');
+      toast.success(t('profile.pictureRemoved'));
     } catch (error) {
       toast.error('Failed to remove profile picture');
     } finally {
@@ -347,7 +347,7 @@ const Profile = () => {
 
       {/* Profile Picture Section */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Profile Picture</h2>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">{t('profile.profilePicture')}</h2>
         <div className="flex items-center gap-6">
           <div className="relative">
             <div 
@@ -368,7 +368,7 @@ const Profile = () => {
           </div>
           <div className="flex-1">
             <p className="text-sm text-gray-600 mb-4">
-              Upload a profile picture. Recommended size: 400x400px. Max size: 500KB.
+              {t('profile.uploadHint')}
             </p>
             <div className="flex gap-3">
               <input
@@ -384,7 +384,7 @@ const Profile = () => {
                 className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
                 <Camera className="w-4 h-4 mr-2" />
-                {profilePicture ? 'Change Picture' : 'Upload Picture'}
+                {profilePicture ? t('profile.changePicture') : t('profile.uploadPicture')}
               </button>
               {profilePicture && (
                 <button
@@ -393,7 +393,7 @@ const Profile = () => {
                   className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
-                  Remove
+                  {t('profile.removePicture')}
                 </button>
               )}
             </div>

@@ -381,7 +381,15 @@
     "viewPhoto": "View Photo",
     "changePhoto": "Change Photo",
     "deletePhoto": "Delete Photo",
-    "close": "Close"
+    "close": "Close",
+    "profilePicture": "Profile Picture",
+    "uploadHint": "Upload a profile picture. Recommended size: 400x400px. Max size: 500KB.",
+    "uploadPicture": "Upload Picture",
+    "changePicture": "Change Picture",
+    "removePicture": "Remove",
+    "confirmRemove": "Are you sure you want to remove your profile picture?",
+    "pictureUpdated": "Profile picture updated successfully",
+    "pictureRemoved": "Profile picture removed successfully"
   },
   "brand": {
     "tagline": "Connecting Hearts, Reducing Waste",
