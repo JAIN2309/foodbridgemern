@@ -7,21 +7,24 @@ A production-grade food donation platform connecting food donors with NGOs to re
 ## Features
 
 ### For Donors
-- Post surplus food donations with photo, pickup window, and expiry time
-- Real-time notifications when donations are claimed
-- Complete donation history with status tracking
+- Post surplus food donations with photo, weight (kg), pickup window, and expiry time
+- Real-time status updates — instant notification when NGO claims (Socket.IO)
+- Full NGO contact card shown after claim (name, phone, email, address, trust score, ratings)
+- Complete donation history with kg saved from waste tracking
 - Biometric authentication support for posting donations
+- No-image placeholder when photo is unavailable
 
 ### For NGOs
 - Live feed of nearby available donations with geospatial filtering
+- Confirmation dialog before claiming — includes 30-minute pickup commitment notice
 - Interactive map view of donation locations
-- One-click claim system with automatic donor contact sharing
 - Claims history and pickup tracking
+- Immediate live feed refresh after claiming
 
 ### For Admins
-- User verification — approve / reject with confirmation dialog
-- Real-time analytics dashboard (donation breakdown, user stats, completion rate)
-- Paginated users list with last login time and online status
+- User verification — approve / reject with multilingual confirmation dialog
+- Real-time analytics dashboard — donation breakdown, completion rate, verification rate, kg saved
+- Paginated users list with last login time
 - Paginated donation history with filters (status, date, donor, NGO)
 - Live donation map
 
@@ -32,9 +35,10 @@ A production-grade food donation platform connecting food donors with NGOs to re
 ### Backend
 | Technology | Purpose |
 |-----------|---------|
-| Node.js 18+ | Runtime (uses built-in `node --watch`) |
+| Node.js 18+ | Runtime (built-in `node --watch`, no nodemon) |
 | Express.js | Web framework |
 | MongoDB + Mongoose | Database and ODM |
+| Socket.IO | Real-time donation status updates |
 | Redis | Caching, rate limiting, JWT blacklist |
 | Argon2id | Password hashing (with bcrypt migration support) |
 | JWT | Authentication |
@@ -42,7 +46,7 @@ A production-grade food donation platform connecting food donors with NGOs to re
 | AES-256-GCM | Field-level encryption (email, phone, license) |
 | node-cron | Scheduled jobs |
 
-### Frontend
+### Web Frontend
 | Technology | Purpose |
 |-----------|---------|
 | React 18 | UI library |
@@ -54,6 +58,19 @@ A production-grade food donation platform connecting food donors with NGOs to re
 | React Hot Toast | Notifications |
 | Leaflet + React-Leaflet | Interactive maps |
 | i18next | Internationalisation (English, Hindi, Gujarati) |
+| Socket.IO Client | Real-time updates |
+
+### Mobile Frontend
+| Technology | Purpose |
+|-----------|---------|
+| React Native + Expo 54 | Mobile framework |
+| Expo Router | File-based navigation |
+| Redux Toolkit | State management |
+| expo-location | GPS geolocation with fallback |
+| expo-local-authentication | Biometric (Face ID / Fingerprint) |
+| expo-secure-store | Secure token storage |
+| react-native-maps | Google Maps integration |
+| i18next | Internationalisation (English, Hindi, Gujarati) |
 
 ---
 
@@ -64,15 +81,15 @@ foodbridge/
 ├── backend/
 │   ├── controllers/
 │   │   ├── authController.js      # Register, login, logout, password reset
-│   │   ├── donationController.js  # CRUD, nearby, claim, collect, history
-│   │   └── userController.js      # Admin stats, user management, verification
+│   │   ├── donationController.js  # CRUD, nearby, claim, collect, history, weight_kg
+│   │   └── userController.js      # Admin stats (kg saved), user management, verification
 │   ├── middleware/
 │   │   ├── auth.js                # JWT verify + Redis user cache + blacklist check
-│   │   ├── rateLimiter.js         # Brute-force + spray protection via Redis
+│   │   ├── rateLimiter.js         # Brute-force (per account) + spray (distinct emails/IP)
 │   │   └── logger.js              # Request logger with sensitive field redaction
 │   ├── models/
-│   │   ├── User.js                # Schema with Argon2 hashing + AES-256 encryption
-│   │   └── Donation.js
+│   │   ├── User.js                # Argon2 hashing + AES-256-GCM field encryption
+│   │   └── Donation.js            # weight_kg field, geospatial index
 │   ├── routes/
 │   │   ├── auth.js
 │   │   ├── donations.js
@@ -86,21 +103,32 @@ foodbridge/
 │   │   └── redisClient.js         # Redis wrapper with in-memory fallback
 │   ├── jobs/
 │   │   └── expiryScheduler.js     # Auto-expire donations, 365-day cleanup
-│   └── server.js
+│   └── server.js                  # Real Socket.IO server (donor/NGO rooms)
 ├── frontend-webview/              # React web application
 │   └── src/
 │       ├── pages/
-│       │   ├── admin/Dashboard.jsx
-│       │   ├── donor/Dashboard.jsx
-│       │   ├── ngo/Dashboard.jsx
+│       │   ├── admin/Dashboard.jsx  # Analytics, paginated users + donations, confirmation dialogs
+│       │   ├── donor/Dashboard.jsx  # Post food (weight_kg), NGO contact card, real-time status
+│       │   ├── ngo/Dashboard.jsx    # Live feed, claim confirmation dialog, map
 │       │   ├── auth/Login.jsx
-│       │   ├── auth/Register.jsx
+│       │   ├── auth/Register.jsx    # FSSAI/NGO license formatter, phone formatter
 │       │   └── common/Profile.jsx
-│       ├── store/slices/          # Redux slices
-│       ├── hooks/                 # useGeolocation, useBiometric, useMobile
-│       ├── services/              # api.js, socket.js
-│       └── locales/               # en, hi, gu translation files
+│       ├── store/slices/
+│       ├── hooks/                   # useGeolocation (GPS + network fallback + retry)
+│       ├── services/                # api.js, socket.js (donor + NGO rooms)
+│       └── locales/                 # en, hi, gu translation files
 └── frontend-mobileview/           # React Native / Expo mobile app
+    └── src/
+        ├── screens/
+        │   ├── DonorDashboard.tsx   # Post food (weight_kg), image error handling, stats
+        │   ├── NGODashboard.tsx     # Claim confirmation Alert.alert dialog
+        │   ├── AdminDashboard.tsx   # Paginated users, last login, analytics
+        │   ├── LoginScreen.tsx
+        │   └── RegisterScreen.tsx   # FSSAI/NGO formatter, phone formatter, +91 prefix
+        ├── hooks/
+        │   └── useLocation.ts       # GPS with high→network fallback + retry
+        ├── store/
+        └── i18n/locales/            # en, hi, gu TypeScript translation files
 ```
 
 ---
@@ -160,9 +188,11 @@ FRONTEND_URL=http://localhost:5173
 PORT=5001
 ```
 
-> **Gmail App Password:** Go to Google Account → Security → 2-Step Verification → App passwords. Generate one named "FoodBridge".
+> **Gmail App Password:** Google Account → Security → 2-Step Verification → App passwords → Create one named "FoodBridge".
 
-> **Production Redis:** Use [Upstash](https://upstash.com) free tier. Copy the connection URL and set `REDIS_URL`.
+> **Encryption Key:** Run `node -e "require('crypto').randomBytes(32).toString('hex')"` and paste the output.
+
+> **Production Redis:** Use [Upstash](https://upstash.com) free tier. Set `REDIS_URL` to the connection URL.
 
 ### 5. Create the first admin user
 ```bash
@@ -192,6 +222,20 @@ npm run dev
 
 ---
 
+## Donation Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `food_items` | Array | Name, category, storage, expiry per item |
+| `quantity_serves` | Number | People the donation feeds |
+| `weight_kg` | Number | Total food weight in kg (tracked for impact reporting) |
+| `photo_url` | String | Base64 food photo (optional) |
+| `pickup_address` | String | Collection address |
+| `pickup_window_start/end` | Date | NGO pickup window |
+| `status` | Enum | available → reserved → collected / expired |
+
+---
+
 ## API Endpoints
 
 ### Authentication
@@ -199,9 +243,9 @@ npm run dev
 |--------|----------|-------------|-------------|
 | POST | `/api/auth/register` | Register donor or NGO | 3/hr per IP |
 | POST | `/api/auth/login` | Login | 5/15min per account |
-| POST | `/api/auth/logout` | Logout (blacklists token) | — |
+| POST | `/api/auth/logout` | Logout (blacklists JWT) | — |
 | POST | `/api/auth/request-password-reset` | Send OTP to email | 3/hr per account |
-| POST | `/api/auth/verify-otp` | Verify reset OTP | — |
+| POST | `/api/auth/verify-otp` | Verify OTP (single-use) | — |
 | POST | `/api/auth/reset-password` | Set new password | 3/hr per account |
 | GET | `/api/auth/profile` | Get own profile | — |
 | PUT | `/api/auth/profile` | Update own profile | — |
@@ -209,54 +253,67 @@ npm run dev
 ### Donations
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/donations/nearby` | Geospatial nearby donations (Redis cached) |
-| POST | `/api/donations` | Create donation |
-| PUT | `/api/donations/:id/claim` | Claim donation (NGO) |
-| PUT | `/api/donations/:id/collect` | Mark as collected |
-| GET | `/api/donations/history/donor` | Donor history |
+| GET | `/api/donations/nearby` | Geospatial nearby donations (Redis cached 2 min) |
+| POST | `/api/donations` | Create donation (with weight_kg) |
+| PUT | `/api/donations/:id/claim` | Claim donation — invalidates cache, emits socket event |
+| PUT | `/api/donations/:id/collect` | Mark collected — invalidates cache + admin stats |
+| GET | `/api/donations/history/donor` | Donor history (with full NGO contact details) |
 | GET | `/api/donations/history/ngo` | NGO claim history |
-| GET | `/api/donations/admin/history` | Full history with pagination + filters |
+| GET | `/api/donations/admin/history` | Paginated full history with filters |
 
 ### Users (Admin)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/users/stats` | Platform stats (Redis cached 5 min) |
-| GET | `/api/users/all` | Paginated users list with search |
+| GET | `/api/users/stats` | Platform stats incl. kg_saved (Redis cached 5 min) |
+| GET | `/api/users/all` | Paginated + searchable users list |
 | GET | `/api/users/pending` | Pending verifications |
-| PUT | `/api/users/:id/verify` | Approve or reject user |
+| PUT | `/api/users/:id/verify` | Approve or reject — clears cache instantly |
 
 ---
 
 ## Security
 
-- **Rate limiting** — brute-force protection per account (email), spray protection per network (distinct accounts/IP)
-- **JWT blacklist** — logged-out tokens are invalidated in Redis immediately
-- **Auth middleware cache** — user object cached in Redis (5 min TTL), no DB hit on every request
-- **Field-level encryption** — email, phone, license number, contact person stored AES-256-GCM encrypted
-- **Argon2id hashing** — passwords hashed with Argon2id (memory: 64MB, time: 3, parallelism: 4)
-- **Role enforcement** — `admin` and `super_admin` roles cannot be self-registered
-- **Input validation** — all registration fields validated on backend (not just frontend)
-- **OTP single-use** — OTP is invalidated immediately after successful verification
-- **Sensitive log redaction** — passwords, tokens, encrypted fields never appear in logs
+- **Rate limiting** — per-account brute-force limit (5/15min) + per-IP distinct-email spray detection (50 accounts/15min)
+- **JWT blacklist** — logged-out tokens invalidated in Redis for remaining 7-day lifetime
+- **Auth middleware cache** — user object cached in Redis (5 min), no DB hit per request
+- **Field-level encryption** — email, phone, license, contact person encrypted with AES-256-GCM
+- **Argon2id hashing** — memory: 64MB, time: 3 iterations, parallelism: 4
+- **Role enforcement** — `admin` / `super_admin` cannot be self-registered via API
+- **Backend validation** — email regex, Indian phone format, FSSAI 14-digit, coordinate range, field minlength
+- **OTP single-use** — OTP nulled immediately after successful verification
+- **Sensitive log redaction** — passwords, tokens, encrypted fields stripped from all logs
+
+---
+
+## Real-Time Architecture
+
+```
+NGO claims donation
+  → Backend: DB update → Redis cache invalidated → Socket.IO emit to donor-{id} room
+  → Donor browser: receives donation-claimed event → immediately re-fetches history
+  → Status changes from "available" to "reserved" without waiting for 30s poll
+```
+
+Both donor and NGO dashboards also auto-refresh every 30 seconds as a fallback.
 
 ---
 
 ## Backend Scripts
 
 ```bash
-npm run dev              # Start with node --watch (auto-reload on file change)
+npm run dev              # Start with node --watch (auto-reload)
 npm start                # Production start
 npm run create-admin     # Create default admin user
 npm run create-super-admin  # Create super admin
-npm run fetch-users      # List all users with roles
-npm run fetch-roles      # Detailed role-wise user report
+npm run fetch-users      # List all users
+npm run fetch-roles      # Role-wise user report
 ```
 
 ---
 
 ## Internationalisation
 
-The web frontend supports three languages switchable at runtime:
+All three platforms (web, mobile, admin) support three languages switchable at runtime:
 
 | Language | Code |
 |----------|------|
@@ -264,24 +321,26 @@ The web frontend supports three languages switchable at runtime:
 | Hindi | `hi` |
 | Gujarati | `gu` |
 
-Translation files: `frontend-webview/src/locales/{en,hi,gu}/translation.json`
+Web: `frontend-webview/src/locales/{en,hi,gu}/translation.json`
+Mobile: `frontend-mobileview/src/i18n/locales/{en,hi,gu}.ts`
 
 ---
 
 ## Redis Features
 
-The app runs fully without Redis (graceful fallback to in-memory/direct DB). With Redis connected:
+The app runs fully without Redis (graceful in-memory fallback). With Redis connected:
 
 | Feature | TTL | Benefit |
 |---------|-----|---------|
-| Nearby donations cache | 2 min | Skips expensive geospatial aggregation |
-| Admin stats cache | 5 min | 7 parallel aggregations → single Redis read |
-| Auth user cache | 5 min | No DB hit on every protected request |
-| Login rate limit | 15 min window | 5 attempts per account |
+| Nearby donations cache | 2 min | Skips geospatial aggregation; invalidated on claim/collect |
+| Admin stats cache | 5 min | 8 parallel aggregations → single Redis read |
+| Auth user cache | 5 min | No DB hit on every protected API call |
+| Login rate limit | 15 min window | 5 attempts per account (IP-agnostic) |
+| Spray detection | 15 min window | Blocks >50 distinct accounts per IP |
 | Register rate limit | 1 hr window | 3 attempts per IP |
 | JWT blacklist | 7 days | Immediate logout token invalidation |
 
-**Production:** Use [Upstash](https://upstash.com) Redis free tier — set `REDIS_URL` in production env.
+**Production:** [Upstash](https://upstash.com) Redis free tier (10k req/day) is sufficient for FoodBridge.
 
 ---
 
