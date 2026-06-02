@@ -376,6 +376,13 @@ const NGODashboard = () => {
                                 )}
                               </div>
 
+                              {/* Posted on */}
+                              {donation.createdAt && (
+                                <p className="text-xs text-gray-400 mb-2">
+                                  {t('donationDetails.postedOn')} {new Date(donation.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              )}
+
                               {donation.special_instructions && (
                                 <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-2 py-1 mb-2">
                                   💬 {donation.special_instructions}
@@ -526,6 +533,12 @@ const NGODashboard = () => {
                               <span className="flex items-center gap-1">
                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
                                 {t(`donationDetails.${donation.food_items[0].storage_conditions}`) || donation.food_items[0].storage_conditions}
+                              </span>
+                            )}
+                            {donation.createdAt && (
+                              <span className="flex items-center gap-1 text-gray-400">
+                                <Clock className="w-3.5 h-3.5" />
+                                {t('donationDetails.postedOn')} {new Date(donation.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                               </span>
                             )}
                             <span className="flex items-center gap-1 text-gray-500">

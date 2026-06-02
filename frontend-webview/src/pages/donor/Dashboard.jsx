@@ -844,8 +844,8 @@ const DonorDashboard = () => {
                         <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(donation.status)}`}>
                           {t(`dashboard.donor.${donation.status}`)}
                         </span>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                          {new Date(donation.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                          {t('donationDetails.postedOn')} {new Date(donation.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
                     </div>
