@@ -31,10 +31,11 @@ class PerformanceService {
             from: 'users',
             localField: 'donor_id',
             foreignField: '_id',
-            as: 'donor',
-            pipeline: [{ $project: { organization_name: 1, phone: 1, trust_score: 1 } }]
+            as: 'donor_id',
+            pipeline: [{ $project: { organization_name: 1, phone: 1, trust_score: 1, address: 1 } }]
           }
         },
+        { $unwind: { path: '$donor_id', preserveNullAndEmpty: true } },
         { $limit: 50 },
         { $sort: { distance: 1, createdAt: -1 } }
       ]);

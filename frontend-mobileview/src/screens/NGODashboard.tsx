@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, Alert } from 'react-native';
+import {
+  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  RefreshControl, Alert, Image,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -64,34 +67,126 @@ export default function NGODashboard() {
     { key: 'claims', icon: 'clipboard', label: t('dashboard.ngo.myClaims'), count: claimedDonations.length },
   ];
 
-  const DonationCard = ({ d, showClaim }: any) => (
-    <View style={styles.card}>
-      <View style={styles.cardTop}>
-        <View style={[styles.cardIconWrap, { backgroundColor: statusColor(d.status) + '18' }]}>
-          <Ionicons name="fast-food" size={20} color={statusColor(d.status)} />
+  const categoryColor = (cat: string) => ({
+    vegetarian: { bg: '#dcfce7', text: '#15803d' },
+    vegan: { bg: '#d1fae5', text: '#065f46' },
+    'non-vegetarian': { bg: '#fee2e2', text: '#b91c1c' },
+    mixed: { bg: '#f3f4f6', text: '#374151' },
+  }[cat] || { bg: '#f3f4f6', text: '#374151' });
+
+  const DonationCard = ({ d, showClaim }: any) => {
+    const cat = d.food_items?.[0]?.category;
+    const catStyle = categoryColor(cat);
+    const hasPhoto = d.photo_url && !d.photo_url.includes('placeholder');
+
+    return (
+      <View style={styles.card}>
+        {/* Top row: image + content */}
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          {/* Photo */}
+          {hasPhoto ? (
+            <Image source={{ uri: d.photo_url }} style={styles.cardImage} />
+          ) : (
+            <View style={[styles.cardImage, { backgroundColor: '#f3f4f6', justifyContent: 'center', alignItems: 'center' }]}>
+              <Ionicons name="image-outline" size={24} color="#9ca3af" />
+            </View>
+          )}
+
+          <View style={{ flex: 1 }}>
+            {/* Title + status */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+              <Text style={[styles.cardTitle, { flex: 1, marginRight: 8 }]} numberOfLines={2}>
+                {d.food_items.map((i: any) => i.name).join(', ')}
+              </Text>
+              <View style={[styles.badge, { backgroundColor: statusColor(d.status) + '20' }]}>
+                <Text style={[styles.badgeText, { color: statusColor(d.status) }]}>{d.status}</Text>
+              </View>
+            </View>
+
+            {/* Donor + trust score */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <Text style={styles.cardOrg} numberOfLines={1}>{d.donor_id?.organization_name}</Text>
+              {d.donor_id?.trust_score != null && (
+                <View style={{ backgroundColor: '#fef3c7', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                  <Text style={{ fontSize: 10, color: '#92400e', fontWeight: '600' }}>★ {d.donor_id.trust_score}</Text>
+                </View>
+              )}
+              {cat && (
+                <View style={{ backgroundColor: catStyle.bg, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                  <Text style={{ fontSize: 10, color: catStyle.text, fontWeight: '600' }}>{cat === 'non-vegetarian' ? 'Non-Veg' : cat.charAt(0).toUpperCase() + cat.slice(1)}</Text>
+                </View>
+              )}
+            </View>
+
+            {/* Stats */}
+            <View style={styles.cardMeta}>
+              <View style={styles.metaItem}>
+                <Ionicons name="people-outline" size={13} color="#6b7280" />
+                <Text style={styles.metaText}>{d.quantity_serves} {t('dashboard.ngo.serves')}</Text>
+              </View>
+              {d.weight_kg > 0 && (
+                <View style={styles.metaItem}>
+                  <Ionicons name="scale-outline" size={13} color="#6b7280" />
+                  <Text style={styles.metaText}>{d.weight_kg} kg</Text>
+                </View>
+              )}
+              {d.food_items?.[0]?.storage_conditions && (
+                <View style={styles.metaItem}>
+                  <Ionicons name="snow-outline" size={13} color="#6b7280" />
+                  <Text style={styles.metaText}>{d.food_items[0].storage_conditions.split('_')[0]}</Text>
+                </View>
+              )}
+            </View>
+
+            {/* Time + location */}
+            <View style={[styles.cardMeta, { marginTop: 4 }]}>
+              <View style={styles.metaItem}>
+                <Ionicons name="time-outline" size={13} color="#f59e0b" />
+                <Text style={[styles.metaText, { color: '#d97706', fontWeight: '600' }]}>
+                  {(() => {
+                    const ms = new Date(d.pickup_window_end).getTime() - Date.now();
+                    if (ms < 0) return 'Expired';
+                    const h = Math.floor(ms / 3600000);
+                    const m = Math.floor((ms % 3600000) / 60000);
+                    return h > 0 ? `${h}h ${m}m left` : `${m}m left`;
+                  })()}
+                </Text>
+              </View>
+              <View style={styles.metaItem}>
+                <Ionicons name="location-outline" size={13} color="#6b7280" />
+                <Text style={styles.metaText} numberOfLines={1}>{d.pickup_address}</Text>
+              </View>
+            </View>
+
+            {/* Phone */}
+            {d.donor_id?.phone && (
+              <View style={[styles.metaItem, { marginTop: 4 }]}>
+                <Ionicons name="call-outline" size={13} color="#2563eb" />
+                <Text style={[styles.metaText, { color: '#2563eb' }]}>+91 {d.donor_id.phone}</Text>
+              </View>
+            )}
+
+            {/* Special instructions */}
+            {d.special_instructions ? (
+              <Text style={{ fontSize: 11, color: '#6b7280', marginTop: 4, backgroundColor: '#f9fafb', borderRadius: 6, padding: 6 }} numberOfLines={2}>
+                💬 {d.special_instructions}
+              </Text>
+            ) : null}
+          </View>
         </View>
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.cardTitle} numberOfLines={1}>{d.food_items.map((i: any) => i.name).join(', ')}</Text>
-          <Text style={styles.cardOrg}>{d.donor_id?.organization_name}</Text>
-        </View>
-        <View style={[styles.badge, { backgroundColor: statusColor(d.status) + '20' }]}>
-          <Text style={[styles.badgeText, { color: statusColor(d.status) }]}>{d.status}</Text>
-        </View>
+
+        {/* Claim button */}
+        {showClaim && d.status === 'available' && (
+          <TouchableOpacity onPress={() => handleClaim(d._id, d.food_items?.map((i: any) => i.name).join(', ') || '')} activeOpacity={0.9} style={{ marginTop: 12 }}>
+            <LinearGradient colors={['#10b981', '#059669']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.claimBtn}>
+              <Ionicons name="hand-left-outline" size={16} color="#fff" />
+              <Text style={styles.claimBtnText}>{t('dashboard.ngo.claimBtn')}</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
       </View>
-      <View style={styles.cardMeta}>
-        <View style={styles.metaItem}><Ionicons name="people-outline" size={13} color="#6b7280" /><Text style={styles.metaText}>{t('dashboard.ngo.serves')} {d.quantity_serves}</Text></View>
-        <View style={styles.metaItem}><Ionicons name="location-outline" size={13} color="#6b7280" /><Text style={styles.metaText} numberOfLines={1}>{d.pickup_address}</Text></View>
-      </View>
-      {showClaim && d.status === 'available' && (
-        <TouchableOpacity onPress={() => handleClaim(d._id, d.food_items?.map((i: any) => i.name).join(', ') || '')} activeOpacity={0.9}>
-          <LinearGradient colors={['#10b981', '#059669']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.claimBtn}>
-            <Ionicons name="hand-left-outline" size={16} color="#fff" />
-            <Text style={styles.claimBtnText}>{t('dashboard.ngo.claimBtn')}</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f7fa' }} edges={['bottom']}>
@@ -194,6 +289,7 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 18, fontWeight: '700', color: '#1f2937' },
   emptyDesc: { fontSize: 14, color: '#6b7280', textAlign: 'center', paddingHorizontal: 32 },
   card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
+  cardImage: { width: 88, height: 88, borderRadius: 12 },
   cardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   cardIconWrap: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   cardTitle: { fontSize: 15, fontWeight: '700', color: '#1f2937' },

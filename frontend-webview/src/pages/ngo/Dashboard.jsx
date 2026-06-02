@@ -280,50 +280,112 @@ const NGODashboard = () => {
                     nearbyDonations
                       .filter(d => d.status === 'available')
                       .map((donation) => (
-                        <div key={donation._id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                          <div className="flex items-start justify-between">
-                            <div className="flex space-x-4">
+                        <div key={donation._id} className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow bg-white">
+                          <div className="flex gap-4">
+                            {/* Image */}
+                            {donation.photo_url && !donation.photo_url.includes('placeholder') ? (
                               <img
                                 src={donation.photo_url}
                                 alt="Food"
-                                className="w-16 h-16 rounded-lg object-cover"
+                                className="w-24 h-24 rounded-xl object-cover flex-shrink-0"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  e.target.nextSibling.style.display = 'flex';
+                                }}
                               />
-                              <div className="flex-1">
-                                <h4 className="font-medium text-gray-900">
+                            ) : null}
+                            {(!donation.photo_url || donation.photo_url.includes('placeholder')) && (
+                              <div className="w-24 h-24 rounded-xl flex-shrink-0 bg-gradient-to-br from-gray-100 to-gray-200 flex flex-col items-center justify-center border border-gray-200">
+                                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span className="text-xs text-gray-400 mt-1">No Photo</span>
+                              </div>
+                            )}
+
+                            {/* Content */}
+                            <div className="flex-1 min-w-0">
+                              {/* Title row */}
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <h4 className="font-semibold text-gray-900 text-base leading-tight">
                                   {donation.food_items.map(item => item.name).join(', ')}
                                 </h4>
-                                <p className="text-sm text-gray-600 mb-2">
-                                  {t('dashboard.ngo.by')} {donation.donor_id.organization_name}
-                                </p>
-                                <div className="flex items-center space-x-4 text-sm text-gray-600">
-                                  <span className="flex items-center">
-                                    <Users className="w-4 h-4 mr-1" />
-                                    {t('dashboard.ngo.serves')} {donation.quantity_serves}
+                                <span className={`px-2 py-0.5 text-xs rounded-full flex-shrink-0 ${getStatusColor(donation.status)}`}>
+                                  {t(`dashboard.donor.${donation.status}`)}
+                                </span>
+                              </div>
+
+                              {/* Donor + category row */}
+                              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                <span className="text-sm text-gray-600">
+                                  {t('dashboard.ngo.by')} <span className="font-medium text-gray-800">{donation.donor_id?.organization_name}</span>
+                                </span>
+                                {donation.donor_id?.trust_score != null && (
+                                  <span className="flex items-center gap-0.5 text-xs text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded">
+                                    ★ {donation.donor_id.trust_score}
                                   </span>
-                                  <span className="flex items-center">
-                                    <Clock className="w-4 h-4 mr-1" />
-                                    {formatTimeRemaining(donation.pickup_window_end)}
+                                )}
+                                {donation.food_items?.[0]?.category && (
+                                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                    donation.food_items[0].category === 'vegetarian' ? 'bg-green-100 text-green-700' :
+                                    donation.food_items[0].category === 'vegan' ? 'bg-emerald-100 text-emerald-700' :
+                                    donation.food_items[0].category === 'non-vegetarian' ? 'bg-red-100 text-red-700' :
+                                    'bg-gray-100 text-gray-600'
+                                  }`}>
+                                    {t(`donationDetails.${donation.food_items[0].category}`)}
                                   </span>
-                                  <span className="flex items-center">
-                                    <MapPin className="w-4 h-4 mr-1" />
-                                    {donation.pickup_address}
-                                  </span>
-                                </div>
-                                {donation.special_instructions && (
-                                  <p className="text-sm text-gray-600 mt-2">
-                                    <strong>{t('dashboard.ngo.instructions')}:</strong> {donation.special_instructions}
-                                  </p>
                                 )}
                               </div>
-                            </div>
-                            <div className="flex flex-col items-end space-y-2">
-                              <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(donation.status)}`}>
-                                {t(`dashboard.donor.${donation.status}`)}
-                              </span>
+
+                              {/* Stats row */}
+                              <div className="flex flex-wrap gap-3 text-sm text-gray-600 mb-2">
+                                <span className="flex items-center gap-1">
+                                  <Users className="w-3.5 h-3.5" />
+                                  {donation.quantity_serves} {t('dashboard.donor.people')}
+                                </span>
+                                {donation.weight_kg > 0 && (
+                                  <span className="flex items-center gap-1">
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>
+                                    {donation.weight_kg} kg
+                                  </span>
+                                )}
+                                {donation.food_items?.[0]?.storage_conditions && (
+                                  <span className="flex items-center gap-1">
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
+                                    {t(`donationDetails.${donation.food_items[0].storage_conditions}`) || donation.food_items[0].storage_conditions}
+                                  </span>
+                                )}
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3.5 h-3.5 text-orange-500" />
+                                  <span className="text-orange-600 font-medium">{formatTimeRemaining(donation.pickup_window_end)}</span>
+                                </span>
+                              </div>
+
+                              {/* Address + phone */}
+                              <div className="flex flex-wrap gap-3 text-sm text-gray-500 mb-2">
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-3.5 h-3.5" />
+                                  {donation.pickup_address}
+                                </span>
+                                {donation.donor_id?.phone && (
+                                  <a href={`tel:+91${donation.donor_id.phone}`} className="flex items-center gap-1 text-blue-600 hover:underline">
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                                    +91 {donation.donor_id.phone}
+                                  </a>
+                                )}
+                              </div>
+
+                              {donation.special_instructions && (
+                                <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-2 py-1 mb-2">
+                                  💬 {donation.special_instructions}
+                                </p>
+                              )}
+
+                              {/* Claim button */}
                               <button
                                 onClick={() => openClaimConfirm(donation._id, donation.food_items?.map(i => i.name).join(', ') || '')}
                                 disabled={isLoading}
-                                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 text-sm"
+                                className="w-full mt-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 text-sm font-semibold transition-colors"
                               >
                                 {t('dashboard.ngo.claimFood')}
                               </button>
