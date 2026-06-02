@@ -14,11 +14,6 @@ const Profile = () => {
   const navigate = useNavigate();
   const { user, isLoading } = useSelector((state) => state.auth);
   
-  console.log('👤 User from Redux:', {
-    email: user?.email,
-    phone: user?.phone,
-    contact_person: user?.contact_person
-  });
   
   const [isEditing, setIsEditing] = useState(false);
   const [profilePicture, setProfilePicture] = useState(user?.profile_picture || null);

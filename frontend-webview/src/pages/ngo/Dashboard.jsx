@@ -25,7 +25,6 @@ const NGODashboard = () => {
   const { location: geoLocation } = useGeolocation();
   const [activeTab, setActiveTab] = useState('feed');
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
-  const [debugInfo, setDebugInfo] = useState({});
   const [claimConfirm, setClaimConfirm] = useState({ open: false, donationId: null, donationName: '' });
 
   useEffect(() => {
@@ -38,15 +37,7 @@ const NGODashboard = () => {
     
     // Use location or fallback to Delhi coordinates
     const coords = geoLocation || { latitude: 28.6139, longitude: 77.2090 };
-    console.log('NGO location:', coords);
-    
-    setDebugInfo({
-      userLocation: geoLocation,
-      fallbackUsed: !geoLocation,
-      userVerified: user?.is_verified,
-      userRole: user?.role
-    });
-    
+
     dispatch(fetchNearbyDonations({
       longitude: coords.longitude,
       latitude: coords.latitude,
@@ -271,31 +262,9 @@ const NGODashboard = () => {
                   {nearbyDonations.filter(d => d.status === 'available').length === 0 ? (
                     <div className="text-center py-8">
                       <p className="text-gray-500">{t('dashboard.ngo.noDonationsNearby')}</p>
-                      <div className="text-xs text-gray-400 mt-4 p-3 bg-gray-50 rounded">
-                        <p><strong>{t('dashboard.ngo.debugInfo')}:</strong></p>
-                        <p>{t('dashboard.ngo.totalDonations')}: {nearbyDonations.length}</p>
-                        <p>{t('dashboard.ngo.availableNearby')}: {nearbyDonations.filter(d => d.status === 'available').length}</p>
-                        <p>{t('dashboard.ngo.userVerified')}: {debugInfo.userVerified ? t('common.yes') : t('common.no')}</p>
-                        <p>{t('dashboard.ngo.location')}: {debugInfo.userLocation ? `${debugInfo.userLocation.latitude}, ${debugInfo.userLocation.longitude}` : 'Using fallback (Delhi)'}</p>
-                        <p>{t('dashboard.ngo.fallbackUsed')}: {debugInfo.fallbackUsed ? t('common.yes') : t('common.no')}</p>
-                      </div>
                       <button
-                        onClick={async () => {
+                        onClick={() => {
                           const coords = geoLocation || { latitude: 28.6139, longitude: 77.2090 };
-                          console.log('Manual refresh clicked with coords:', coords);
-                          try {
-                            const response = await api.get('/donations/nearby', {
-                              params: {
-                                longitude: coords.longitude,
-                                latitude: coords.latitude,
-                                maxDistance: 10000
-                              }
-                            });
-                            console.log('Direct API call result:', response.data);
-                          } catch (error) {
-                            console.error('Direct API call error:', error.response?.data || error.message);
-                          }
-                          
                           dispatch(fetchNearbyDonations({
                             longitude: coords.longitude,
                             latitude: coords.latitude,

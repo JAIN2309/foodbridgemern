@@ -76,7 +76,6 @@ const AdminDashboard = () => {
   const checkBackendHealth = async () => {
     try {
       const response = await api.get('/users/health');
-      console.log('Backend health check:', response.data);
     } catch (error) {
       console.error('Backend health check failed:', error);
     }
@@ -127,7 +126,6 @@ const AdminDashboard = () => {
     setIsLoading(true);
     setApiError(null);
     try {
-      console.log('Fetching admin data...');
       const [pendingRes, statsRes, donationsRes, usersRes, historyRes] = await Promise.all([
         api.get('/users/pending'),
         api.get('/users/stats'),
@@ -135,14 +133,6 @@ const AdminDashboard = () => {
         api.get(`/users/all?page=1&limit=${usersLimit}&role=${roleFilter}`),
         api.get(`/donations/admin/history?page=1&limit=${historyLimit}`)
       ]);
-      
-      console.log('API responses:', {
-        pending: pendingRes.data,
-        stats: statsRes.data,
-        donations: donationsRes.data,
-        users: usersRes.data,
-        history: historyRes.data
-      });
       
       setPendingUsers(pendingRes.data || []);
       setStats(statsRes.data || {});
