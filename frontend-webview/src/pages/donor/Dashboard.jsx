@@ -147,6 +147,7 @@ const DonorDashboard = () => {
       expiry_date: data.expiry_date
     }))));
     formData.append('quantity_serves', data.quantity_serves);
+    formData.append('weight_kg', data.weight_kg);
     formData.append('pickup_address', data.pickup_address);
     formData.append('pickup_window_start', data.pickup_window_start);
     formData.append('pickup_window_end', data.pickup_window_end);
@@ -394,7 +395,42 @@ const DonorDashboard = () => {
                   <p className="text-lg font-bold text-gray-900 dark:text-white">{selectedDonation.quality_score?.toFixed(1) || 'N/A'}</p>
                   <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">{t('donationDetails.quality')}</p>
                 </div>
+
+                {selectedDonation.weight_kg > 0 && (
+                  <div className={`rounded-xl p-3 text-center col-span-2 ${
+                    selectedDonation.status === 'collected'
+                      ? 'bg-emerald-50 dark:bg-emerald-900/20'
+                      : 'bg-gray-50 dark:bg-gray-700/30'
+                  }`}>
+                    <div className="w-10 h-10 bg-gradient-to-br from-emerald-100 to-emerald-200 dark:from-emerald-800 dark:to-emerald-900 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+                      </svg>
+                    </div>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white">{selectedDonation.weight_kg} kg</p>
+                    <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                      {selectedDonation.status === 'collected'
+                        ? t('donationDetails.kgSaved')
+                        : t('donationDetails.estimatedWeight')}
+                    </p>
+                  </div>
+                )}
               </div>
+
+              {/* Kg saved banner for collected donations */}
+              {selectedDonation.status === 'collected' && selectedDonation.weight_kg > 0 && (
+                <div className="mb-4 bg-gradient-to-r from-emerald-500 to-green-600 rounded-xl p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-white font-bold text-base">{selectedDonation.weight_kg} kg {t('donationDetails.kgSaved')}</p>
+                    <p className="text-emerald-100 text-xs">{t('donationDetails.kgSavedDesc')}</p>
+                  </div>
+                </div>
+              )}
 
               {/* Pickup Info */}
               <div className="mb-6">
@@ -952,7 +988,7 @@ const DonorDashboard = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dashboard.donor.quantity')} *</label>
                     <input
-                      {...register('quantity_serves', { 
+                      {...register('quantity_serves', {
                         required: 'Quantity is required',
                         min: { value: 1, message: 'Minimum 1 person' },
                         max: { value: 1000, message: 'Maximum 1000 people' }
@@ -965,6 +1001,27 @@ const DonorDashboard = () => {
                     />
                     {errors.quantity_serves && (
                       <p className="mt-1 text-sm text-red-600">{errors.quantity_serves.message}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dashboard.donor.weightKg')} *</label>
+                    <input
+                      {...register('weight_kg', {
+                        required: t('dashboard.donor.weightRequired'),
+                        min: { value: 0.1, message: t('dashboard.donor.weightMin') },
+                        max: { value: 5000, message: t('dashboard.donor.weightMax') }
+                      })}
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      max="5000"
+                      placeholder={t('dashboard.donor.weightPlaceholder')}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('dashboard.donor.weightHint')}</p>
+                    {errors.weight_kg && (
+                      <p className="mt-1 text-sm text-red-600">{errors.weight_kg.message}</p>
                     )}
                   </div>
 

@@ -29,6 +29,11 @@ const donationSchema = new mongoose.Schema({
     required: true,
     min: 1
   },
+  weight_kg: {
+    type: Number,
+    required: true,
+    min: 0.1
+  },
   photo_url: {
     type: String,
     required: true

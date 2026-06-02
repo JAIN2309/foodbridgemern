@@ -52,6 +52,7 @@ const createDonation = async (req, res) => {
     let {
       food_items,
       quantity_serves,
+      weight_kg,
       coordinates,
       pickup_address,
       pickup_window_start,
@@ -108,6 +109,7 @@ const createDonation = async (req, res) => {
       donor_id: req.user._id,
       food_items,
       quantity_serves,
+      weight_kg: parseFloat(weight_kg) || 0,
       photo_url,
       location: {
         type: 'Point',

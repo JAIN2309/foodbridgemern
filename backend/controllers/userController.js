@@ -77,7 +77,8 @@ const getAdminStats = async (req, res) => {
       verifiedUsers,
       donorCount,
       ngoCount,
-      servesPending
+      servesPending,
+      kgSaved
     ] = await Promise.all([
       Donation.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
       Donation.aggregate([
@@ -91,6 +92,10 @@ const getAdminStats = async (req, res) => {
       Donation.aggregate([
         { $match: { status: { $in: ['available', 'reserved'] } } },
         { $group: { _id: null, total: { $sum: '$quantity_serves' } } }
+      ]),
+      Donation.aggregate([
+        { $match: { status: 'collected' } },
+        { $group: { _id: null, total: { $sum: '$weight_kg' } } }
       ])
     ]);
 
@@ -116,6 +121,7 @@ const getAdminStats = async (req, res) => {
       },
       meals_served:  totalServed[0]?.total  || 0,
       meals_pending: servesPending[0]?.total || 0,
+      kg_saved: Math.round((kgSaved[0]?.total || 0) * 10) / 10,
       users: {
         total:             totalUsers,
         verified:          verifiedUsers,

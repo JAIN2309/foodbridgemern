@@ -23,7 +23,7 @@ export default function DonorDashboard() {
 
   const [formData, setFormData] = useState({
     food_items: '', food_category: 'vegetarian', quantity_serves: '',
-    pickup_address: '', special_instructions: '', storage_conditions: 'refrigerated',
+    weight_kg: '', pickup_address: '', special_instructions: '', storage_conditions: 'refrigerated',
   });
 
   const [dates, setDates] = useState({
@@ -84,6 +84,7 @@ export default function DonorDashboard() {
     if (!location) { Toast.show({ type: 'error', text1: 'Location access required' }); return; }
     if (!formData.food_items.trim()) { Toast.show({ type: 'error', text1: 'Food items required' }); return; }
     if (!formData.quantity_serves || parseInt(formData.quantity_serves) < 1) { Toast.show({ type: 'error', text1: 'Valid quantity required (min 1)' }); return; }
+    if (!formData.weight_kg || parseFloat(formData.weight_kg) < 0.1) { Toast.show({ type: 'error', text1: t('dashboard.donor.weightRequired') }); return; }
     if (!formData.pickup_address.trim()) { Toast.show({ type: 'error', text1: 'Pickup address required' }); return; }
 
     const now = new Date();
@@ -126,6 +127,7 @@ export default function DonorDashboard() {
       expiry_date: data.dates.expiry_date.toISOString(),
     }))));
     donationFormData.append('quantity_serves', data.formData.quantity_serves);
+    donationFormData.append('weight_kg', data.formData.weight_kg);
     donationFormData.append('pickup_address', data.formData.pickup_address.trim());
     donationFormData.append('pickup_window_start', data.dates.pickup_start.toISOString());
     donationFormData.append('pickup_window_end', data.dates.pickup_end.toISOString());
@@ -134,7 +136,7 @@ export default function DonorDashboard() {
     try {
       await dispatch(createDonation(donationFormData)).unwrap();
       Toast.show({ type: 'success', text1: t('common.success'), text2: 'Donation posted successfully!' });
-      setFormData({ food_items: '', food_category: 'vegetarian', quantity_serves: '', pickup_address: '', special_instructions: '', storage_conditions: 'refrigerated' });
+      setFormData({ food_items: '', food_category: 'vegetarian', quantity_serves: '', weight_kg: '', pickup_address: '', special_instructions: '', storage_conditions: 'refrigerated' });
       setDates({
         pickup_start: new Date(),
         pickup_end: new Date(Date.now() + 2 * 60 * 60 * 1000),
@@ -411,7 +413,32 @@ export default function DonorDashboard() {
                       <Text style={styles.statValue}>{selectedDonation.quality_score?.toFixed(1) || 'N/A'}</Text>
                       <Text style={styles.statLabel}>{t('donationDetails.quality')}</Text>
                     </View>
+
+                    {selectedDonation.weight_kg > 0 && (
+                      <View style={[styles.statBox, { backgroundColor: '#ecfdf5' }]}>
+                        <LinearGradient colors={['#d1fae5', '#a7f3d0']} style={styles.statGradient}>
+                          <Ionicons name="scale" size={24} color="#059669" />
+                        </LinearGradient>
+                        <Text style={[styles.statValue, { color: '#059669' }]}>{selectedDonation.weight_kg} kg</Text>
+                        <Text style={styles.statLabel}>
+                          {selectedDonation.status === 'collected' ? t('donationDetails.kgSaved') : t('donationDetails.estimatedWeight')}
+                        </Text>
+                      </View>
+                    )}
                   </View>
+
+                  {/* Kg saved banner */}
+                  {selectedDonation.status === 'collected' && selectedDonation.weight_kg > 0 && (
+                    <LinearGradient colors={['#059669', '#16a34a']} style={{ borderRadius: 14, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                      <View style={{ width: 36, height: 36, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 18, justifyContent: 'center', alignItems: 'center' }}>
+                        <Ionicons name="leaf" size={20} color="#fff" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>{selectedDonation.weight_kg} kg {t('donationDetails.kgSaved')}</Text>
+                        <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12 }}>{t('donationDetails.kgSavedDesc')}</Text>
+                      </View>
+                    </LinearGradient>
+                  )}
 
                   {/* Details Section */}
                   <View style={styles.detailsSection}>
@@ -610,6 +637,14 @@ export default function DonorDashboard() {
                           <Ionicons name="people-outline" size={14} color="#6b7280" />
                           <Text style={styles.metaText}>{t('dashboard.donor.served')} {d.quantity_serves}</Text>
                         </View>
+                        {d.weight_kg > 0 && (
+                          <View style={styles.metaItem}>
+                            <Ionicons name="scale-outline" size={14} color={d.status === 'collected' ? '#059669' : '#6b7280'} />
+                            <Text style={[styles.metaText, d.status === 'collected' && { color: '#059669', fontWeight: '600' }]}>
+                              {d.weight_kg} kg{d.status === 'collected' ? ` ${t('donationDetails.kgSaved')}` : ''}
+                            </Text>
+                          </View>
+                        )}
                         <View style={styles.metaItem}>
                           <Ionicons name="calendar-outline" size={14} color="#6b7280" />
                           <Text style={styles.metaText}>{new Date(d.createdAt).toLocaleDateString()}</Text>
@@ -699,6 +734,21 @@ export default function DonorDashboard() {
                   keyboardType="numeric"
                   underlineColorAndroid="transparent"
                 />
+              </View>
+
+              {/* Weight in KG */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>{t('dashboard.donor.weightKg')} *</Text>
+                <TextInput
+                  style={styles.inputField}
+                  placeholder={t('dashboard.donor.weightPlaceholder')}
+                  placeholderTextColor="#9ca3af"
+                  value={formData.weight_kg}
+                  onChangeText={(v) => setFormData({ ...formData, weight_kg: v.replace(/[^0-9.]/g, '') })}
+                  keyboardType="decimal-pad"
+                  underlineColorAndroid="transparent"
+                />
+                <Text style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>{t('dashboard.donor.weightHint')}</Text>
               </View>
 
               {/* Food Category */}
