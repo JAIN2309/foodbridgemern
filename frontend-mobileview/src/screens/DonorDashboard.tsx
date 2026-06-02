@@ -43,6 +43,7 @@ export default function DonorDashboard() {
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
   const [scrollIndicatorHeight, setScrollIndicatorHeight] = useState(0);
   const [scrollIndicatorTop, setScrollIndicatorTop] = useState(0);
+  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
 
   useEffect(() => { dispatch(fetchDonorHistory()); }, []);
 
@@ -350,19 +351,23 @@ export default function DonorDashboard() {
 
                   {/* Image Card */}
                   <View style={styles.imageCard}>
-                    <TouchableOpacity 
-                      onPress={() => { 
-                        if (selectedDonation.photo_url && !selectedDonation.photo_url.includes('placeholder')) {
-                          setDetailsModalVisible(false); 
-                          setTimeout(() => openImageModal(selectedDonation.photo_url, selectedDonation.food_items.map((i: any) => i.name).join(', ')), 300); 
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (selectedDonation.photo_url && !selectedDonation.photo_url.includes('placeholder') && !imgErrors[selectedDonation._id]) {
+                          setDetailsModalVisible(false);
+                          setTimeout(() => openImageModal(selectedDonation.photo_url, selectedDonation.food_items.map((i: any) => i.name).join(', ')), 300);
                         }
-                      }} 
+                      }}
                       activeOpacity={0.8}
-                      disabled={!selectedDonation.photo_url || selectedDonation.photo_url.includes('placeholder')}
+                      disabled={!selectedDonation.photo_url || selectedDonation.photo_url.includes('placeholder') || !!imgErrors[selectedDonation._id]}
                     >
-                      {selectedDonation.photo_url && !selectedDonation.photo_url.includes('placeholder') ? (
+                      {selectedDonation.photo_url && !selectedDonation.photo_url.includes('placeholder') && !imgErrors[selectedDonation._id] ? (
                         <View>
-                          <Image source={{ uri: selectedDonation.photo_url }} style={styles.sheetImageInner} />
+                          <Image
+                            source={{ uri: selectedDonation.photo_url }}
+                            style={styles.sheetImageInner}
+                            onError={() => setImgErrors(prev => ({ ...prev, [selectedDonation._id]: true }))}
+                          />
                           <View style={styles.imageOverlay}>
                             <Ionicons name="expand" size={20} color="#fff" />
                             <Text style={styles.imageOverlayText}>{t('donationDetails.tapToEnlarge')}</Text>
@@ -614,13 +619,22 @@ export default function DonorDashboard() {
               userDonations.map((d: any) => (
                 <TouchableOpacity key={d._id} style={styles.card} onPress={() => openDonationDetails(d)} activeOpacity={0.7}>
                   <View style={styles.cardRow}>
-                    <TouchableOpacity onPress={(e) => { e.stopPropagation(); openImageModal(d.photo_url, d.food_items.map((i: any) => i.name).join(', ')); }}>
-                      {d.photo_url && !d.photo_url.includes('placeholder') ? (
-                        <Image source={{ uri: d.photo_url }} style={styles.cardImage} />
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (d.photo_url && !d.photo_url.includes('placeholder') && !imgErrors[d._id])
+                          openImageModal(d.photo_url, d.food_items.map((i: any) => i.name).join(', '));
+                      }}
+                    >
+                      {d.photo_url && !d.photo_url.includes('placeholder') && !imgErrors[d._id] ? (
+                        <Image
+                          source={{ uri: d.photo_url }}
+                          style={styles.cardImage}
+                          onError={() => setImgErrors(prev => ({ ...prev, [d._id]: true }))}
+                        />
                       ) : (
                         <View style={[styles.cardImage, styles.noImagePlaceholder]}>
-                          <Ionicons name="image-outline" size={32} color="#9ca3af" />
-                          <Text style={styles.noImageText}>No Image</Text>
+                          <Ionicons name="image-outline" size={28} color="#9ca3af" />
+                          <Text style={styles.noImageText}>{t('donationDetails.noPhotoAdded')}</Text>
                         </View>
                       )}
                     </TouchableOpacity>

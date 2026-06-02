@@ -26,6 +26,7 @@ const NGODashboard = () => {
   const [activeTab, setActiveTab] = useState('feed');
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
   const [debugInfo, setDebugInfo] = useState({});
+  const [claimConfirm, setClaimConfirm] = useState({ open: false, donationId: null, donationName: '' });
 
   useEffect(() => {
     // Check URL parameters for tab
@@ -95,11 +96,18 @@ const NGODashboard = () => {
     };
   }, [dispatch]);
 
-  const handleClaimDonation = async (donationId) => {
+  const openClaimConfirm = (donationId, donationName) =>
+    setClaimConfirm({ open: true, donationId, donationName });
+
+  const closeClaimConfirm = () =>
+    setClaimConfirm({ open: false, donationId: null, donationName: '' });
+
+  const handleClaimDonation = async () => {
+    const { donationId } = claimConfirm;
+    closeClaimConfirm();
     try {
       await dispatch(claimDonation(donationId)).unwrap();
-      toast.success('Donation claimed successfully!');
-      // Re-fetch immediately so live feed removes the claimed donation
+      toast.success(t('dashboard.ngo.claimSuccess'));
       if (geoLocation) {
         dispatch(fetchNearbyDonations({
           longitude: geoLocation.longitude,
@@ -109,7 +117,7 @@ const NGODashboard = () => {
       }
       dispatch(fetchNGOHistory());
     } catch (error) {
-      toast.error(error || 'Failed to claim donation');
+      toast.error(error || t('dashboard.ngo.claimFailed'));
     }
   };
 
@@ -146,6 +154,7 @@ const NGODashboard = () => {
   };
 
   return (
+    <>
     <div className="space-y-6">
       {/* Header */}
       <div>
@@ -343,7 +352,7 @@ const NGODashboard = () => {
                                 {t(`dashboard.donor.${donation.status}`)}
                               </span>
                               <button
-                                onClick={() => handleClaimDonation(donation._id)}
+                                onClick={() => openClaimConfirm(donation._id, donation.food_items?.map(i => i.name).join(', ') || '')}
                                 disabled={isLoading}
                                 className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 text-sm"
                               >
@@ -389,10 +398,10 @@ const NGODashboard = () => {
                                   {donation.donor_id.organization_name}
                                 </p>
                                 <button
-                                  onClick={() => handleClaimDonation(donation._id)}
+                                  onClick={() => openClaimConfirm(donation._id, donation.food_items?.map(i => i.name).join(', ') || '')}
                                   className="mt-2 px-3 py-1 bg-primary-600 text-white rounded text-sm"
                                 >
-                                  Claim
+                                  {t('dashboard.ngo.claimFood')}
                                 </button>
                               </div>
                             </Popup>
@@ -473,6 +482,50 @@ const NGODashboard = () => {
         </div>
       </div>
     </div>
+
+    {/* Claim Confirmation Dialog */}
+    {claimConfirm.open && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeClaimConfirm} />
+        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+          {/* Icon */}
+          <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+            <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+
+          <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
+            {t('dashboard.ngo.confirmClaimTitle')}
+          </h3>
+          <p className="text-sm text-gray-600 text-center mb-1">
+            {t('dashboard.ngo.confirmClaimMsg')}
+          </p>
+          <p className="text-sm font-semibold text-gray-800 text-center mb-3">
+            "{claimConfirm.donationName}"
+          </p>
+          <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2 text-center mb-6">
+            {t('dashboard.ngo.confirmClaimNote')}
+          </p>
+
+          <div className="flex gap-3">
+            <button
+              onClick={closeClaimConfirm}
+              className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
+            >
+              {t('layout.cancel')}
+            </button>
+            <button
+              onClick={handleClaimDonation}
+              className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 transition-colors"
+            >
+              {t('dashboard.ngo.claimFood')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 

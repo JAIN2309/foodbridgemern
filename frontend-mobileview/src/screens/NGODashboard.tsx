@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -34,13 +34,27 @@ export default function NGODashboard() {
     setRefreshing(false);
   };
 
-  const handleClaim = async (donationId: string) => {
-    try {
-      await dispatch(claimDonation(donationId)).unwrap();
-      Toast.show({ type: 'success', text1: 'Donation claimed!' });
-    } catch (error: any) {
-      Toast.show({ type: 'error', text1: error || 'Failed to claim' });
-    }
+  const handleClaim = (donationId: string, donationName: string) => {
+    Alert.alert(
+      t('dashboard.ngo.confirmClaimTitle'),
+      `${t('dashboard.ngo.confirmClaimMsg')} "${donationName}"?\n\n${t('dashboard.ngo.confirmClaimNote')}`,
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('dashboard.ngo.claimBtn'),
+          style: 'default',
+          onPress: async () => {
+            try {
+              await dispatch(claimDonation(donationId)).unwrap();
+              Toast.show({ type: 'success', text1: t('dashboard.ngo.claimSuccess') });
+              dispatch(fetchClaimedDonations());
+            } catch (error: any) {
+              Toast.show({ type: 'error', text1: t('dashboard.ngo.claimFailed'), text2: error?.message || error });
+            }
+          }
+        }
+      ]
+    );
   };
 
   const statusColor = (s: string) => ({ available: '#10b981', reserved: '#f59e0b', collected: '#3b82f6' }[s] || '#6b7280');
@@ -69,7 +83,7 @@ export default function NGODashboard() {
         <View style={styles.metaItem}><Ionicons name="location-outline" size={13} color="#6b7280" /><Text style={styles.metaText} numberOfLines={1}>{d.pickup_address}</Text></View>
       </View>
       {showClaim && d.status === 'available' && (
-        <TouchableOpacity onPress={() => handleClaim(d._id)} activeOpacity={0.9}>
+        <TouchableOpacity onPress={() => handleClaim(d._id, d.food_items?.map((i: any) => i.name).join(', ') || '')} activeOpacity={0.9}>
           <LinearGradient colors={['#10b981', '#059669']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.claimBtn}>
             <Ionicons name="hand-left-outline" size={16} color="#fff" />
             <Text style={styles.claimBtnText}>{t('dashboard.ngo.claimBtn')}</Text>

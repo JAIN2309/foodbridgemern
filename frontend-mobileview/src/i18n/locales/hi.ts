@@ -112,6 +112,11 @@ export default {
       noClaims: 'कोई दावा किया गया दान नहीं',
       noClaimsDesc: 'लाइव फीड से दान का दावा करें',
       claimBtn: 'दान का दावा करें',
+      confirmClaimTitle: 'इस दान का दावा करें?',
+      confirmClaimMsg: 'आप दावा करने वाले हैं',
+      confirmClaimNote: 'आप 30 मिनट के भीतर पिकअप के लिए जिम्मेदार होंगे।',
+      claimSuccess: 'दान सफलतापूर्वक दावा किया गया!',
+      claimFailed: 'दान का दावा करने में विफल',
       serves: 'परोसता है',
     },
     admin: {

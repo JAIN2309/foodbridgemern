@@ -112,6 +112,11 @@ export default {
       noClaims: 'કોઈ દાવો કરેલ દાન નથી',
       noClaimsDesc: 'લાઇવ ફીડ ટેબ પરથી દાનનો દાવો કરો',
       claimBtn: 'દાનનો દાવો કરો',
+      confirmClaimTitle: 'આ દાનનો દાવો કરો?',
+      confirmClaimMsg: 'તમે દાવો કરવા જઈ રહ્યા છો',
+      confirmClaimNote: '30 મિનિટની અંદર પિકઅપ માટે તમે જવાબદાર રહેશો.',
+      claimSuccess: 'દાનનો સફળતાપૂર્વક દાવો કર્યો!',
+      claimFailed: 'દાનનો દાવો કરવામાં નિષ્ફળ',
       serves: 'પીરસે છે',
     },
     admin: {

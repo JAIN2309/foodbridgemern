@@ -112,6 +112,11 @@ export default {
       noClaims: 'No claimed donations',
       noClaimsDesc: 'Claim donations from the Live Feed tab',
       claimBtn: 'Claim Donation',
+      confirmClaimTitle: 'Claim This Donation?',
+      confirmClaimMsg: 'You are about to claim',
+      confirmClaimNote: 'You will be responsible for pickup within 30 minutes.',
+      claimSuccess: 'Donation claimed successfully!',
+      claimFailed: 'Failed to claim donation',
       serves: 'Serves',
     },
     admin: {
