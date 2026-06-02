@@ -290,7 +290,7 @@ const DonorDashboard = () => {
                     {selectedDonation.food_items.map(item => item.name).join(', ')}
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {t('donationDetails.postedOn')} {new Date(selectedDonation.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {t('donationDetails.postedOn')} {new Date(selectedDonation.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
                 <button
@@ -845,7 +845,7 @@ const DonorDashboard = () => {
                           {t(`dashboard.donor.${donation.status}`)}
                         </span>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                          {new Date(donation.createdAt).toLocaleDateString()}
+                          {new Date(donation.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
                     </div>

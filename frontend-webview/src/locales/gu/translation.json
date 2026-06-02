@@ -201,7 +201,11 @@
       "claimedDonations": "મારા દાવો કરેલા દાન",
       "noClaimedDonations": "હજુ સુધી કોઈ દાવો કરેલ દાન નથી",
       "from": "થી",
-      "markCollected": "એકત્રિત તરીકે ચિહ્નિત કરો"
+      "markCollected": "એકત્રિત તરીકે ચિહ્નિત કરો",
+      "markedCollected": "દાન એકત્રિત તરીકે ચિહ્નિત!",
+      "collectFailed": "એકત્રિત તરીકે ચિહ્નિત કરવામાં નિષ્ફળ",
+      "claimedOn": "દાવો કર્યો",
+      "collectedOn": "એકત્રિત કર્યું"
     },
     "admin": {
       "history":"ઇતિહાસ",

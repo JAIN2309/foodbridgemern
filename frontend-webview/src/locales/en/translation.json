@@ -201,7 +201,11 @@
       "claimedDonations": "My Claimed Donations",
       "noClaimedDonations": "No claimed donations yet",
       "from": "From",
-      "markCollected": "Mark Collected"
+      "markCollected": "Mark as Collected",
+      "markedCollected": "Donation marked as collected!",
+      "collectFailed": "Failed to mark as collected",
+      "claimedOn": "Claimed",
+      "collectedOn": "Collected on"
     },
     "admin": {
       "history":"History",

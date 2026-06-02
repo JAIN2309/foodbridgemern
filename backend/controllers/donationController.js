@@ -547,7 +547,7 @@ const getNGOHistory = async (req, res) => {
       claimed_by: req.user._id,
       deletion_scheduled: { $ne: true }
     })
-      .populate('donor_id', 'organization_name')
+      .populate('donor_id', 'organization_name phone contact_person trust_score address')
       .sort({ claimed_at: -1 });
     
     res.json(donations);

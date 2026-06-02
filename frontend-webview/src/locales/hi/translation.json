@@ -201,7 +201,11 @@
       "claimedDonations": "मेरे दावा किए गए दान",
       "noClaimedDonations": "अभी तक कोई दावा किया गया दान नहीं",
       "from": "से",
-      "markCollected": "एकत्रित के रूप में चिह्नित करें"
+      "markCollected": "एकत्रित के रूप में चिह्नित करें",
+      "markedCollected": "दान एकत्रित के रूप में चिह्नित!",
+      "collectFailed": "एकत्रित के रूप में चिह्नित करने में विफल",
+      "claimedOn": "दावा किया",
+      "collectedOn": "एकत्रित किया"
     },
     "admin": {
       "history":"इतिहास",

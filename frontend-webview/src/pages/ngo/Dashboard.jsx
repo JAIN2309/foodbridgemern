@@ -454,56 +454,150 @@ const NGODashboard = () => {
                   <p className="text-gray-500">{t('dashboard.ngo.noClaimedDonations')}</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {userDonations.map((donation) => (
-                    <div key={donation._id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <img
-                          src={donation.photo_url}
-                          alt="Food"
-                          className="w-12 h-12 rounded-lg object-cover"
-                        />
-                        <div>
-                          <p className="font-medium">
-                            {donation.food_items.map(item => item.name).join(', ')}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            {t('dashboard.ngo.from')} {donation.donor_id.organization_name}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            {t('dashboard.ngo.serves')} {donation.quantity_serves} {t('dashboard.donor.people')}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(donation.status)}`}>
-                          {t(`dashboard.donor.${donation.status}`)}
-                        </span>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {new Date(donation.claimed_at).toLocaleDateString()}
-                        </p>
-                        {donation.status === 'reserved' && (
-                          <div className="mt-2">
-                            <div className="flex items-center text-sm text-gray-600 mb-2">
-                              <Phone className="w-4 h-4 mr-1" />
-                              {donation.donor_id.phone}
+                    <div key={donation._id} className="border border-gray-200 rounded-xl p-4 bg-white hover:shadow-md transition-shadow">
+                      <div className="flex gap-4">
+
+                        {/* Image */}
+                        {donation.photo_url && !donation.photo_url.includes('placeholder') ? (
+                          <img
+                            src={donation.photo_url}
+                            alt="Food"
+                            className="w-24 h-24 rounded-xl object-cover flex-shrink-0"
+                            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                          />
+                        ) : null}
+                        {(!donation.photo_url || donation.photo_url.includes('placeholder')) && (
+                          <div className="w-24 h-24 rounded-xl flex-shrink-0 bg-gradient-to-br from-gray-100 to-gray-200 flex flex-col items-center justify-center border border-gray-200">
+                            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span className="text-xs text-gray-400 mt-1">No Photo</span>
+                          </div>
+                        )}
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          {/* Title + status */}
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <h4 className="font-semibold text-gray-900 text-base leading-tight">
+                              {donation.food_items.map(item => item.name).join(', ')}
+                            </h4>
+                            <span className={`px-2 py-0.5 text-xs rounded-full flex-shrink-0 font-semibold ${getStatusColor(donation.status)}`}>
+                              {t(`dashboard.donor.${donation.status}`)}
+                            </span>
+                          </div>
+
+                          {/* Donor + category */}
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <span className="text-sm text-gray-600">
+                              {t('dashboard.ngo.from')} <span className="font-medium text-gray-800">{donation.donor_id?.organization_name}</span>
+                            </span>
+                            {donation.donor_id?.trust_score != null && (
+                              <span className="text-xs text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded">★ {donation.donor_id.trust_score}</span>
+                            )}
+                            {donation.food_items?.[0]?.category && (
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                donation.food_items[0].category === 'vegetarian' ? 'bg-green-100 text-green-700' :
+                                donation.food_items[0].category === 'vegan' ? 'bg-emerald-100 text-emerald-700' :
+                                donation.food_items[0].category === 'non-vegetarian' ? 'bg-red-100 text-red-700' :
+                                'bg-gray-100 text-gray-600'
+                              }`}>
+                                {t(`donationDetails.${donation.food_items[0].category}`)}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Stats row */}
+                          <div className="flex flex-wrap gap-3 text-sm text-gray-600 mb-2">
+                            <span className="flex items-center gap-1">
+                              <Users className="w-3.5 h-3.5" />
+                              {donation.quantity_serves} {t('dashboard.donor.people')}
+                            </span>
+                            {donation.weight_kg > 0 && (
+                              <span className="flex items-center gap-1">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>
+                                {donation.weight_kg} kg
+                                {donation.status === 'collected' && <span className="text-emerald-600 font-medium"> {t('donationDetails.kgSaved')}</span>}
+                              </span>
+                            )}
+                            {donation.food_items?.[0]?.storage_conditions && (
+                              <span className="flex items-center gap-1">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
+                                {t(`donationDetails.${donation.food_items[0].storage_conditions}`) || donation.food_items[0].storage_conditions}
+                              </span>
+                            )}
+                            <span className="flex items-center gap-1 text-gray-500">
+                              <Clock className="w-3.5 h-3.5" />
+                              {t('dashboard.ngo.claimedOn')} {new Date(donation.claimed_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+
+                          {/* Pickup address */}
+                          {donation.pickup_address && (
+                            <div className="flex items-start gap-1 text-sm text-gray-500 mb-2">
+                              <MapPin className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                              <span>{donation.pickup_address}</span>
                             </div>
+                          )}
+
+                          {/* Pickup window */}
+                          {donation.pickup_window_start && (
+                            <div className="flex items-center gap-1 text-sm text-gray-500 mb-2">
+                              <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span>
+                                {new Date(donation.pickup_window_start).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                {' — '}
+                                {new Date(donation.pickup_window_end).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Donor contact */}
+                          {donation.donor_id?.phone && (
+                            <a href={`tel:+91${donation.donor_id.phone}`} className="flex items-center gap-1 text-sm text-blue-600 hover:underline mb-2">
+                              <Phone className="w-3.5 h-3.5" />
+                              +91 {donation.donor_id.phone}
+                              {donation.donor_id?.contact_person && (
+                                <span className="text-gray-400 ml-1">({donation.donor_id.contact_person})</span>
+                              )}
+                            </a>
+                          )}
+
+                          {/* Special instructions */}
+                          {donation.special_instructions && (
+                            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-2 py-1 mb-3">
+                              💬 {donation.special_instructions}
+                            </p>
+                          )}
+
+                          {/* Mark Collected button */}
+                          {donation.status === 'reserved' && (
                             <button
                               onClick={async () => {
                                 try {
                                   await api.post(`/donations/${donation._id}/collect`);
-                                  toast.success('Donation marked as collected!');
+                                  toast.success(t('dashboard.ngo.markedCollected'));
                                   dispatch(fetchNGOHistory());
-                                } catch (error) {
-                                  toast.error('Failed to mark as collected');
+                                } catch {
+                                  toast.error(t('dashboard.ngo.collectFailed'));
                                 }
                               }}
-                              className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+                              className="w-full mt-1 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors"
                             >
-                              {t('dashboard.ngo.markCollected')}
+                              ✅ {t('dashboard.ngo.markCollected')}
                             </button>
-                          </div>
-                        )}
+                          )}
+
+                          {/* Collected banner */}
+                          {donation.status === 'collected' && (
+                            <div className="mt-1 flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                              <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              <span className="text-sm font-medium text-emerald-700">{t('dashboard.ngo.collectedOn')} {new Date(donation.collected_at || donation.claimed_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}

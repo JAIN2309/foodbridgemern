@@ -133,7 +133,7 @@ const TrustScoreDisplay = ({ user, showDetails = false, size = 'medium' }) => {
                   <div className="flex items-center space-x-1 mb-1">
                     {renderStars(review.rating, 0)}
                     <span className="text-gray-500">
-                      {new Date(review.created_at).toLocaleDateString()}
+                      {new Date(review.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                   {review.comment && (

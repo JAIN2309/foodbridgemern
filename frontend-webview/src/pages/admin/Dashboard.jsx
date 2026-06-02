@@ -451,7 +451,7 @@ const AdminDashboard = () => {
                             <div>
                               <p><strong>{t('dashboard.admin.license')}:</strong> {user.license_number}</p>
                               <p><strong>{t('dashboard.admin.address')}:</strong> {user.address}</p>
-                              <p><strong>{t('dashboard.admin.registered')}:</strong> {new Date(user.createdAt).toLocaleDateString()}</p>
+                              <p><strong>{t('dashboard.admin.registered')}:</strong> {new Date(user.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                             </div>
                           </div>
                         </div>
@@ -754,7 +754,7 @@ const AdminDashboard = () => {
                             </span>
                           </td>
                           <td className="px-4 py-4 text-sm text-gray-500">
-                            {new Date(user.createdAt).toLocaleDateString()}
+                            {new Date(user.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                           </td>
                           <td className="px-4 py-4 text-sm text-gray-500">
                             {user.last_login
