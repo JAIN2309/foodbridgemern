@@ -19,11 +19,11 @@ const ROLES = [
   { key: 'ngo', label: 'auth.register.ngo', icon: 'people', desc: 'auth.register.ngoDesc', colors: ['#16a34a', '#22c55e'] },
 ];
 
+// Phone is rendered separately — excluded from generic FIELDS loop
 const FIELDS = [
-  { key: 'organization_name', placeholder: 'auth.register.orgNamePlaceholder', icon: 'business-outline', required: true },
-  { key: 'contact_person', placeholder: 'auth.register.contactPersonPlaceholder', icon: 'person-outline' },
-  { key: 'phone', placeholder: 'auth.register.phonePlaceholder', icon: 'call-outline', keyboard: 'phone-pad' },
-  { key: 'address', placeholder: 'auth.register.addressPlaceholder', icon: 'location-outline' },
+  { key: 'organization_name', placeholder: 'auth.register.orgNamePlaceholder', icon: 'business-outline' },
+  { key: 'contact_person',    placeholder: 'auth.register.contactPersonPlaceholder', icon: 'person-outline' },
+  { key: 'address',           placeholder: 'auth.register.addressPlaceholder', icon: 'location-outline' },
 ];
 
 export default function RegisterScreen() {
@@ -41,6 +41,27 @@ export default function RegisterScreen() {
   const [focused, setFocused] = useState('');
 
   const update = (key: string, val: string) => setFormData(p => ({ ...p, [key]: val }));
+
+  const handlePhoneChange = (val: string) => {
+    // Strip non-digits and cap at 10 characters
+    update('phone', val.replace(/\D/g, '').slice(0, 10));
+  };
+
+  const isPhoneValid = formData.phone.length === 10 && /^[6-9][0-9]{9}$/.test(formData.phone);
+
+  const validateForm = (): string | null => {
+    if (!formData.email || !formData.password || !formData.organization_name)
+      return t('auth.register.fillRequired');
+    if (formData.organization_name.trim().length < 2)
+      return t('auth.register.orgNameMin');
+    if (formData.contact_person.trim().length < 2)
+      return t('auth.register.contactMin');
+    if (!isPhoneValid)
+      return t('auth.register.phoneInvalid');
+    if (formData.address.trim().length < 10)
+      return t('auth.register.addressMin');
+    return validateLicense();
+  };
 
   const handleLicenseChange = (val: string) => {
     if (formData.role === 'donor') {
@@ -69,13 +90,9 @@ export default function RegisterScreen() {
   const passWidth = { weak: '33%', good: '66%', strong: '100%' };
 
   const handleRegister = async () => {
-    if (!formData.email || !formData.password || !formData.organization_name) {
-      Toast.show({ type: 'error', text1: t('auth.register.fillRequired'), text2: t('auth.register.fillRequiredDesc') });
-      return;
-    }
-    const licenseError = validateLicense();
-    if (licenseError) {
-      Toast.show({ type: 'error', text1: t('auth.register.invalidLicense'), text2: licenseError });
+    const validationError = validateForm();
+    if (validationError) {
+      Toast.show({ type: 'error', text1: t('auth.register.validationError'), text2: validationError, visibilityTime: 4000 });
       return;
     }
     try {
@@ -184,19 +201,62 @@ export default function RegisterScreen() {
             {/* Other fields */}
             <View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>{t('auth.register.orgDetails')}</Text><View style={styles.dividerLine} /></View>
 
+            {/* org name, contact person, address */}
             {FIELDS.map((f) => (
               <View key={f.key} style={{ marginBottom: 12 }}>
                 <View style={[styles.inputWrap, focused === f.key && styles.inputFocusBlue]}>
                   <Ionicons name={f.icon as any} size={18} color={focused === f.key ? '#2563eb' : '#9ca3af'} style={styles.inputIcon} />
                   <TextInput
-                    style={styles.input} placeholder={t(f.placeholder)} placeholderTextColor="#9ca3af"
-                    value={(formData as any)[f.key]} onChangeText={(v) => update(f.key, v)}
-                    keyboardType={(f as any).keyboard || 'default'}
-                    onFocus={() => setFocused(f.key)} onBlur={() => setFocused('')}
+                    style={styles.input}
+                    placeholder={t(f.placeholder)}
+                    placeholderTextColor="#9ca3af"
+                    value={(formData as any)[f.key]}
+                    onChangeText={(v) => update(f.key, v)}
+                    onFocus={() => setFocused(f.key)}
+                    onBlur={() => setFocused('')}
                   />
                 </View>
               </View>
             ))}
+
+            {/* Phone — separate with +91 prefix, digit-only formatter, live indicator */}
+            <View style={{ marginBottom: 12 }}>
+              <View style={styles.labelRow}>
+                <Ionicons name="call" size={13} color="#2563eb" />
+                <Text style={styles.label}>{t('auth.register.phone')} *</Text>
+              </View>
+              <View style={[styles.inputWrap, focused === 'phone' && styles.inputFocusBlue,
+                formData.phone.length > 0 ? (isPhoneValid ? styles.inputValid : styles.inputError) : {}
+              ]}>
+                {/* +91 prefix */}
+                <View style={styles.prefixBox}>
+                  <Text style={styles.flag}>🇮🇳</Text>
+                  <Text style={styles.prefixText}>+91</Text>
+                </View>
+                <View style={styles.prefixDivider} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="9876543210"
+                  placeholderTextColor="#9ca3af"
+                  value={formData.phone}
+                  onChangeText={handlePhoneChange}
+                  keyboardType="numeric"
+                  maxLength={10}
+                  onFocus={() => setFocused('phone')}
+                  onBlur={() => setFocused('')}
+                />
+                {formData.phone.length > 0 && (
+                  <Ionicons
+                    name={isPhoneValid ? 'checkmark-circle' : 'close-circle'}
+                    size={18}
+                    color={isPhoneValid ? '#22c55e' : '#ef4444'}
+                  />
+                )}
+              </View>
+              {formData.phone.length > 0 && !isPhoneValid && (
+                <Text style={styles.errorText}>{t('auth.register.phoneInvalid')}</Text>
+              )}
+            </View>
 
             {/* License Number (FSSAI / NGO) */}
             <View style={{ marginBottom: 12 }}>
@@ -300,4 +360,11 @@ const styles = StyleSheet.create({
   loginBtn: { alignItems: 'center', marginTop: 20, paddingVertical: 4 },
   loginText: { fontSize: 14, color: '#6b7280' },
   loginBold: { color: '#2563eb', fontWeight: '700' },
+  inputValid: { borderColor: '#22c55e', backgroundColor: '#f0fdf4' },
+  inputError: { borderColor: '#ef4444', backgroundColor: '#fef2f2' },
+  prefixBox: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingRight: 8 },
+  flag: { fontSize: 16 },
+  prefixText: { fontSize: 14, fontWeight: '600', color: '#374151' },
+  prefixDivider: { width: 1, height: 24, backgroundColor: '#e5e7eb', marginRight: 10 },
+  errorText: { fontSize: 11, color: '#ef4444', marginTop: 4 },
 });

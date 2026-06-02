@@ -49,8 +49,8 @@ const Register = () => {
   };
 
   const validatePhone = (phone) => {
-    const phoneRegex = /^[6-9][0-9]{9}$/;
-    return phoneRegex.test(phone) || t('auth.register.phoneInvalid');
+    const digits = (phone || '').replace(/\D/g, '');
+    return /^[6-9][0-9]{9}$/.test(digits) || t('auth.register.phoneInvalid');
   };
 
   const validatePassword = (password) => {
@@ -101,7 +101,7 @@ const Register = () => {
   }, [dispatch]);
 
   const isEmailValid = watchedEmail ? validateEmail(watchedEmail) === true : null;
-  const isPhoneValid = watchedPhone ? validatePhone(watchedPhone) === true : null;
+  const isPhoneValid = watchedPhone ? /^[6-9][0-9]{9}$/.test(watchedPhone.replace(/\D/g, '')) : null;
   const isPasswordValid = Object.values(passwordValidation).every(Boolean);
   const watchedLicense = watch('license_number');
   const isLicenseValid = watchedLicense ? 
@@ -275,7 +275,10 @@ const Register = () => {
                   {selectedRole === 'donor' ? t('auth.register.restaurantName') : t('auth.register.ngoName')}
                 </label>
                 <input
-                  {...register('organization_name', { required: t('auth.register.orgNameRequired') })}
+                  {...register('organization_name', {
+                    required: t('auth.register.orgNameRequired'),
+                    minLength: { value: 2, message: t('auth.register.orgNameMin') }
+                  })}
                   type="text"
                   placeholder={selectedRole === 'donor' ? t('auth.register.enterRestaurant') : t('auth.register.enterNgo')}
                   className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-colors ${
@@ -294,7 +297,10 @@ const Register = () => {
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">{t('auth.register.contactPerson')}</label>
                   <input
-                    {...register('contact_person', { required: t('auth.register.contactRequired') })}
+                    {...register('contact_person', {
+                      required: t('auth.register.contactRequired'),
+                      minLength: { value: 2, message: t('auth.register.contactMin') }
+                    })}
                     type="text"
                     placeholder={t('auth.register.fullName')}
                     className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-colors ${
@@ -317,13 +323,18 @@ const Register = () => {
                         <span className="text-sm font-medium text-gray-700">+91</span>
                       </div>
                       <input
-                        {...register('phone', { 
+                        {...register('phone', {
                           required: t('auth.register.phoneRequired'),
-                          validate: validatePhone
+                          validate: validatePhone,
+                          onChange: (e) => {
+                            e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          }
                         })}
                         type="tel"
+                        inputMode="numeric"
+                        maxLength={10}
                         placeholder="9876543210"
-                        className={`flex-1 px-4 py-3 border-2 rounded-r-xl focus:outline-none transition-colors ${
+                        className={`flex-1 px-4 py-3 pr-10 border-2 rounded-r-xl focus:outline-none transition-colors ${
                           errors.phone ? 'border-red-300 focus:border-red-500' :
                           isPhoneValid === true ? 'border-green-300 focus:border-green-500' :
                           isPhoneValid === false ? 'border-red-300 focus:border-red-500' :
@@ -450,7 +461,10 @@ const Register = () => {
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">{t('auth.register.address')}</label>
                 <textarea
-                  {...register('address', { required: t('auth.register.addressRequired') })}
+                  {...register('address', {
+                    required: t('auth.register.addressRequired'),
+                    minLength: { value: 10, message: t('auth.register.addressMin') }
+                  })}
                   rows="3"
                   placeholder={t('auth.register.completeAddress')}
                   className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-colors resize-none ${
