@@ -32,7 +32,7 @@ const NGODashboard = () => {
     const urlParams = new URLSearchParams(location.search);
     const tabParam = urlParams.get('tab');
     if (tabParam) {
-      setActiveTab(tabParam);
+      setActiveTab(['feed', 'history'].includes(tabParam) ? tabParam : 'feed');
     }
     
     // Use location or fallback to Delhi coordinates
@@ -57,13 +57,14 @@ const NGODashboard = () => {
     }, 30000);
     
     // Listen for sidebar navigation events
-    const handleTabChange = (event) => {
-      setActiveTab(event.detail);
+    // Map sidebar action values to valid NGO tab names
+    const resolveTab = (val) => {
+      if (val === 'feed' || val === 'history') return val;
+      return 'feed'; // 'overview', 'dashboard' etc. → default to live feed
     };
-    
-    const handleForceUpdate = (event) => {
-      setActiveTab(event.detail);
-    };
+
+    const handleTabChange = (event) => setActiveTab(resolveTab(event.detail));
+    const handleForceUpdate = (event) => setActiveTab(resolveTab(event.detail));
     
     window.addEventListener('dashboardTabChange', handleTabChange);
     window.addEventListener('forceTabUpdate', handleForceUpdate);
