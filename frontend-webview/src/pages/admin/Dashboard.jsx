@@ -181,7 +181,7 @@ const AdminDashboard = () => {
       case 'available': return 'bg-green-100 text-green-800';
       case 'reserved': return 'bg-yellow-100 text-yellow-800';
       case 'collected': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800 dark:text-gray-100';
     }
   };
 
@@ -191,9 +191,9 @@ const AdminDashboard = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t('dashboard.admin.title')}</h1>
-          <p className="text-gray-600">{t('dashboard.admin.subtitle')}</p>
-          <p className="text-xs text-gray-400 mt-1">{t('dashboard.admin.autoRefresh')}</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('dashboard.admin.title')}</h1>
+          <p className="text-gray-600 dark:text-gray-400 dark:text-gray-500">{t('dashboard.admin.subtitle')}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('dashboard.admin.autoRefresh')}</p>
         </div>
         <button
           onClick={fetchData}
@@ -227,7 +227,7 @@ const AdminDashboard = () => {
       {isLoading && (
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-gray-600 mt-2">{t('dashboard.admin.loadingData')}</p>
+          <p className="text-gray-600 dark:text-gray-400 dark:text-gray-500 mt-2">{t('dashboard.admin.loadingData')}</p>
         </div>
       )}
 
@@ -239,7 +239,7 @@ const AdminDashboard = () => {
               <Users className="w-5 h-5 text-blue-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-gray-600">{t('dashboard.admin.totalUsers')}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 dark:text-gray-500">{t('dashboard.admin.totalUsers')}</p>
               <p className="text-lg font-semibold">{stats.users?.total || 0}</p>
             </div>
           </div>
@@ -251,7 +251,7 @@ const AdminDashboard = () => {
               <CheckCircle className="w-5 h-5 text-green-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-gray-600">{t('dashboard.admin.verifiedUsers')}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 dark:text-gray-500">{t('dashboard.admin.verifiedUsers')}</p>
               <p className="text-lg font-semibold">{stats.users?.verified || 0}</p>
             </div>
           </div>
@@ -263,7 +263,7 @@ const AdminDashboard = () => {
               <Clock className="w-5 h-5 text-yellow-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-gray-600">{t('dashboard.admin.pendingApproval')}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 dark:text-gray-500">{t('dashboard.admin.pendingApproval')}</p>
               <p className="text-lg font-semibold">{stats.users?.pending || 0}</p>
             </div>
           </div>
@@ -275,7 +275,7 @@ const AdminDashboard = () => {
               <TrendingUp className="w-5 h-5 text-purple-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-gray-600">{t('dashboard.admin.mealsServed')}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 dark:text-gray-500">{t('dashboard.admin.mealsServed')}</p>
               <p className="text-lg font-semibold">{stats.meals_served || 0}</p>
             </div>
           </div>
@@ -283,15 +283,15 @@ const AdminDashboard = () => {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900/30">
+        <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="flex space-x-8 px-6">
             <button
               onClick={() => setActiveTab('overview')}
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'overview'
                   ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-300 hover:border-gray-300'
               }`}
             >
               {t('dashboard.admin.overview')}
@@ -301,7 +301,7 @@ const AdminDashboard = () => {
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'verify'
                   ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-300 hover:border-gray-300'
               }`}
             >
               {t('dashboard.admin.verifyUsers')} ({pendingUsers.length})
@@ -311,7 +311,7 @@ const AdminDashboard = () => {
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'map'
                   ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-300 hover:border-gray-300'
               }`}
             >
               {t('dashboard.admin.liveMap')}
@@ -321,7 +321,7 @@ const AdminDashboard = () => {
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'analytics'
                   ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-300 hover:border-gray-300'
               }`}
             >
               {t('dashboard.admin.analytics')}
@@ -331,7 +331,7 @@ const AdminDashboard = () => {
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'users'
                   ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-300 hover:border-gray-300'
               }`}
             >
               {t('dashboard.admin.usersList')} ({usersPagination.total})
@@ -341,7 +341,7 @@ const AdminDashboard = () => {
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'history'
                   ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-300 hover:border-gray-300'
               }`}
             >
               {t('dashboard.admin.history')} ({donationHistory.length})
@@ -354,7 +354,7 @@ const AdminDashboard = () => {
           {activeTab === 'overview' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
                   <h3 className="text-lg font-medium mb-4">{t('dashboard.admin.donationStats')}</h3>
                   <div className="space-y-2">
                     <div className="flex justify-between">
@@ -372,7 +372,7 @@ const AdminDashboard = () => {
                   </div>
                 </div>
                 
-                <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
                   <h3 className="text-lg font-medium mb-4">{t('dashboard.admin.userStats')}</h3>
                   <div className="space-y-2">
                     <div className="flex justify-between">
@@ -406,7 +406,7 @@ const AdminDashboard = () => {
                           <p className="font-medium">
                             {donation.food_items.map(item => item.name).join(', ')}
                           </p>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-gray-600 dark:text-gray-400 dark:text-gray-500">
                             By {donation.donor_id?.organization_name || 'Unknown'}
                           </p>
                         </div>
@@ -426,7 +426,7 @@ const AdminDashboard = () => {
               <h3 className="text-lg font-medium">{t('dashboard.admin.pendingVerifications')}</h3>
               {pendingUsers.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-500">{t('dashboard.admin.noPendingVerifications')}</p>
+                  <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500">{t('dashboard.admin.noPendingVerifications')}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -442,7 +442,7 @@ const AdminDashboard = () => {
                               {user.role.toUpperCase()}
                             </span>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-400 dark:text-gray-500">
                             <div>
                               <p><strong>{t('dashboard.admin.email')}:</strong> {user.email}</p>
                               <p><strong>{t('dashboard.admin.contact')}:</strong> {user.contact_person}</p>
@@ -569,8 +569,8 @@ const AdminDashboard = () => {
               </div>
 
               {/* Donation status breakdown */}
-              <div className="bg-gray-50 rounded-lg p-5">
-                <h4 className="font-medium text-gray-700 mb-4 flex items-center gap-2">
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-5">
+                <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
                   <BarChart3 className="w-4 h-4" /> {t('dashboard.admin.donationBreakdown')}
                 </h4>
                 {(() => {
@@ -585,11 +585,11 @@ const AdminDashboard = () => {
                     <div className="space-y-3">
                       {items.map(({ label, value, color }) => (
                         <div key={label}>
-                          <div className="flex justify-between text-sm text-gray-600 mb-1">
+                          <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 dark:text-gray-500 mb-1">
                             <span>{label}</span>
-                            <span className="font-medium">{value} <span className="text-gray-400 font-normal">({Math.round((value / total) * 100)}%)</span></span>
+                            <span className="font-medium">{value} <span className="text-gray-400 dark:text-gray-500 font-normal">({Math.round((value / total) * 100)}%)</span></span>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2.5">
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                             <div className={`${color} h-2.5 rounded-full transition-all duration-500`}
                               style={{ width: `${Math.round((value / total) * 100)}%` }} />
                           </div>
@@ -602,8 +602,8 @@ const AdminDashboard = () => {
 
               {/* User breakdown */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-gray-50 rounded-lg p-5">
-                  <h4 className="font-medium text-gray-700 mb-4 flex items-center gap-2">
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-5">
+                  <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
                     <Users className="w-4 h-4" /> {t('dashboard.admin.userBreakdown')}
                   </h4>
                   <div className="space-y-3">
@@ -615,11 +615,11 @@ const AdminDashboard = () => {
                       const total = (stats.users?.total || 1);
                       return (
                         <div key={label}>
-                          <div className="flex justify-between text-sm text-gray-600 mb-1">
+                          <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 dark:text-gray-500 mb-1">
                             <span>{label}</span>
                             <span className="font-medium">{value}</span>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2.5">
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                             <div className={`${color} h-2.5 rounded-full transition-all duration-500`}
                               style={{ width: `${Math.round((value / total) * 100)}%` }} />
                           </div>
@@ -629,27 +629,27 @@ const AdminDashboard = () => {
                   </div>
                 </div>
 
-                <div className="bg-gray-50 rounded-lg p-5">
-                  <h4 className="font-medium text-gray-700 mb-4 flex items-center gap-2">
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-5">
+                  <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4" /> {t('dashboard.admin.platformHealth')}
                   </h4>
                   <div className="space-y-4">
                     <div>
-                      <div className="flex justify-between text-sm text-gray-600 mb-1">
+                      <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 dark:text-gray-500 mb-1">
                         <span>{t('dashboard.admin.donationSuccessRate')}</span>
                         <span className="font-semibold text-green-600">{stats.donations?.completion_rate ?? 0}%</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                         <div className="bg-green-500 h-2.5 rounded-full transition-all duration-500"
                           style={{ width: `${stats.donations?.completion_rate ?? 0}%` }} />
                       </div>
                     </div>
                     <div>
-                      <div className="flex justify-between text-sm text-gray-600 mb-1">
+                      <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 dark:text-gray-500 mb-1">
                         <span>{t('dashboard.admin.userVerificationRate')}</span>
                         <span className="font-semibold text-blue-600">{stats.users?.verification_rate ?? 0}%</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                         <div className="bg-blue-500 h-2.5 rounded-full transition-all duration-500"
                           style={{ width: `${stats.users?.verification_rate ?? 0}%` }} />
                       </div>
@@ -670,19 +670,19 @@ const AdminDashboard = () => {
                     placeholder={t('dashboard.admin.searchUsers')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full md:w-64"
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full md:w-64"
                   />
                   <select
                     value={roleFilter}
                     onChange={(e) => setRoleFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="all">{t('dashboard.admin.allRoles')}</option>
                     <option value="donor">{t('dashboard.admin.donorOnly')}</option>
                     <option value="ngo">{t('dashboard.admin.ngoOnly')}</option>
                     <option value="admin">{t('dashboard.admin.adminOnly')}</option>
                   </select>
-                  <div className="text-sm text-gray-500 whitespace-nowrap">
+                  <div className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 whitespace-nowrap">
                     {dataLoaded ? `${usersPagination.total} ${t('dashboard.admin.usersFound')}` : t('dashboard.admin.loading')}
                   </div>
                 </div>
@@ -690,13 +690,13 @@ const AdminDashboard = () => {
               {!dataLoaded || usersLoading ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
-                  <p className="text-gray-500 mt-2">{t('dashboard.admin.loadingUsers')}</p>
+                  <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-2">{t('dashboard.admin.loadingUsers')}</p>
                 </div>
               ) : allUsers.length === 0 ? (
                 <div className="text-center py-8">
                   <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">{t('dashboard.admin.noUsersFound')}</p>
-                  <p className="text-xs text-gray-400 mt-2">
+                  <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500">{t('dashboard.admin.noUsersFound')}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
                     {t('dashboard.admin.noUsersDesc')}
                     <br />• {t('dashboard.admin.backendNotRunning')}
                     <br />• {t('dashboard.admin.noRegistrations')}
@@ -711,25 +711,25 @@ const AdminDashboard = () => {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="min-w-full bg-white border border-gray-200 rounded-lg">
-                    <thead className="bg-gray-50">
+                  <table className="min-w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('dashboard.admin.organization')}</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('dashboard.admin.role')}</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('dashboard.admin.contact')}</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('dashboard.admin.license')}</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('dashboard.admin.status')}</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('dashboard.admin.joined')}</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('dashboard.admin.lastLogin')}</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t('dashboard.admin.organization')}</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t('dashboard.admin.role')}</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t('dashboard.admin.contact')}</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t('dashboard.admin.license')}</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t('dashboard.admin.status')}</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t('dashboard.admin.joined')}</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t('dashboard.admin.lastLogin')}</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                       {allUsers.map((user) => (
-                        <tr key={user._id} className="hover:bg-gray-50">
+                        <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                           <td className="px-4 py-4">
                             <div>
-                              <div className="font-medium text-gray-900">{user.organization_name}</div>
-                              <div className="text-sm text-gray-500">{user.contact_person}</div>
+                              <div className="font-medium text-gray-900 dark:text-white">{user.organization_name}</div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">{user.contact_person}</div>
                             </div>
                           </td>
                           <td className="px-4 py-4">
@@ -740,11 +740,11 @@ const AdminDashboard = () => {
                             </span>
                           </td>
                           <td className="px-4 py-4">
-                            <div className="text-sm text-gray-900">{user.email}</div>
-                            <div className="text-sm text-gray-500">{user.phone}</div>
+                            <div className="text-sm text-gray-900 dark:text-white">{user.email}</div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">{user.phone}</div>
                           </td>
                           <td className="px-4 py-4">
-                            <div className="text-sm text-gray-900 font-mono">{user.license_number}</div>
+                            <div className="text-sm text-gray-900 dark:text-white font-mono">{user.license_number}</div>
                           </td>
                           <td className="px-4 py-4">
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -753,10 +753,10 @@ const AdminDashboard = () => {
                               {user.is_verified ? t('dashboard.admin.verified') : t('dashboard.admin.pending')}
                             </span>
                           </td>
-                          <td className="px-4 py-4 text-sm text-gray-500">
+                          <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">
                             {new Date(user.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                           </td>
-                          <td className="px-4 py-4 text-sm text-gray-500">
+                          <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">
                             {user.last_login
                               ? new Date(user.last_login).toLocaleString()
                               : <span className="text-gray-300 italic">Never</span>}
@@ -768,7 +768,7 @@ const AdminDashboard = () => {
                   {/* Users pagination */}
                   {usersPagination.pages > 1 && (
                     <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">
                         {t('dashboard.admin.page')} {usersPage} {t('dashboard.admin.of')} {usersPagination.pages}
                         &nbsp;·&nbsp; {usersPagination.total} {t('dashboard.admin.total').toLowerCase()}
                       </p>
@@ -776,7 +776,7 @@ const AdminDashboard = () => {
                         <button
                           onClick={() => setUsersPage(p => Math.max(1, p - 1))}
                           disabled={usersPage === 1}
-                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
                           ← {t('dashboard.admin.prev')}
                         </button>
@@ -794,7 +794,7 @@ const AdminDashboard = () => {
                                 className={`w-8 h-8 text-sm rounded-lg transition-colors ${
                                   p === usersPage
                                     ? 'bg-blue-600 text-white font-semibold'
-                                    : 'border border-gray-300 hover:bg-gray-50 text-gray-600'
+                                    : 'border border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 dark:text-gray-500'
                                 }`}
                               >
                                 {p}
@@ -805,7 +805,7 @@ const AdminDashboard = () => {
                         <button
                           onClick={() => setUsersPage(p => Math.min(usersPagination.pages, p + 1))}
                           disabled={usersPage === usersPagination.pages}
-                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
                           {t('dashboard.admin.next')} →
                         </button>
@@ -822,7 +822,7 @@ const AdminDashboard = () => {
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">
                   {t('dashboard.admin.history')}
-                  <span className="ml-2 text-sm font-normal text-gray-400">
+                  <span className="ml-2 text-sm font-normal text-gray-400 dark:text-gray-500">
                     ({historyPagination.total} {t('dashboard.admin.total').toLowerCase()})
                   </span>
                 </h3>
@@ -831,11 +831,11 @@ const AdminDashboard = () => {
               {historyLoading ? (
                 <div className="text-center py-12">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto" />
-                  <p className="text-gray-400 mt-2 text-sm">{t('dashboard.admin.loading')}</p>
+                  <p className="text-gray-400 dark:text-gray-500 mt-2 text-sm">{t('dashboard.admin.loading')}</p>
                 </div>
               ) : donationHistory.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-gray-400">{t('dashboard.admin.noDonationHistory')}</p>
+                  <p className="text-gray-400 dark:text-gray-500">{t('dashboard.admin.noDonationHistory')}</p>
                 </div>
               ) : (
                 <>
@@ -853,7 +853,7 @@ const AdminDashboard = () => {
                   {/* Pagination controls */}
                   {historyPagination.pages > 1 && (
                     <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">
                         {t('dashboard.admin.page')} {historyPage} {t('dashboard.admin.of')} {historyPagination.pages}
                         &nbsp;·&nbsp; {historyPagination.total} {t('dashboard.admin.total').toLowerCase()}
                       </p>
@@ -861,7 +861,7 @@ const AdminDashboard = () => {
                         <button
                           onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
                           disabled={historyPage === 1}
-                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
                           ← {t('dashboard.admin.prev')}
                         </button>
@@ -886,7 +886,7 @@ const AdminDashboard = () => {
                                 className={`w-8 h-8 text-sm rounded-lg transition-colors ${
                                   p === historyPage
                                     ? 'bg-blue-600 text-white font-semibold'
-                                    : 'border border-gray-300 hover:bg-gray-50 text-gray-600'
+                                    : 'border border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 dark:text-gray-500'
                                 }`}
                               >
                                 {p}
@@ -898,7 +898,7 @@ const AdminDashboard = () => {
                         <button
                           onClick={() => setHistoryPage(p => Math.min(historyPagination.pages, p + 1))}
                           disabled={historyPage === historyPagination.pages}
-                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
                           {t('dashboard.admin.next')} →
                         </button>
@@ -923,7 +923,7 @@ const AdminDashboard = () => {
         />
 
         {/* Dialog */}
-        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fade-in">
+        <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fade-in">
           {/* Icon */}
           <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${
             confirmDialog.approved ? 'bg-green-100' : 'bg-red-100'
@@ -935,7 +935,7 @@ const AdminDashboard = () => {
           </div>
 
           {/* Title */}
-          <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white text-center mb-2">
             {confirmDialog.approved
               ? t('dashboard.admin.confirmApproveTitle')
               : t('dashboard.admin.confirmRejectTitle')
@@ -943,13 +943,13 @@ const AdminDashboard = () => {
           </h3>
 
           {/* Message */}
-          <p className="text-sm text-gray-600 text-center mb-1">
+          <p className="text-sm text-gray-600 dark:text-gray-400 dark:text-gray-500 text-center mb-1">
             {confirmDialog.approved
               ? t('dashboard.admin.confirmApproveMsg')
               : t('dashboard.admin.confirmRejectMsg')
             }
           </p>
-          <p className="text-sm font-semibold text-gray-800 text-center mb-6">
+          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 text-center mb-6">
             "{confirmDialog.userName}"
           </p>
 
@@ -963,7 +963,7 @@ const AdminDashboard = () => {
           <div className="flex gap-3">
             <button
               onClick={closeConfirm}
-              className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               {t('dashboard.admin.cancel')}
             </button>
