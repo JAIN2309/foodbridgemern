@@ -467,15 +467,90 @@ const DonorDashboard = () => {
                     )}
 
                     {selectedDonation.claimed_by && (
-                      <div className="flex gap-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
-                        <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
-                          <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z" clipRule="evenodd" />
-                          </svg>
+                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
+                        {/* Header */}
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-10 h-10 bg-green-100 dark:bg-green-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-green-600 dark:text-green-400 uppercase tracking-wide">{t('donationDetails.claimedBy')}</p>
+                            <p className="text-base font-bold text-gray-900 dark:text-white">{selectedDonation.claimed_by?.organization_name}</p>
+                          </div>
+                          {/* Trust score badge */}
+                          {selectedDonation.claimed_by?.trust_score != null && (
+                            <div className="ml-auto flex items-center gap-1 bg-white dark:bg-gray-800 border border-green-200 dark:border-green-700 rounded-lg px-2 py-1">
+                              <svg className="w-3.5 h-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                              </svg>
+                              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{selectedDonation.claimed_by.trust_score}/100</span>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex-1">
-                          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{t('donationDetails.claimedBy')}</p>
-                          <p className="text-sm font-semibold text-gray-900 dark:text-white">{selectedDonation.claimed_by?.organization_name || 'NGO Organization'}</p>
+
+                        {/* Contact details grid */}
+                        <div className="grid grid-cols-1 gap-2">
+                          {selectedDonation.claimed_by?.contact_person && (
+                            <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                              <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                              <span className="font-medium">{selectedDonation.claimed_by.contact_person}</span>
+                            </div>
+                          )}
+                          {selectedDonation.claimed_by?.phone && (
+                            <a href={`tel:+91${selectedDonation.claimed_by.phone}`}
+                              className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline">
+                              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                              </svg>
+                              <span className="font-medium">+91 {selectedDonation.claimed_by.phone}</span>
+                            </a>
+                          )}
+                          {selectedDonation.claimed_by?.email && (
+                            <a href={`mailto:${selectedDonation.claimed_by.email}`}
+                              className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline">
+                              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                              </svg>
+                              <span className="font-medium">{selectedDonation.claimed_by.email}</span>
+                            </a>
+                          )}
+                          {selectedDonation.claimed_by?.address && (
+                            <div className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                              <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              <span>{selectedDonation.claimed_by.address}</span>
+                            </div>
+                          )}
+                          {selectedDonation.claimed_by?.ratings?.average > 0 && (
+                            <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                              <svg className="w-4 h-4 text-yellow-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                              </svg>
+                              <span>{selectedDonation.claimed_by.ratings.average} / 5 ({selectedDonation.claimed_by.ratings.count} {t('donationDetails.reviews')})</span>
+                            </div>
+                          )}
+                          {selectedDonation.claimed_by?.activity_stats?.successful_pickups > 0 && (
+                            <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                              <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span>{selectedDonation.claimed_by.activity_stats.successful_pickups} {t('donationDetails.successfulPickups')}</span>
+                            </div>
+                          )}
+                          {selectedDonation.claimed_at && (
+                            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 pt-1 border-t border-green-200 dark:border-green-800 mt-1">
+                              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span>{t('donationDetails.claimedAt')} {new Date(selectedDonation.claimed_at).toLocaleString()}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}

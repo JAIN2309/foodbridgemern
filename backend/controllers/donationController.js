@@ -529,7 +529,7 @@ const syncOfflineActions = async (req, res) => {
 const getDonorHistory = async (req, res) => {
   try {
     const donations = await Donation.find({ donor_id: req.user._id })
-      .populate('claimed_by', 'organization_name')
+      .populate('claimed_by', 'organization_name email phone contact_person address trust_score ratings activity_stats')
       .sort({ createdAt: -1 });
     
     res.json(donations);
