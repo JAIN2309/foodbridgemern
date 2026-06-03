@@ -324,7 +324,18 @@
       "of": "of",
       "prev": "Prev",
       "next": "Next",
-      "searchUsers": "Search by name, email, or phone..."
+      "searchUsers": "Search by name, email, or phone...",
+      "pickupAnalytics": "Pickup Analytics",
+      "instantActive": "Instant (Active)",
+      "within30min": "Deadline within 30 min",
+      "upcomingScheduled": "Upcoming Scheduled",
+      "futureScheduled": "Future scheduled pickups",
+      "waitingPickup": "Waiting to be claimed",
+      "allTime": "All time",
+      "pickupTypeSplit": "Pickup Type Split (All Time)",
+      "instantPickup": "Instant Pickup",
+      "scheduledPickup": "Scheduled Pickup",
+      "pickupTypeNote": "Based on total claimed donations:"
     }
   },
   "donationDetails": {

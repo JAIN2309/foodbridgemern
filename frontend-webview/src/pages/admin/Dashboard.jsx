@@ -600,6 +600,67 @@ const AdminDashboard = () => {
                 })()}
               </div>
 
+              {/* Pickup Analytics Section */}
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-5">
+                <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+                  <Clock className="w-4 h-4" /> {t('dashboard.admin.pickupAnalytics')}
+                </h4>
+
+                {/* Donation status pipeline tiles */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                  {[
+                    { label: t('dashboard.admin.available'),        value: stats.donations?.active    ?? 0, icon: '🟢', bg: 'bg-green-50 dark:bg-green-900/20',   text: 'text-green-700 dark:text-green-300',  sub: t('dashboard.admin.waitingPickup') },
+                    { label: t('dashboard.admin.instantActive'),    value: stats.pickup?.instant_active ?? 0, icon: '⚡', bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-300',  sub: t('dashboard.admin.within30min') },
+                    { label: t('dashboard.admin.upcomingScheduled'),value: stats.pickup?.upcoming_scheduled ?? 0, icon: '📅', bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-700 dark:text-blue-300', sub: t('dashboard.admin.futureScheduled') },
+                    { label: t('dashboard.admin.completed'),        value: stats.donations?.completed ?? 0, icon: '✅', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-300', sub: t('dashboard.admin.allTime') },
+                  ].map(({ label, value, icon, bg, text, sub }) => (
+                    <div key={label} className={`${bg} rounded-xl p-3 border border-white/50`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-lg">{icon}</span>
+                        <span className={`text-xl font-bold ${text}`}>{value}</span>
+                      </div>
+                      <p className={`text-xs font-semibold ${text}`}>{label}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Instant vs Scheduled split */}
+                <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">{t('dashboard.admin.pickupTypeSplit')}</p>
+                  {(() => {
+                    const inst  = stats.pickup?.instant   ?? 0;
+                    const sched = stats.pickup?.scheduled ?? 0;
+                    const tot   = stats.pickup?.total || 1;
+                    const instPct  = Math.round((inst  / tot) * 100);
+                    const schedPct = Math.round((sched / tot) * 100);
+                    return (
+                      <div className="space-y-3">
+                        {/* Stacked bar */}
+                        <div className="w-full h-4 rounded-full bg-gray-200 dark:bg-gray-600 overflow-hidden flex">
+                          <div className="bg-amber-400 h-full transition-all duration-700" style={{ width: `${instPct}%` }} title={`Instant: ${instPct}%`} />
+                          <div className="bg-blue-500 h-full transition-all duration-700" style={{ width: `${schedPct}%` }} title={`Scheduled: ${schedPct}%`} />
+                        </div>
+                        {/* Legend */}
+                        <div className="flex gap-6">
+                          <div className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-amber-400 inline-block" />
+                            <span className="text-sm text-gray-600 dark:text-gray-400">⚡ {t('dashboard.admin.instantPickup')}</span>
+                            <span className="text-sm font-bold text-amber-600">{inst} <span className="text-xs font-normal text-gray-400">({instPct}%)</span></span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-blue-500 inline-block" />
+                            <span className="text-sm text-gray-600 dark:text-gray-400">📅 {t('dashboard.admin.scheduledPickup')}</span>
+                            <span className="text-sm font-bold text-blue-600">{sched} <span className="text-xs font-normal text-gray-400">({schedPct}%)</span></span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">{t('dashboard.admin.pickupTypeNote')} {tot}</p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
               {/* User breakdown */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-5">

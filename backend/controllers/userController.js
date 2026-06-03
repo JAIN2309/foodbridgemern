@@ -49,7 +49,7 @@ const verifyUser = async (req, res) => {
     }
 
     // Invalidate stats cache so admin sees updated counts immediately
-    await redis.del('admin:stats');
+    await redis.del('admin:stats:v2');
     // Invalidate user cache so the user's new is_verified state is reflected
     await redis.del(`user:${userId}`);
 
@@ -64,12 +64,13 @@ const verifyUser = async (req, res) => {
 
 const getAdminStats = async (req, res) => {
   try {
-    const cached = await redis.get('admin:stats');
+    const cached = await redis.get('admin:stats:v2');
     if (cached) {
       console.log('⚡ Admin stats served from Redis cache');
       return res.json(JSON.parse(cached));
     }
 
+    const now = new Date();
     const [
       donationByStatus,
       totalServed,
@@ -78,7 +79,10 @@ const getAdminStats = async (req, res) => {
       donorCount,
       ngoCount,
       servesPending,
-      kgSaved
+      kgSaved,
+      pickupTypeBreakdown,
+      upcomingScheduled,
+      instantReserved
     ] = await Promise.all([
       Donation.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
       Donation.aggregate([
@@ -96,7 +100,24 @@ const getAdminStats = async (req, res) => {
       Donation.aggregate([
         { $match: { status: 'collected' } },
         { $group: { _id: null, total: { $sum: '$weight_kg' } } }
-      ])
+      ]),
+      // Pickup type breakdown across all claimed/collected donations
+      Donation.aggregate([
+        { $match: { status: { $in: ['reserved', 'collected'] }, pickup_type: { $exists: true } } },
+        { $group: { _id: '$pickup_type', count: { $sum: 1 } } }
+      ]),
+      // Upcoming scheduled: reserved with future scheduled_pickup_time
+      Donation.countDocuments({
+        status: 'reserved',
+        pickup_type: 'scheduled',
+        scheduled_pickup_time: { $gt: now }
+      }),
+      // Instant reserved: reserved with pickup_type instant (active right now)
+      Donation.countDocuments({
+        status: 'reserved',
+        pickup_type: 'instant',
+        pickup_deadline: { $gt: now }
+      })
     ]);
 
     const byStatus = donationByStatus.reduce((acc, s) => {
@@ -109,6 +130,11 @@ const getAdminStats = async (req, res) => {
     const active    = byStatus.available || 0;
     const reserved  = byStatus.reserved  || 0;
     const expired   = byStatus.expired   || 0;
+
+    const ptMap = pickupTypeBreakdown.reduce((acc, p) => { acc[p._id] = p.count; return acc; }, {});
+    const instantTotal   = ptMap.instant   || 0;
+    const scheduledTotal = ptMap.scheduled || 0;
+    const pickupTotal    = instantTotal + scheduledTotal;
 
     const stats = {
       donations: {
@@ -129,10 +155,19 @@ const getAdminStats = async (req, res) => {
         donors:            donorCount,
         ngos:              ngoCount,
         verification_rate: totalUsers > 0 ? Math.round((verifiedUsers / totalUsers) * 100) : 0
+      },
+      pickup: {
+        instant:            instantTotal,
+        scheduled:          scheduledTotal,
+        total:              pickupTotal,
+        instant_pct:        pickupTotal > 0 ? Math.round((instantTotal   / pickupTotal) * 100) : 0,
+        scheduled_pct:      pickupTotal > 0 ? Math.round((scheduledTotal / pickupTotal) * 100) : 0,
+        upcoming_scheduled: upcomingScheduled,
+        instant_active:     instantReserved
       }
     };
 
-    await redis.set('admin:stats', JSON.stringify(stats), STATS_TTL);
+    await redis.set('admin:stats:v2', JSON.stringify(stats), STATS_TTL);
     res.json(stats);
   } catch (error) {
     console.error('getAdminStats error:', error);

@@ -475,7 +475,7 @@ const markCollected = async (req, res) => {
       const [lng, lat] = donation.location.coordinates;
       await performanceService.invalidateLocationCache(lng, lat);
     }
-    await redis.del('admin:stats');
+    await redis.del('admin:stats:v2');
 
     res.json({
       message: 'Donation marked as collected',
@@ -578,7 +578,7 @@ const releaseDonation = async (req, res) => {
       const [lng, lat] = donation.location.coordinates;
       await performanceService.invalidateLocationCache(lng, lat);
     }
-    await redis.del('admin:stats');
+    await redis.del('admin:stats:v2');
 
     res.json({ message: 'Donation released back to available' });
   } catch (error) {
@@ -605,7 +605,7 @@ const adminReleaseDonation = async (req, res) => {
       const [lng, lat] = donation.location.coordinates;
       await performanceService.invalidateLocationCache(lng, lat);
     }
-    await redis.del('admin:stats');
+    await redis.del('admin:stats:v2');
 
     res.json({ message: 'Donation force-released to available', donation });
   } catch (error) {
@@ -646,7 +646,7 @@ const syncOfflineActions = async (req, res) => {
               User.findByIdAndUpdate(req.user._id, { $inc: { 'activity_stats.successful_pickups': 1 } }),
               User.findByIdAndUpdate(donation.donor_id, { $inc: { 'activity_stats.successful_pickups': 1 } })
             ]);
-            await redis.del('admin:stats');
+            await redis.del('admin:stats:v2');
             results.push({ action: action.action, success: true, donationId: action.data.donationId });
             break;
           }
