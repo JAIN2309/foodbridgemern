@@ -40,6 +40,9 @@ const AdminDashboard = () => {
   const [confirmDialog, setConfirmDialog] = useState({ open: false, userId: null, approved: null, userName: '' });
   const [statusConfirm, setStatusConfirm] = useState({ open: false, userId: null, userName: '', currentActive: true });
   const [detailDrawer, setDetailDrawer] = useState({ open: false, user: null, data: null, loading: false });
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [analyticsStats, setAnalyticsStats] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
@@ -187,6 +190,138 @@ const AdminDashboard = () => {
     } catch {
       setDetailDrawer(d => ({ ...d, loading: false }));
     }
+  };
+
+  const fetchAnalytics = async (start, end) => {
+    setAnalyticsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (start) params.set('startDate', start);
+      if (end)   params.set('endDate',   end);
+      const query = params.toString() ? `?${params}` : '';
+      const res = await api.get(`/users/stats${query}`);
+      setAnalyticsStats(res.data);
+    } catch { /* keep previous */ } finally {
+      setAnalyticsLoading(false);
+    }
+  };
+
+  // d = the stats object to export (filtered or all-time)
+  const exportCSV = (d) => {
+    const period = d?.date_range?.start
+      ? `${d.date_range.start} to ${d.date_range.end || 'today'}`
+      : 'All time';
+    const rows = [
+      ['FoodBridge Analytics Export'],
+      [`Period: ${period}`],
+      [`Generated: ${new Date().toLocaleString()}`],
+      [],
+      ['DONATION STATUS'],
+      ['Metric', 'Value'],
+      ['Total Donations',   d?.donations?.total        ?? 0],
+      ['Available',         d?.donations?.active       ?? 0],
+      ['Reserved',          d?.donations?.reserved     ?? 0],
+      ['Completed',         d?.donations?.completed    ?? 0],
+      ['Expired',           d?.donations?.expired      ?? 0],
+      ['Completion Rate',   `${d?.donations?.completion_rate ?? 0}%`],
+      [],
+      ['IMPACT'],
+      ['Meals Served',      d?.meals_served   ?? 0],
+      ['Meals Pending',     d?.meals_pending  ?? 0],
+      ['Kg Food Saved',     `${d?.kg_saved ?? 0} kg`],
+      [],
+      ['PICKUP ANALYTICS'],
+      ['Instant Pickups',       d?.pickup?.instant          ?? 0],
+      ['Scheduled Pickups',     d?.pickup?.scheduled        ?? 0],
+      ['Instant %',             `${d?.pickup?.instant_pct   ?? 0}%`],
+      ['Scheduled %',           `${d?.pickup?.scheduled_pct ?? 0}%`],
+      ['Upcoming Scheduled',    d?.pickup?.upcoming_scheduled ?? 0],
+      ['Instant Active',        d?.pickup?.instant_active  ?? 0],
+      [],
+      ['USER STATISTICS'],
+      ['Total Users',       d?.users?.total              ?? 0],
+      ['Verified',          d?.users?.verified           ?? 0],
+      ['Pending',           d?.users?.pending            ?? 0],
+      ['Donors',            d?.users?.donors             ?? 0],
+      ['NGOs',              d?.users?.ngos               ?? 0],
+      ['Verification Rate', `${d?.users?.verification_rate ?? 0}%`],
+    ];
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `foodbridge-analytics-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportPDF = (d) => {
+    const period = d?.date_range?.start
+      ? `${d.date_range.start} to ${d.date_range.end || 'today'}`
+      : 'All time';
+    const row  = (label, value) => `<tr><td>${label}</td><td class="val">${value}</td></tr>`;
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
+      <title>FoodBridge Analytics</title>
+      <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:Arial,sans-serif;padding:32px;color:#111;font-size:13px}
+        h1{color:#16a34a;font-size:22px;margin-bottom:4px}
+        .meta{color:#6b7280;font-size:12px;margin-bottom:24px}
+        h2{font-size:14px;font-weight:700;color:#374151;border-bottom:2px solid #e5e7eb;padding-bottom:6px;margin:20px 0 10px}
+        table{width:100%;border-collapse:collapse;margin-bottom:16px}
+        td{padding:7px 10px;border:1px solid #e5e7eb;font-size:12px}
+        tr:nth-child(even) td{background:#f9fafb}
+        .val{font-weight:700;color:#16a34a;text-align:right}
+        .grid{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}
+        @media print{body{padding:16px}button{display:none}}
+      </style></head><body>
+      <h1>🌱 FoodBridge Analytics Report</h1>
+      <div class="meta">Period: <strong>${period}</strong> &nbsp;·&nbsp; Generated: ${new Date().toLocaleString()}</div>
+      <div class="grid">
+        <div>
+          <h2>Donation Status</h2>
+          <table>
+            ${row('Total Donations', d?.donations?.total ?? 0)}
+            ${row('Available', d?.donations?.active ?? 0)}
+            ${row('Reserved', d?.donations?.reserved ?? 0)}
+            ${row('Completed', d?.donations?.completed ?? 0)}
+            ${row('Expired', d?.donations?.expired ?? 0)}
+            ${row('Completion Rate', `${d?.donations?.completion_rate ?? 0}%`)}
+          </table>
+          <h2>Platform Impact</h2>
+          <table>
+            ${row('Meals Served', d?.meals_served ?? 0)}
+            ${row('Meals Pending', d?.meals_pending ?? 0)}
+            ${row('Kg Food Saved', `${d?.kg_saved ?? 0} kg`)}
+          </table>
+        </div>
+        <div>
+          <h2>Pickup Analytics</h2>
+          <table>
+            ${row('Instant Pickups', `${d?.pickup?.instant ?? 0} (${d?.pickup?.instant_pct ?? 0}%)`)}
+            ${row('Scheduled Pickups', `${d?.pickup?.scheduled ?? 0} (${d?.pickup?.scheduled_pct ?? 0}%)`)}
+            ${row('Upcoming Scheduled', d?.pickup?.upcoming_scheduled ?? 0)}
+            ${row('Instant Active', d?.pickup?.instant_active ?? 0)}
+          </table>
+          <h2>User Statistics</h2>
+          <table>
+            ${row('Total Users', d?.users?.total ?? 0)}
+            ${row('Verified Users', d?.users?.verified ?? 0)}
+            ${row('Pending', d?.users?.pending ?? 0)}
+            ${row('Donors', d?.users?.donors ?? 0)}
+            ${row('NGOs', d?.users?.ngos ?? 0)}
+            ${row('Verification Rate', `${d?.users?.verification_rate ?? 0}%`)}
+          </table>
+        </div>
+      </div>
+      <p style="margin-top:24px;font-size:11px;color:#9ca3af;text-align:center">FoodBridge &nbsp;·&nbsp; Reducing food waste, one donation at a time</p>
+      </body></html>`;
+    const win = window.open('', '_blank', 'width=900,height=700');
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 400);
   };
 
   const handleVerifyUser = async () => {
@@ -553,9 +688,68 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {activeTab === 'analytics' && (
+          {activeTab === 'analytics' && (() => {
+            const display = analyticsStats || stats;
+            return (
             <div className="space-y-6">
-              <h3 className="text-lg font-medium">{t('dashboard.admin.platformAnalytics')}</h3>
+              {/* Header row: title + date range filter + export buttons */}
+              <div className="flex flex-col md:flex-row md:items-end gap-3">
+                <div className="flex-1">
+                  <h3 className="text-lg font-medium">{t('dashboard.admin.platformAnalytics')}</h3>
+                  {display?.date_range?.start && (
+                    <p className="text-xs text-blue-600 mt-0.5">
+                      📅 {t('dashboard.admin.filteredPeriod')}: {display.date_range.start} → {display.date_range.end || t('dashboard.admin.today')}
+                    </p>
+                  )}
+                </div>
+
+                {/* Date range inputs */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2">
+                    <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    <input type="date" value={dateRange.start}
+                      onChange={e => setDateRange(r => ({ ...r, start: e.target.value }))}
+                      className="text-xs bg-transparent text-gray-700 dark:text-gray-300 outline-none w-28" />
+                    <span className="text-gray-400 text-xs">—</span>
+                    <input type="date" value={dateRange.end}
+                      onChange={e => setDateRange(r => ({ ...r, end: e.target.value }))}
+                      className="text-xs bg-transparent text-gray-700 dark:text-gray-300 outline-none w-28" />
+                  </div>
+                  <button
+                    onClick={() => fetchAnalytics(dateRange.start, dateRange.end)}
+                    disabled={analyticsLoading}
+                    className="px-3 py-2 bg-primary-600 text-white text-xs font-semibold rounded-xl hover:bg-primary-700 disabled:opacity-50 transition-colors"
+                  >
+                    {analyticsLoading ? '⟳' : t('dashboard.admin.applyFilter')}
+                  </button>
+                  {analyticsStats && (
+                    <button
+                      onClick={() => { setAnalyticsStats(null); setDateRange({ start: '', end: '' }); }}
+                      className="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs font-semibold rounded-xl hover:bg-gray-200 transition-colors"
+                    >
+                      {t('dashboard.admin.clearFilter')}
+                    </button>
+                  )}
+                </div>
+
+                {/* Export buttons */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => exportCSV(display)}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-xl hover:bg-emerald-700 transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    CSV
+                  </button>
+                  <button
+                    onClick={() => exportPDF(display)}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-red-600 text-white text-xs font-semibold rounded-xl hover:bg-red-700 transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                    PDF
+                  </button>
+                </div>
+              </div>
 
               {/* Key metric cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -564,8 +758,8 @@ const AdminDashboard = () => {
                     <Package className="w-4 h-4 text-blue-600" />
                     <p className="text-xs text-blue-600 font-medium">{t('dashboard.admin.totalDonations')}</p>
                   </div>
-                  <p className="text-2xl font-bold text-blue-700">{stats.donations?.total ?? 0}</p>
-                  <p className="text-xs text-blue-400 mt-1">{stats.donations?.active ?? 0} {t('dashboard.admin.activeNow').toLowerCase()}</p>
+                  <p className="text-2xl font-bold text-blue-700">{display.donations?.total ?? 0}</p>
+                  <p className="text-xs text-blue-400 mt-1">{display.donations?.active ?? 0} {t('dashboard.admin.activeNow').toLowerCase()}</p>
                 </div>
 
                 <div className="bg-green-50 rounded-lg p-4">
@@ -573,8 +767,8 @@ const AdminDashboard = () => {
                     <Utensils className="w-4 h-4 text-green-600" />
                     <p className="text-xs text-green-600 font-medium">{t('dashboard.admin.mealsServed')}</p>
                   </div>
-                  <p className="text-2xl font-bold text-green-700">{stats.meals_served ?? 0}</p>
-                  <p className="text-xs text-green-400 mt-1">{stats.meals_pending ?? 0} pending</p>
+                  <p className="text-2xl font-bold text-green-700">{display.meals_served ?? 0}</p>
+                  <p className="text-xs text-green-400 mt-1">{display.meals_pending ?? 0} pending</p>
                 </div>
 
                 <div className="bg-purple-50 rounded-lg p-4">
@@ -582,8 +776,8 @@ const AdminDashboard = () => {
                     <TrendingUp className="w-4 h-4 text-purple-600" />
                     <p className="text-xs text-purple-600 font-medium">{t('dashboard.admin.completionRate')}</p>
                   </div>
-                  <p className="text-2xl font-bold text-purple-700">{stats.donations?.completion_rate ?? 0}%</p>
-                  <p className="text-xs text-purple-400 mt-1">{stats.donations?.completed ?? 0} {t('dashboard.admin.completed').toLowerCase()}</p>
+                  <p className="text-2xl font-bold text-purple-700">{display.donations?.completion_rate ?? 0}%</p>
+                  <p className="text-xs text-purple-400 mt-1">{display.donations?.completed ?? 0} {t('dashboard.admin.completed').toLowerCase()}</p>
                 </div>
 
                 <div className="bg-orange-50 rounded-lg p-4">
@@ -591,8 +785,8 @@ const AdminDashboard = () => {
                     <ShieldCheck className="w-4 h-4 text-orange-600" />
                     <p className="text-xs text-orange-600 font-medium">{t('dashboard.admin.verificationRate')}</p>
                   </div>
-                  <p className="text-2xl font-bold text-orange-700">{stats.users?.verification_rate ?? 0}%</p>
-                  <p className="text-xs text-orange-400 mt-1">{stats.users?.verified ?? 0} / {stats.users?.total ?? 0} users</p>
+                  <p className="text-2xl font-bold text-orange-700">{display.users?.verification_rate ?? 0}%</p>
+                  <p className="text-xs text-orange-400 mt-1">{display.users?.verified ?? 0} / {display.users?.total ?? 0} users</p>
                 </div>
               </div>
 
@@ -603,12 +797,12 @@ const AdminDashboard = () => {
                 </h4>
                 {(() => {
                   const items = [
-                    { label: t('dashboard.admin.active'),    value: stats.donations?.active    ?? 0, color: 'bg-blue-500' },
-                    { label: t('dashboard.admin.reserved'),  value: stats.donations?.reserved  ?? 0, color: 'bg-yellow-500' },
-                    { label: t('dashboard.admin.completed'), value: stats.donations?.completed ?? 0, color: 'bg-green-500' },
-                    { label: t('dashboard.admin.expired'),   value: stats.donations?.expired   ?? 0, color: 'bg-red-400' },
+                    { label: t('dashboard.admin.active'),    value: display.donations?.active    ?? 0, color: 'bg-blue-500' },
+                    { label: t('dashboard.admin.reserved'),  value: display.donations?.reserved  ?? 0, color: 'bg-yellow-500' },
+                    { label: t('dashboard.admin.completed'), value: display.donations?.completed ?? 0, color: 'bg-green-500' },
+                    { label: t('dashboard.admin.expired'),   value: display.donations?.expired   ?? 0, color: 'bg-red-400' },
                   ];
-                  const total = stats.donations?.total || 1;
+                  const total = display.donations?.total || 1;
                   return (
                     <div className="space-y-3">
                       {items.map(({ label, value, color }) => (
@@ -637,10 +831,10 @@ const AdminDashboard = () => {
                 {/* Donation status pipeline tiles */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
                   {[
-                    { label: t('dashboard.admin.available'),        value: stats.donations?.active    ?? 0, icon: '🟢', bg: 'bg-green-50 dark:bg-green-900/20',   text: 'text-green-700 dark:text-green-300',  sub: t('dashboard.admin.waitingPickup') },
-                    { label: t('dashboard.admin.instantActive'),    value: stats.pickup?.instant_active ?? 0, icon: '⚡', bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-300',  sub: t('dashboard.admin.within30min') },
-                    { label: t('dashboard.admin.upcomingScheduled'),value: stats.pickup?.upcoming_scheduled ?? 0, icon: '📅', bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-700 dark:text-blue-300', sub: t('dashboard.admin.futureScheduled') },
-                    { label: t('dashboard.admin.completed'),        value: stats.donations?.completed ?? 0, icon: '✅', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-300', sub: t('dashboard.admin.allTime') },
+                    { label: t('dashboard.admin.available'),        value: display.donations?.active    ?? 0, icon: '🟢', bg: 'bg-green-50 dark:bg-green-900/20',   text: 'text-green-700 dark:text-green-300',  sub: t('dashboard.admin.waitingPickup') },
+                    { label: t('dashboard.admin.instantActive'),    value: display.pickup?.instant_active ?? 0, icon: '⚡', bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-300',  sub: t('dashboard.admin.within30min') },
+                    { label: t('dashboard.admin.upcomingScheduled'),value: display.pickup?.upcoming_scheduled ?? 0, icon: '📅', bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-700 dark:text-blue-300', sub: t('dashboard.admin.futureScheduled') },
+                    { label: t('dashboard.admin.completed'),        value: display.donations?.completed ?? 0, icon: '✅', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-300', sub: t('dashboard.admin.allTime') },
                   ].map(({ label, value, icon, bg, text, sub }) => (
                     <div key={label} className={`${bg} rounded-xl p-3 border border-white/50`}>
                       <div className="flex items-center justify-between mb-1">
@@ -657,9 +851,9 @@ const AdminDashboard = () => {
                 <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">{t('dashboard.admin.pickupTypeSplit')}</p>
                   {(() => {
-                    const inst  = stats.pickup?.instant   ?? 0;
-                    const sched = stats.pickup?.scheduled ?? 0;
-                    const tot   = stats.pickup?.total || 1;
+                    const inst  = display.pickup?.instant   ?? 0;
+                    const sched = display.pickup?.scheduled ?? 0;
+                    const tot   = display.pickup?.total || 1;
                     const instPct  = Math.round((inst  / tot) * 100);
                     const schedPct = Math.round((sched / tot) * 100);
                     return (
@@ -697,11 +891,11 @@ const AdminDashboard = () => {
                   </h4>
                   <div className="space-y-3">
                     {[
-                      { label: t('dashboard.admin.donorOnly'),  value: stats.users?.donors  ?? 0, color: 'bg-blue-500' },
-                      { label: t('dashboard.admin.ngoOnly'),    value: stats.users?.ngos    ?? 0, color: 'bg-green-500' },
-                      { label: t('dashboard.admin.pending'),    value: stats.users?.pending ?? 0, color: 'bg-yellow-400' },
+                      { label: t('dashboard.admin.donorOnly'),  value: display.users?.donors  ?? 0, color: 'bg-blue-500' },
+                      { label: t('dashboard.admin.ngoOnly'),    value: display.users?.ngos    ?? 0, color: 'bg-green-500' },
+                      { label: t('dashboard.admin.pending'),    value: display.users?.pending ?? 0, color: 'bg-yellow-400' },
                     ].map(({ label, value, color }) => {
-                      const total = (stats.users?.total || 1);
+                      const total = (display.users?.total || 1);
                       return (
                         <div key={label}>
                           <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 dark:text-gray-500 mb-1">
@@ -726,28 +920,29 @@ const AdminDashboard = () => {
                     <div>
                       <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 dark:text-gray-500 mb-1">
                         <span>{t('dashboard.admin.donationSuccessRate')}</span>
-                        <span className="font-semibold text-green-600">{stats.donations?.completion_rate ?? 0}%</span>
+                        <span className="font-semibold text-green-600">{display.donations?.completion_rate ?? 0}%</span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                         <div className="bg-green-500 h-2.5 rounded-full transition-all duration-500"
-                          style={{ width: `${stats.donations?.completion_rate ?? 0}%` }} />
+                          style={{ width: `${display.donations?.completion_rate ?? 0}%` }} />
                       </div>
                     </div>
                     <div>
                       <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 dark:text-gray-500 mb-1">
                         <span>{t('dashboard.admin.userVerificationRate')}</span>
-                        <span className="font-semibold text-blue-600">{stats.users?.verification_rate ?? 0}%</span>
+                        <span className="font-semibold text-blue-600">{display.users?.verification_rate ?? 0}%</span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                         <div className="bg-blue-500 h-2.5 rounded-full transition-all duration-500"
-                          style={{ width: `${stats.users?.verification_rate ?? 0}%` }} />
+                          style={{ width: `${display.users?.verification_rate ?? 0}%` }} />
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {activeTab === 'users' && (
             <div className="space-y-4">

@@ -356,7 +356,11 @@
       "statusChangeFailed": "Failed to change account status",
       "contactInfo": "Contact Information",
       "timeline": "Account Timeline",
-      "activityStats": "Activity Statistics"
+      "activityStats": "Activity Statistics",
+      "applyFilter": "Apply",
+      "clearFilter": "Clear",
+      "filteredPeriod": "Filtered period",
+      "today": "today"
     }
   },
   "donationDetails": {

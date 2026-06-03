@@ -64,13 +64,31 @@ const verifyUser = async (req, res) => {
 
 const getAdminStats = async (req, res) => {
   try {
-    const cached = await redis.get('admin:stats:v2');
-    if (cached) {
-      console.log('⚡ Admin stats served from Redis cache');
-      return res.json(JSON.parse(cached));
+    const { startDate, endDate } = req.query;
+    const hasDateRange = !!(startDate || endDate);
+
+    // Only use cache for all-time (no date filter)
+    if (!hasDateRange) {
+      const cached = await redis.get('admin:stats:v2');
+      if (cached) {
+        console.log('⚡ Admin stats served from Redis cache');
+        return res.json(JSON.parse(cached));
+      }
     }
 
     const now = new Date();
+
+    // Build date range filter for donations
+    const dateFilter = {};
+    if (startDate) dateFilter.$gte = new Date(startDate);
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.$lte = end;
+    }
+    const donationDateMatch = hasDateRange ? { createdAt: dateFilter } : {};
+    const claimDateMatch    = hasDateRange ? { claimed_at: dateFilter } : {};
+
     const [
       donationByStatus,
       totalServed,
@@ -84,9 +102,9 @@ const getAdminStats = async (req, res) => {
       upcomingScheduled,
       instantReserved
     ] = await Promise.all([
-      Donation.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+      Donation.aggregate([{ $match: donationDateMatch }, { $group: { _id: '$status', count: { $sum: 1 } } }]),
       Donation.aggregate([
-        { $match: { status: 'collected' } },
+        { $match: { status: 'collected', ...donationDateMatch } },
         { $group: { _id: null, total: { $sum: '$quantity_serves' } } }
       ]),
       User.countDocuments({ role: { $ne: 'admin' } }),
@@ -94,30 +112,21 @@ const getAdminStats = async (req, res) => {
       User.countDocuments({ role: 'donor' }),
       User.countDocuments({ role: 'ngo' }),
       Donation.aggregate([
-        { $match: { status: { $in: ['available', 'reserved'] } } },
+        { $match: { status: { $in: ['available', 'reserved'] }, ...donationDateMatch } },
         { $group: { _id: null, total: { $sum: '$quantity_serves' } } }
       ]),
       Donation.aggregate([
-        { $match: { status: 'collected' } },
+        { $match: { status: 'collected', ...donationDateMatch } },
         { $group: { _id: null, total: { $sum: '$weight_kg' } } }
       ]),
-      // Pickup type breakdown across all claimed/collected donations
+      // Pickup type breakdown — filter by claimed_at range
       Donation.aggregate([
-        { $match: { status: { $in: ['reserved', 'collected'] }, pickup_type: { $exists: true } } },
+        { $match: { status: { $in: ['reserved', 'collected'] }, pickup_type: { $exists: true }, ...claimDateMatch } },
         { $group: { _id: '$pickup_type', count: { $sum: 1 } } }
       ]),
-      // Upcoming scheduled: reserved with future scheduled_pickup_time
-      Donation.countDocuments({
-        status: 'reserved',
-        pickup_type: 'scheduled',
-        scheduled_pickup_time: { $gt: now }
-      }),
-      // Instant reserved: reserved with pickup_type instant (active right now)
-      Donation.countDocuments({
-        status: 'reserved',
-        pickup_type: 'instant',
-        pickup_deadline: { $gt: now }
-      })
+      // Real-time counts — never date-filtered
+      Donation.countDocuments({ status: 'reserved', pickup_type: 'scheduled', scheduled_pickup_time: { $gt: now } }),
+      Donation.countDocuments({ status: 'reserved', pickup_type: 'instant', pickup_deadline: { $gt: now } })
     ]);
 
     const byStatus = donationByStatus.reduce((acc, s) => {
@@ -167,8 +176,15 @@ const getAdminStats = async (req, res) => {
       }
     };
 
-    await redis.set('admin:stats:v2', JSON.stringify(stats), STATS_TTL);
-    res.json(stats);
+    const response = {
+      ...stats,
+      date_range: hasDateRange ? { start: startDate || null, end: endDate || null } : null
+    };
+
+    if (!hasDateRange) {
+      await redis.set('admin:stats:v2', JSON.stringify(response), STATS_TTL);
+    }
+    res.json(response);
   } catch (error) {
     console.error('getAdminStats error:', error);
     res.status(500).json({ message: error.message });
