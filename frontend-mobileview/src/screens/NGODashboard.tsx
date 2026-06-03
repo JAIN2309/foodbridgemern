@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  RefreshControl, Alert, Image,
+  RefreshControl, Image, Modal,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -25,6 +26,11 @@ export default function NGODashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [releaseModal, setReleaseModal] = useState({ open: false, donationId: '', donationName: '' });
   const [releaseReason, setReleaseReason] = useState('');
+  const [pickupModal, setPickupModal] = useState<{ open: boolean; donationId: string; donationName: string; pickupWindowEnd: Date | null; }>({ open: false, donationId: '', donationName: '', pickupWindowEnd: null });
+  const [pickupType, setPickupType] = useState<'instant' | 'scheduled'>('instant');
+  const [scheduledDate, setScheduledDate] = useState(new Date(Date.now() + 60 * 60 * 1000));
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [pickupError, setPickupError] = useState('');
 
   useEffect(() => {
     if (location && isOnline) {
@@ -101,32 +107,49 @@ export default function NGODashboard() {
     }
   };
 
-  const handleClaim = (donationId: string, donationName: string) => {
-    Alert.alert(
-      t('dashboard.ngo.confirmClaimTitle'),
-      `${t('dashboard.ngo.confirmClaimMsg')} "${donationName}"?\n\n${t('dashboard.ngo.confirmClaimNote')}`,
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('dashboard.ngo.claimBtn'),
-          style: 'default',
-          onPress: async () => {
-            if (!isOnline) {
-              await enqueue({ type: 'claim_donation', donationId });
-              Toast.show({ type: 'info', text1: t('offline.savedOffline'), text2: t('offline.willSync') });
-              return;
-            }
-            try {
-              await dispatch(claimDonation(donationId)).unwrap();
-              Toast.show({ type: 'success', text1: t('dashboard.ngo.claimSuccess') });
-              dispatch(fetchClaimedDonations());
-            } catch (error: any) {
-              Toast.show({ type: 'error', text1: t('dashboard.ngo.claimFailed'), text2: error?.message || error });
-            }
-          }
-        }
-      ]
-    );
+  const handleClaim = (donation: any) => {
+    setPickupType('instant');
+    setScheduledDate(new Date(Date.now() + 60 * 60 * 1000));
+    setPickupError('');
+    setPickupModal({
+      open: true,
+      donationId: donation._id,
+      donationName: donation.food_items?.map((i: any) => i.name).join(', ') || '',
+      pickupWindowEnd: donation.pickup_window_end ? new Date(donation.pickup_window_end) : null
+    });
+  };
+
+  const confirmPickup = async () => {
+    if (pickupType === 'scheduled') {
+      const now = new Date();
+      if (scheduledDate <= now) {
+        setPickupError(t('dashboard.ngo.pickupMustBeFuture'));
+        return;
+      }
+      if (pickupModal.pickupWindowEnd && scheduledDate > pickupModal.pickupWindowEnd) {
+        setPickupError(t('dashboard.ngo.pickupMustBeBeforeEnd'));
+        return;
+      }
+    }
+    const { donationId } = pickupModal;
+    setPickupModal(p => ({ ...p, open: false }));
+
+    if (!isOnline) {
+      await enqueue({ type: 'claim_donation', donationId, pickup_type: pickupType, scheduled_pickup_time: pickupType === 'scheduled' ? scheduledDate.toISOString() : undefined } as any);
+      Toast.show({ type: 'info', text1: t('offline.savedOffline'), text2: t('offline.willSync') });
+      return;
+    }
+    try {
+      await dispatch(claimDonation({
+        donationId,
+        pickup_type: pickupType,
+        scheduled_pickup_time: pickupType === 'scheduled' ? scheduledDate.toISOString() : undefined
+      })).unwrap();
+      Toast.show({ type: 'success', text1: t('dashboard.ngo.claimSuccess') });
+      dispatch(fetchClaimedDonations());
+    } catch (error: any) {
+      Toast.show({ type: 'error', text1: t('dashboard.ngo.claimFailed'), text2: error?.message || error });
+    }
   };
 
   const statusColor = (s: string) => ({ available: '#10b981', reserved: '#f59e0b', collected: '#3b82f6' }[s] || '#6b7280');
@@ -246,7 +269,7 @@ export default function NGODashboard() {
 
         {/* Claim button */}
         {showClaim && d.status === 'available' && (
-          <TouchableOpacity onPress={() => handleClaim(d._id, d.food_items?.map((i: any) => i.name).join(', ') || '')} activeOpacity={0.9} style={{ marginTop: 12 }}>
+          <TouchableOpacity onPress={() => handleClaim(d)} activeOpacity={0.9} style={{ marginTop: 12 }}>
             <LinearGradient colors={['#10b981', '#059669']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.claimBtn}>
               <Ionicons name="hand-left-outline" size={16} color="#fff" />
               <Text style={styles.claimBtnText}>{t('dashboard.ngo.claimBtn')}</Text>
@@ -342,6 +365,25 @@ export default function NGODashboard() {
           ) : claimedDonations.map((d: any) => (
             <View key={d._id}>
               <DonationCard d={d} showClaim={false} />
+              {/* Pickup schedule badge for reserved */}
+              {d.status === 'reserved' && d.pickup_deadline && (
+                <View style={{ paddingHorizontal: 16, marginTop: -8, marginBottom: 6 }}>
+                  <View style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
+                    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1,
+                    borderColor: d.pickup_type === 'scheduled' ? '#bfdbfe' : '#bbf7d0',
+                    backgroundColor: d.pickup_type === 'scheduled' ? '#eff6ff' : '#f0fdf4'
+                  }}>
+                    <Text style={{ fontSize: 11 }}>{d.pickup_type === 'scheduled' ? '📅' : '⚡'}</Text>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: d.pickup_type === 'scheduled' ? '#1d4ed8' : '#15803d' }}>
+                      {d.pickup_type === 'scheduled' && d.scheduled_pickup_time
+                        ? `${t('dashboard.ngo.scheduledFor')} ${new Date(d.scheduled_pickup_time).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+                        : `${t('dashboard.ngo.pickupBy')} ${new Date(d.pickup_deadline).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`
+                      }
+                    </Text>
+                  </View>
+                </View>
+              )}
               {/* Action buttons for reserved donations */}
               {d.status === 'reserved' && (
                 <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 12, marginTop: -8 }}>
@@ -365,6 +407,103 @@ export default function NGODashboard() {
           ))}
         )}
       </ScrollView>
+
+      {/* Pickup Schedule Modal */}
+      <Modal visible={pickupModal.open} transparent animationType="fade" onRequestClose={() => setPickupModal(p => ({ ...p, open: false }))}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 24, width: '100%' }}>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1f2937', textAlign: 'center', marginBottom: 4 }}>
+              {t('dashboard.ngo.pickupModalTitle')}
+            </Text>
+            <Text style={{ fontSize: 13, color: '#6b7280', textAlign: 'center', marginBottom: 20 }} numberOfLines={2}>
+              "{pickupModal.donationName}"
+            </Text>
+
+            {/* Instant option */}
+            <TouchableOpacity
+              onPress={() => { setPickupType('instant'); setPickupError(''); }}
+              style={{ flexDirection: 'row', alignItems: 'flex-start', padding: 16, borderRadius: 14, borderWidth: 2, borderColor: pickupType === 'instant' ? '#16a34a' : '#e5e7eb', backgroundColor: pickupType === 'instant' ? '#f0fdf4' : '#f9fafb', marginBottom: 10 }}
+            >
+              <Text style={{ fontSize: 24, marginRight: 12 }}>⚡</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#1f2937' }}>{t('dashboard.ngo.pickupInstantLabel')}</Text>
+                <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{t('dashboard.ngo.pickupInstantDesc')}</Text>
+                {pickupType === 'instant' && (
+                  <Text style={{ fontSize: 11, color: '#d97706', marginTop: 6, backgroundColor: '#fef3c7', padding: 6, borderRadius: 8 }}>
+                    ⚠️ {t('dashboard.ngo.pickupInstantWarning')}
+                  </Text>
+                )}
+              </View>
+              {pickupType === 'instant' && <Ionicons name="checkmark-circle" size={20} color="#16a34a" style={{ marginLeft: 8 }} />}
+            </TouchableOpacity>
+
+            {/* Scheduled option */}
+            <TouchableOpacity
+              onPress={() => { setPickupType('scheduled'); setPickupError(''); }}
+              style={{ flexDirection: 'row', alignItems: 'flex-start', padding: 16, borderRadius: 14, borderWidth: 2, borderColor: pickupType === 'scheduled' ? '#2563eb' : '#e5e7eb', backgroundColor: pickupType === 'scheduled' ? '#eff6ff' : '#f9fafb', marginBottom: 12 }}
+            >
+              <Text style={{ fontSize: 24, marginRight: 12 }}>📅</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#1f2937' }}>{t('dashboard.ngo.pickupScheduleLabel')}</Text>
+                <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{t('dashboard.ngo.pickupScheduleDesc')}</Text>
+                {pickupType === 'scheduled' && (
+                  <>
+                    <TouchableOpacity
+                      onPress={() => setShowDatePicker(true)}
+                      style={{ marginTop: 10, padding: 10, borderRadius: 10, borderWidth: 1.5, borderColor: '#2563eb', backgroundColor: '#fff', alignItems: 'center' }}
+                    >
+                      <Text style={{ fontSize: 13, color: '#2563eb', fontWeight: '600' }}>
+                        📅 {scheduledDate.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </Text>
+                    </TouchableOpacity>
+                    {pickupModal.pickupWindowEnd && (
+                      <Text style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>
+                        {t('dashboard.ngo.pickupBeforeWindowEnd')}: {new Date(pickupModal.pickupWindowEnd).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </Text>
+                    )}
+                  </>
+                )}
+              </View>
+              {pickupType === 'scheduled' && <Ionicons name="checkmark-circle" size={20} color="#2563eb" style={{ marginLeft: 8 }} />}
+            </TouchableOpacity>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={scheduledDate}
+                mode="datetime"
+                display="default"
+                minimumDate={new Date(Date.now() + 5 * 60 * 1000)}
+                maximumDate={pickupModal.pickupWindowEnd || undefined}
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (selectedDate) setScheduledDate(selectedDate);
+                }}
+              />
+            )}
+
+            {pickupError ? (
+              <Text style={{ fontSize: 12, color: '#dc2626', textAlign: 'center', marginBottom: 10, backgroundColor: '#fef2f2', padding: 8, borderRadius: 8 }}>
+                {pickupError}
+              </Text>
+            ) : null}
+
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => setPickupModal(p => ({ ...p, open: false }))}
+                style={{ flex: 1, paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, borderColor: '#d1d5db', alignItems: 'center' }}
+              >
+                <Text style={{ fontWeight: '600', color: '#374151' }}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={confirmPickup}
+                style={{ flex: 1, paddingVertical: 12, borderRadius: 12, backgroundColor: pickupType === 'instant' ? '#16a34a' : '#2563eb', alignItems: 'center' }}
+              >
+                <Text style={{ fontWeight: '700', color: '#fff' }}>{t('dashboard.ngo.confirmPickupBtn')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Release Reason Modal */}
       {releaseModal.open && (

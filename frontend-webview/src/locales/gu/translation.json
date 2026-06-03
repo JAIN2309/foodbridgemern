@@ -218,7 +218,21 @@
       "releaseFailed": "દાન જારી કરવામાં નિષ્ફળ",
       "releaseHistoryLabel": "પિકઅપ ન થઈ",
       "claimedOn": "દાવો કર્યો",
-      "collectedOn": "એકત્રિત કર્યું"
+      "collectedOn": "એકત્રિત કર્યું",
+      "pickupModalTitle": "પિકઅપ શેડ્યૂલ કરો",
+      "pickupInstantLabel": "તાત્કાલિક પિકઅપ",
+      "pickupInstantDesc": "30 મિનિટમાં પિકઅપ કરો",
+      "pickupInstantWarning": "30 મિનિટમાં ન એકત્ર કરો તો સ્લોટ ફરી ઉપલબ્ધ થશે",
+      "pickupScheduleLabel": "પછીથી શેડ્યૂલ કરો",
+      "pickupScheduleDesc": "પિકઅપ વિન્ડો સમાપ્ત થાય તે પહેલાં તારીખ અને સમય પસંદ કરો",
+      "pickupScheduleTime": "પિકઅપ તારીખ અને સમય",
+      "pickupMustSelectTime": "કૃપા કરીને પિકઅપ તારીખ અને સમય પસંદ કરો",
+      "pickupMustBeFuture": "શેડ્યૂલ સમય ભવિષ્યમાં હોવો જોઈએ",
+      "pickupMustBeBeforeEnd": "શેડ્યૂલ સમય પિકઅપ વિન્ડો સમાપ્ત થાય તે પહેલા હોવો જોઈએ",
+      "confirmPickupBtn": "પિકઅપ નિશ્ચિત કરો",
+      "scheduledFor": "શેડ્યૂલ છે",
+      "pickupBy": "પિકઅપ કરો",
+      "pickupBeforeWindowEnd": "આ પહેલા હોવું જોઈએ"
     },
     "admin": {
       "history":"ઇતિહાસ",

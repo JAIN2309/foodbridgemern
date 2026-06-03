@@ -25,7 +25,10 @@ const NGODashboard = () => {
   const { location: geoLocation } = useGeolocation();
   const [activeTab, setActiveTab] = useState('feed');
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
-  const [claimConfirm, setClaimConfirm] = useState({ open: false, donationId: null, donationName: '' });
+  const [pickupModal, setPickupModal] = useState({
+    open: false, donationId: null, donationName: '',
+    pickupWindowEnd: null, pickupType: 'instant', scheduledTime: '', error: ''
+  });
   const [releaseModal, setReleaseModal] = useState({ open: false, donationId: null });
   const [releaseReason, setReleaseReason] = useState('');
   const [releaseCustom, setReleaseCustom] = useState('');
@@ -99,25 +102,45 @@ const NGODashboard = () => {
     };
   }, [dispatch]);
 
-  const openClaimConfirm = (donationId, donationName) =>
-    setClaimConfirm({ open: true, donationId, donationName });
+  const openPickupModal = (donation) => setPickupModal({
+    open: true,
+    donationId: donation._id,
+    donationName: donation.food_items?.map(i => i.name).join(', ') || '',
+    pickupWindowEnd: donation.pickup_window_end,
+    pickupType: 'instant',
+    scheduledTime: '',
+    error: ''
+  });
 
-  const closeClaimConfirm = () =>
-    setClaimConfirm({ open: false, donationId: null, donationName: '' });
+  const closePickupModal = () => setPickupModal(p => ({ ...p, open: false, error: '' }));
 
-  const handleClaimDonation = async () => {
-    const { donationId } = claimConfirm;
-    closeClaimConfirm();
-    try {
-      await dispatch(claimDonation(donationId)).unwrap();
-      toast.success(t('dashboard.ngo.claimSuccess'));
-      if (geoLocation) {
-        dispatch(fetchNearbyDonations({
-          longitude: geoLocation.longitude,
-          latitude: geoLocation.latitude,
-          maxDistance: 10000
-        }));
+  const handleConfirmPickup = async () => {
+    const { donationId, pickupType, scheduledTime, pickupWindowEnd } = pickupModal;
+    if (pickupType === 'scheduled') {
+      if (!scheduledTime) {
+        setPickupModal(p => ({ ...p, error: t('dashboard.ngo.pickupMustSelectTime') }));
+        return;
       }
+      const st = new Date(scheduledTime);
+      if (st <= new Date()) {
+        setPickupModal(p => ({ ...p, error: t('dashboard.ngo.pickupMustBeFuture') }));
+        return;
+      }
+      if (pickupWindowEnd && st > new Date(pickupWindowEnd)) {
+        setPickupModal(p => ({ ...p, error: t('dashboard.ngo.pickupMustBeBeforeEnd') }));
+        return;
+      }
+    }
+    closePickupModal();
+    try {
+      await dispatch(claimDonation({
+        donationId,
+        pickup_type: pickupType,
+        scheduled_pickup_time: pickupType === 'scheduled' ? scheduledTime : undefined
+      })).unwrap();
+      toast.success(t('dashboard.ngo.claimSuccess'));
+      const coords = geoLocation || { latitude: 28.6139, longitude: 77.2090 };
+      dispatch(fetchNearbyDonations({ longitude: coords.longitude, latitude: coords.latitude, maxDistance: 10000 }));
       dispatch(fetchNGOHistory());
     } catch (error) {
       toast.error(error || t('dashboard.ngo.claimFailed'));
@@ -403,7 +426,7 @@ const NGODashboard = () => {
 
                               {/* Claim button */}
                               <button
-                                onClick={() => openClaimConfirm(donation._id, donation.food_items?.map(i => i.name).join(', ') || '')}
+                                onClick={() => openPickupModal(donation)}
                                 disabled={isLoading}
                                 className="w-full mt-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 text-sm font-semibold transition-colors"
                               >
@@ -449,7 +472,7 @@ const NGODashboard = () => {
                                   {donation.donor_id.organization_name}
                                 </p>
                                 <button
-                                  onClick={() => openClaimConfirm(donation._id, donation.food_items?.map(i => i.name).join(', ') || '')}
+                                  onClick={() => openPickupModal(donation)}
                                   className="mt-2 px-3 py-1 bg-primary-600 text-white rounded text-sm"
                                 >
                                   {t('dashboard.ngo.claimFood')}
@@ -557,6 +580,20 @@ const NGODashboard = () => {
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                               {t('dashboard.ngo.claimedOn')} {new Date(donation.claimed_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </span>
+                            {/* Pickup deadline badge for reserved donations */}
+                            {donation.status === 'reserved' && donation.pickup_deadline && (
+                              <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border ${
+                                new Date(donation.pickup_deadline) > new Date()
+                                  ? (donation.pickup_type === 'scheduled' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-green-50 border-green-200 text-green-700')
+                                  : 'bg-red-50 border-red-200 text-red-700'
+                              }`}>
+                                {donation.pickup_type === 'scheduled' ? '📅' : '⚡'}
+                                {donation.pickup_type === 'scheduled' && donation.scheduled_pickup_time
+                                  ? `${t('dashboard.ngo.scheduledFor')} ${new Date(donation.scheduled_pickup_time).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+                                  : `${t('dashboard.ngo.pickupBy')} ${new Date(donation.pickup_deadline).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`
+                                }
+                              </span>
+                            )}
                           </div>
 
                           {/* Pickup address */}
@@ -740,43 +777,121 @@ const NGODashboard = () => {
       </div>
     )}
 
-    {/* Claim Confirmation Dialog */}
-    {claimConfirm.open && (
+    {/* Pickup Schedule Modal */}
+    {pickupModal.open && (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeClaimConfirm} />
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closePickupModal} />
         <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6">
-          {/* Icon */}
-          <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+          <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
             <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
 
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white text-center mb-2">
-            {t('dashboard.ngo.confirmClaimTitle')}
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white text-center mb-1">
+            {t('dashboard.ngo.pickupModalTitle')}
           </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-1">
-            {t('dashboard.ngo.confirmClaimMsg')}
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 text-center mb-4 truncate px-2">
+            "{pickupModal.donationName}"
           </p>
-          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 text-center mb-3">
-            "{claimConfirm.donationName}"
-          </p>
-          <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2 text-center mb-6">
-            {t('dashboard.ngo.confirmClaimNote')}
-          </p>
+
+          <div className="space-y-3 mb-4">
+            {/* Instant option */}
+            <button
+              onClick={() => setPickupModal(p => ({ ...p, pickupType: 'instant', error: '' }))}
+              className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                pickupModal.pickupType === 'instant'
+                  ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-green-300'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl flex-shrink-0 ${
+                  pickupModal.pickupType === 'instant' ? 'bg-green-100' : 'bg-gray-100 dark:bg-gray-700'
+                }`}>⚡</div>
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-900 dark:text-white text-sm">{t('dashboard.ngo.pickupInstantLabel')}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('dashboard.ngo.pickupInstantDesc')}</p>
+                </div>
+                {pickupModal.pickupType === 'instant' && (
+                  <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+              {pickupModal.pickupType === 'instant' && (
+                <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-2 py-1.5 mt-2">
+                  ⚠️ {t('dashboard.ngo.pickupInstantWarning')}
+                </p>
+              )}
+            </button>
+
+            {/* Scheduled option */}
+            <button
+              onClick={() => setPickupModal(p => ({ ...p, pickupType: 'scheduled', error: '' }))}
+              className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                pickupModal.pickupType === 'scheduled'
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-blue-300'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl flex-shrink-0 ${
+                  pickupModal.pickupType === 'scheduled' ? 'bg-blue-100' : 'bg-gray-100 dark:bg-gray-700'
+                }`}>📅</div>
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-900 dark:text-white text-sm">{t('dashboard.ngo.pickupScheduleLabel')}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('dashboard.ngo.pickupScheduleDesc')}</p>
+                </div>
+                {pickupModal.pickupType === 'scheduled' && (
+                  <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+              {pickupModal.pickupType === 'scheduled' && (
+                <div className="mt-3" onClick={e => e.stopPropagation()}>
+                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-1.5">
+                    {t('dashboard.ngo.pickupScheduleTime')}
+                    {pickupModal.pickupWindowEnd && (
+                      <span className="text-gray-400 font-normal ml-1">
+                        (max: {new Date(pickupModal.pickupWindowEnd).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })})
+                      </span>
+                    )}
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={pickupModal.scheduledTime}
+                    min={new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 16)}
+                    max={pickupModal.pickupWindowEnd ? new Date(pickupModal.pickupWindowEnd).toISOString().slice(0, 16) : undefined}
+                    onChange={e => setPickupModal(p => ({ ...p, scheduledTime: e.target.value, error: '' }))}
+                    className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl text-sm focus:outline-none focus:border-blue-400"
+                  />
+                </div>
+              )}
+            </button>
+          </div>
+
+          {pickupModal.error && (
+            <p className="text-xs text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2 mb-3 text-center">
+              {pickupModal.error}
+            </p>
+          )}
 
           <div className="flex gap-3">
             <button
-              onClick={closeClaimConfirm}
+              onClick={closePickupModal}
               className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               {t('layout.cancel')}
             </button>
             <button
-              onClick={handleClaimDonation}
-              className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 transition-colors"
+              onClick={handleConfirmPickup}
+              className={`flex-1 px-4 py-2.5 text-white rounded-xl font-medium transition-colors ${
+                pickupModal.pickupType === 'scheduled' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'
+              }`}
             >
-              {t('dashboard.ngo.claimFood')}
+              {t('dashboard.ngo.confirmPickupBtn')}
             </button>
           </div>
         </div>

@@ -218,7 +218,21 @@
       "releaseFailed": "Failed to release donation",
       "releaseHistoryLabel": "Not picked up",
       "claimedOn": "Claimed",
-      "collectedOn": "Collected on"
+      "collectedOn": "Collected on",
+      "pickupModalTitle": "Schedule Your Pickup",
+      "pickupInstantLabel": "Instant Pickup",
+      "pickupInstantDesc": "Pick up within 30 minutes",
+      "pickupInstantWarning": "Slot reverts to available if not collected in 30 min",
+      "pickupScheduleLabel": "Schedule Later",
+      "pickupScheduleDesc": "Choose a specific date and time before pickup window ends",
+      "pickupScheduleTime": "Pickup Date & Time",
+      "pickupMustSelectTime": "Please select a pickup date and time",
+      "pickupMustBeFuture": "Scheduled time must be in the future",
+      "pickupMustBeBeforeEnd": "Scheduled time must be before the pickup window ends",
+      "confirmPickupBtn": "Confirm Pickup",
+      "scheduledFor": "Scheduled for",
+      "pickupBy": "Pick up by",
+      "pickupBeforeWindowEnd": "Must be before"
     },
     "admin": {
       "history":"History",

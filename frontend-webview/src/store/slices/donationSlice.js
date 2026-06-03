@@ -33,12 +33,15 @@ export const createDonation = createAsyncThunk(
 
 export const claimDonation = createAsyncThunk(
   'donations/claim',
-  async (donationId, { rejectWithValue }) => {
+  async ({ donationId, pickup_type = 'instant', scheduled_pickup_time }, { rejectWithValue }) => {
     try {
-      const response = await api.post(`/donations/${donationId}/claim`);
+      const response = await api.post(`/donations/${donationId}/claim`, {
+        pickup_type,
+        ...(pickup_type === 'scheduled' && scheduled_pickup_time ? { scheduled_pickup_time } : {})
+      });
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data.message);
+      return rejectWithValue(error.response?.data?.message || error.message);
     }
   }
 );

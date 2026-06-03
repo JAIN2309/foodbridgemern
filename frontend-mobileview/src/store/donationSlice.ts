@@ -40,9 +40,12 @@ export const fetchDonorHistory = createAsyncThunk(
 
 export const claimDonation = createAsyncThunk(
   'donations/claim',
-  async (donationId: string, { rejectWithValue }) => {
+  async ({ donationId, pickup_type = 'instant', scheduled_pickup_time }: { donationId: string; pickup_type?: string; scheduled_pickup_time?: string }, { rejectWithValue }) => {
     try {
-      const response = await api.put(`/donations/${donationId}/claim`);
+      const response = await api.post(`/donations/${donationId}/claim`, {
+        pickup_type,
+        ...(pickup_type === 'scheduled' && scheduled_pickup_time ? { scheduled_pickup_time } : {})
+      });
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to claim donation');

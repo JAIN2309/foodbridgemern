@@ -217,37 +217,72 @@ const getNearbyDonations = async (req, res) => {
   }
 };
 
-// Enhanced claim with logistics and trust verification
+// Enhanced claim with logistics, trust verification, and pickup scheduling
 const claimDonation = async (req, res) => {
   try {
     const { donationId } = req.params;
+    const { pickup_type = 'instant', scheduled_pickup_time } = req.body;
     const ngoId = req.user._id;
-    
-    // Check NGO trust score
+
     if (req.user.trust_score < 30) {
-      return res.status(403).json({ 
-        message: 'Trust score too low. Complete more successful pickups to improve your score.' 
+      return res.status(403).json({
+        message: 'Trust score too low. Complete more successful pickups to improve your score.'
       });
     }
 
+    if (!['instant', 'scheduled'].includes(pickup_type)) {
+      return res.status(400).json({ message: 'pickup_type must be instant or scheduled' });
+    }
+
+    const now = new Date();
+    let parsedScheduledTime = null;
+    let pickupDeadline;
+
+    if (pickup_type === 'scheduled') {
+      if (!scheduled_pickup_time) {
+        return res.status(400).json({ message: 'scheduled_pickup_time is required for scheduled pickup' });
+      }
+      parsedScheduledTime = new Date(scheduled_pickup_time);
+      if (isNaN(parsedScheduledTime.getTime())) {
+        return res.status(400).json({ message: 'Invalid scheduled_pickup_time' });
+      }
+      if (parsedScheduledTime <= now) {
+        return res.status(400).json({ message: 'Scheduled pickup time must be in the future' });
+      }
+      pickupDeadline = new Date(parsedScheduledTime.getTime() + 15 * 60 * 1000); // +15 min grace
+    } else {
+      pickupDeadline = new Date(now.getTime() + 30 * 60 * 1000); // instant: 30 min
+    }
+
+    const claimQuery = {
+      _id: donationId,
+      status: 'available',
+      expiresAt: { $gt: now },
+      quality_score: { $gte: 3 }
+    };
+    // Scheduled: validate time is within the donation's pickup window
+    if (pickup_type === 'scheduled' && parsedScheduledTime) {
+      claimQuery.pickup_window_end = { $gte: parsedScheduledTime };
+    }
+
     const donation = await Donation.findOneAndUpdate(
-      { 
-        _id: donationId, 
-        status: 'available',
-        expiresAt: { $gt: new Date() },
-        quality_score: { $gte: 3 } // Minimum quality threshold
-      },
-      { 
+      claimQuery,
+      {
         status: 'reserved',
         claimed_by: ngoId,
-        claimed_at: new Date()
+        claimed_at: now,
+        pickup_type,
+        scheduled_pickup_time: parsedScheduledTime,
+        pickup_deadline: pickupDeadline
       },
       { new: true, runValidators: true }
     ).populate('donor_id', 'organization_name phone contact_person trust_score');
 
     if (!donation) {
-      return res.status(400).json({ 
-        message: 'Donation not available, expired, or quality too low' 
+      return res.status(400).json({
+        message: pickup_type === 'scheduled'
+          ? 'Donation not available, already expired, or your scheduled time exceeds the pickup window'
+          : 'Donation not available, expired, or quality too low'
       });
     }
 
@@ -258,14 +293,13 @@ const claimDonation = async (req, res) => {
         $push: {
           pickup_attempts: {
             ngo_id: ngoId,
-            scheduled_time: new Date(Date.now() + 30 * 60 * 1000), // 30 min from now
+            scheduled_time: parsedScheduledTime || pickupDeadline,
             status: 'scheduled'
           }
         }
       }
     );
-    
-    // Update NGO stats
+
     await User.findByIdAndUpdate(ngoId, {
       $inc: { 'activity_stats.donations_claimed': 1 }
     });
@@ -278,19 +312,15 @@ const claimDonation = async (req, res) => {
     });
     await transaction.save();
 
-    // Set auto-reassignment timeout
+    // Auto-revert at the pickup deadline
+    const timeoutMs = pickupDeadline.getTime() - now.getTime();
     setTimeout(async () => {
-      const stillReserved = await Donation.findOne({ 
-        _id: donationId, 
-        status: 'reserved' 
-      });
-      
+      const stillReserved = await Donation.findOne({ _id: donationId, status: 'reserved' });
       if (stillReserved) {
         await handleFailedPickup(donationId, ngoId, 'timeout');
       }
-    }, 30 * 60 * 1000); // 30 minutes
+    }, timeoutMs);
 
-    // Invalidate nearby cache so NGOs see updated status immediately
     if (donation.location?.coordinates) {
       const [lng, lat] = donation.location.coordinates;
       await performanceService.invalidateLocationCache(lng, lat);
@@ -298,22 +328,26 @@ const claimDonation = async (req, res) => {
 
     const io = req.app.get('io');
     io.to(`donor-${donation.donor_id._id}`).emit('donation-claimed', {
-      donation: donation,
+      donation,
       ngo: req.user.organization_name,
-      ngo_trust_score: req.user.trust_score
+      ngo_trust_score: req.user.trust_score,
+      pickup_type,
+      pickup_deadline: pickupDeadline
     });
 
-    // Push notification to donor — instant even if their app is closed
     pushToUser(donation.donor_id._id, {
       title: '🤝 Your donation was claimed!',
-      body: `${req.user.organization_name} has claimed "${donation.food_items.map(i => i.name).join(', ')}"`,
+      body: `${req.user.organization_name} will pick up "${donation.food_items.map(i => i.name).join(', ')}"${
+        pickup_type === 'scheduled'
+          ? ` on ${parsedScheduledTime.toLocaleString()}`
+          : ' within 30 minutes'
+      }`,
       data: { type: 'donation_claimed', donationId: donation._id.toString() }
     }).catch(() => {});
 
     try {
       const ngoUser = await User.findById(ngoId);
       const donorUser = donation.donor_id;
-      
       await Promise.all([
         sendEmail(ngoUser.email, emailTemplates.donationClaimed(donation, ngoUser, donorUser).ngo),
         sendEmail(donorUser.email, emailTemplates.donationClaimed(donation, ngoUser, donorUser).donor)
@@ -324,8 +358,10 @@ const claimDonation = async (req, res) => {
 
     res.json({
       message: 'Donation claimed successfully',
-      donation: donation,
-      pickup_deadline: new Date(Date.now() + 30 * 60 * 1000)
+      donation,
+      pickup_type,
+      pickup_deadline: pickupDeadline,
+      scheduled_pickup_time: parsedScheduledTime
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -750,21 +786,18 @@ const getAdminDonationHistory = async (req, res) => {
   }
 };
 
-// Background job to mark expired donations (instead of deleting)
+// Background job: expire available donations + revert overdue reserved ones
 const markExpiredDonations = async () => {
   try {
     const now = new Date();
-    
-    // Find donations that should be expired
+
+    // 1. Available donations past pickup window → expired
     const expiredDonations = await Donation.find({
-      status: { $in: ['available', 'reserved'] },
+      status: 'available',
       expiresAt: { $lte: now },
       deletion_scheduled: { $ne: true }
     });
-    
-    console.log(`⏰ Found ${expiredDonations.length} donations to mark as expired`);
-    
-    // Mark each as expired (preserving history)
+
     for (const donation of expiredDonations) {
       donation.status = 'expired';
       donation.status_history.push({
@@ -774,9 +807,21 @@ const markExpiredDonations = async () => {
       });
       await donation.save();
     }
-    
-    console.log(`✅ Marked ${expiredDonations.length} donations as expired`);
-    return expiredDonations.length;
+
+    // 2. Reserved donations past their pickup_deadline → revert to available
+    const overdueReserved = await Donation.find({
+      status: 'reserved',
+      pickup_deadline: { $lte: now, $ne: null },
+      deletion_scheduled: { $ne: true }
+    });
+
+    for (const donation of overdueReserved) {
+      await handleFailedPickup(donation._id, donation.claimed_by, 'deadline_exceeded');
+    }
+
+    const total = expiredDonations.length + overdueReserved.length;
+    console.log(`✅ Expiry job: ${expiredDonations.length} expired, ${overdueReserved.length} overdue reserved reverted`);
+    return total;
   } catch (error) {
     console.error('❌ Error marking expired donations:', error);
     return 0;

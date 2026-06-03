@@ -84,6 +84,19 @@ const donationSchema = new mongoose.Schema({
     reason:     { type: String },
     released_at:{ type: Date, default: Date.now }
   }],
+  pickup_type: {
+    type: String,
+    enum: ['instant', 'scheduled'],
+    default: 'instant'
+  },
+  scheduled_pickup_time: {
+    type: Date,
+    default: null
+  },
+  pickup_deadline: {
+    type: Date,
+    default: null
+  },
   special_instructions: {
     type: String,
     maxlength: 500

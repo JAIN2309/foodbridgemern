@@ -218,7 +218,21 @@
       "releaseFailed": "दान जारी करने में विफल",
       "releaseHistoryLabel": "पिकअप नहीं हुआ",
       "claimedOn": "दावा किया",
-      "collectedOn": "एकत्रित किया"
+      "collectedOn": "एकत्रित किया",
+      "pickupModalTitle": "पिकअप शेड्यूल करें",
+      "pickupInstantLabel": "तुरंत पिकअप",
+      "pickupInstantDesc": "30 मिनट के भीतर पिकअप करें",
+      "pickupInstantWarning": "30 मिनट में एकत्र न होने पर स्लॉट वापस उपलब्ध हो जाएगा",
+      "pickupScheduleLabel": "बाद में शेड्यूल करें",
+      "pickupScheduleDesc": "पिकअप विंडो समाप्त होने से पहले तारीख और समय चुनें",
+      "pickupScheduleTime": "पिकअप तारीख और समय",
+      "pickupMustSelectTime": "कृपया पिकअप तारीख और समय चुनें",
+      "pickupMustBeFuture": "शेड्यूल समय भविष्य में होना चाहिए",
+      "pickupMustBeBeforeEnd": "शेड्यूल समय पिकअप विंडो समाप्त होने से पहले होना चाहिए",
+      "confirmPickupBtn": "पिकअप की पुष्टि करें",
+      "scheduledFor": "शेड्यूल किया",
+      "pickupBy": "पिकअप करें",
+      "pickupBeforeWindowEnd": "इससे पहले होना चाहिए"
     },
     "admin": {
       "history":"इतिहास",
