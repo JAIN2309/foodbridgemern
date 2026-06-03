@@ -440,6 +440,209 @@ const getUserDetail = async (req, res) => {
   }
 };
 
+const getExportAnalytics = async (req, res) => {
+  try {
+    const mongoose = require('mongoose');
+    const { startDate, endDate } = req.query;
+
+    const dateFilter = {};
+    if (startDate) dateFilter.$gte = new Date(startDate);
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.$lte = end;
+    }
+    const hasRange        = !!(startDate || endDate);
+    const donationMatch   = hasRange ? { createdAt: dateFilter } : {};
+    const claimMatch      = hasRange ? { claimed_at: dateFilter } : {};
+
+    // Default daily window: last 30 days when no range given
+    const dailyFrom = hasRange ? (dateFilter.$gte || new Date(Date.now() - 30 * 86400000)) : new Date(Date.now() - 30 * 86400000);
+    const dailyTo   = hasRange ? (dateFilter.$lte || new Date()) : new Date();
+
+    const [
+      statusBreakdown,
+      totalServed,
+      totalKg,
+      mealsPending,
+      pickupBreakdown,
+      dailyBreakdown,
+      categories,
+      releaseReasons,
+      topNGOs,
+      topDonors,
+      totalUsers,
+      verifiedUsers,
+      donorCount,
+      ngoCount
+    ] = await Promise.all([
+      Donation.aggregate([
+        { $match: donationMatch },
+        { $group: { _id: '$status', count: { $sum: 1 }, kg: { $sum: '$weight_kg' }, serves: { $sum: '$quantity_serves' } } }
+      ]),
+      Donation.aggregate([
+        { $match: { status: 'collected', ...donationMatch } },
+        { $group: { _id: null, total: { $sum: '$quantity_serves' } } }
+      ]),
+      Donation.aggregate([
+        { $match: { status: 'collected', ...donationMatch } },
+        { $group: { _id: null, total: { $sum: '$weight_kg' } } }
+      ]),
+      Donation.aggregate([
+        { $match: { status: { $in: ['available', 'reserved'] }, ...donationMatch } },
+        { $group: { _id: null, total: { $sum: '$quantity_serves' } } }
+      ]),
+      Donation.aggregate([
+        { $match: { status: { $in: ['reserved', 'collected'] }, pickup_type: { $exists: true }, ...claimMatch } },
+        { $group: { _id: '$pickup_type', count: { $sum: 1 }, kg: { $sum: '$weight_kg' } } }
+      ]),
+      // Daily trend
+      Donation.aggregate([
+        { $match: { createdAt: { $gte: dailyFrom, $lte: dailyTo } } },
+        { $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+          total:     { $sum: 1 },
+          collected: { $sum: { $cond: [{ $eq: ['$status', 'collected'] }, 1, 0] } },
+          reserved:  { $sum: { $cond: [{ $eq: ['$status', 'reserved']  }, 1, 0] } },
+          expired:   { $sum: { $cond: [{ $eq: ['$status', 'expired']   }, 1, 0] } },
+          kg:        { $sum: '$weight_kg' },
+          serves:    { $sum: '$quantity_serves' }
+        }},
+        { $sort: { _id: 1 } }
+      ]),
+      // Food categories
+      Donation.aggregate([
+        { $match: donationMatch },
+        { $unwind: { path: '$food_items', preserveNullAndEmptyArrays: true } },
+        { $group: {
+          _id: '$food_items.category',
+          count:  { $sum: 1 },
+          kg:     { $sum: '$weight_kg' },
+          serves: { $sum: '$quantity_serves' }
+        }},
+        { $sort: { count: -1 } }
+      ]),
+      // Release reasons
+      Donation.aggregate([
+        { $match: donationMatch },
+        { $unwind: { path: '$release_history', preserveNullAndEmptyArrays: false } },
+        { $group: { _id: '$release_history.reason', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 10 }
+      ]),
+      // Top 10 NGOs by collections
+      Donation.aggregate([
+        { $match: { status: { $in: ['reserved', 'collected'] }, claimed_by: { $ne: null }, ...claimMatch } },
+        { $group: {
+          _id:       '$claimed_by',
+          claimed:   { $sum: 1 },
+          collected: { $sum: { $cond: [{ $eq: ['$status', 'collected'] }, 1, 0] } },
+          kg_saved:  { $sum: { $cond: [{ $eq: ['$status', 'collected'] }, '$weight_kg', 0] } },
+          serves:    { $sum: { $cond: [{ $eq: ['$status', 'collected'] }, '$quantity_serves', 0] } }
+        }},
+        { $sort: { collected: -1 } },
+        { $limit: 10 },
+        { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'u' } },
+        { $unwind: '$u' },
+        { $project: {
+          name: '$u.organization_name',
+          claimed: 1, collected: 1,
+          kg_saved: { $round: ['$kg_saved', 1] },
+          serves: 1,
+          success_rate: { $cond: [{ $gt: ['$claimed', 0] }, { $round: [{ $multiply: [{ $divide: ['$collected', '$claimed'] }, 100] }, 0] }, 0] }
+        }}
+      ]),
+      // Top 10 donors by donations posted
+      Donation.aggregate([
+        { $match: { donor_id: { $ne: null }, ...donationMatch } },
+        { $group: {
+          _id:      '$donor_id',
+          posted:   { $sum: 1 },
+          collected:{ $sum: { $cond: [{ $eq: ['$status', 'collected'] }, 1, 0] } },
+          kg:       { $sum: '$weight_kg' },
+          serves:   { $sum: '$quantity_serves' }
+        }},
+        { $sort: { posted: -1 } },
+        { $limit: 10 },
+        { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'u' } },
+        { $unwind: '$u' },
+        { $project: {
+          name: '$u.organization_name',
+          posted: 1, collected: 1,
+          kg: { $round: ['$kg', 1] },
+          serves: 1
+        }}
+      ]),
+      User.countDocuments({ role: { $ne: 'admin' } }),
+      User.countDocuments({ is_verified: true, role: { $ne: 'admin' } }),
+      User.countDocuments({ role: 'donor' }),
+      User.countDocuments({ role: 'ngo' })
+    ]);
+
+    const byStatus = statusBreakdown.reduce((a, s) => { a[s._id] = s; return a; }, {});
+    const total = Object.values(byStatus).reduce((s, v) => s + v.count, 0);
+    const ptMap = pickupBreakdown.reduce((a, p) => { a[p._id] = p; return a; }, {});
+    const instT  = ptMap.instant?.count   || 0;
+    const schedT = ptMap.scheduled?.count || 0;
+    const ptTot  = instT + schedT || 1;
+
+    res.json({
+      period: {
+        start:       startDate || null,
+        end:         endDate   || null,
+        is_all_time: !hasRange,
+        daily_from:  dailyFrom.toISOString().slice(0, 10),
+        daily_to:    dailyTo.toISOString().slice(0, 10)
+      },
+      generated_at: new Date().toISOString(),
+      summary: {
+        donations: {
+          total,
+          available:       byStatus.available?.count   || 0,
+          reserved:        byStatus.reserved?.count    || 0,
+          collected:       byStatus.collected?.count   || 0,
+          expired:         byStatus.expired?.count     || 0,
+          completion_rate: total > 0 ? Math.round(((byStatus.collected?.count || 0) / total) * 100) : 0
+        },
+        impact: {
+          meals_served:  totalServed[0]?.total || 0,
+          meals_pending: mealsPending[0]?.total || 0,
+          kg_saved:      Math.round((totalKg[0]?.total || 0) * 10) / 10
+        },
+        pickup: {
+          instant:       instT,
+          scheduled:     schedT,
+          instant_pct:   Math.round((instT  / ptTot) * 100),
+          scheduled_pct: Math.round((schedT / ptTot) * 100)
+        },
+        users: {
+          total: totalUsers, verified: verifiedUsers,
+          pending: totalUsers - verifiedUsers,
+          donors: donorCount, ngos: ngoCount
+        }
+      },
+      daily_breakdown: dailyBreakdown.map(d => ({
+        date:      d._id,
+        total:     d.total,
+        collected: d.collected,
+        reserved:  d.reserved,
+        expired:   d.expired,
+        kg:        Math.round((d.kg || 0) * 10) / 10,
+        serves:    d.serves || 0
+      })),
+      food_categories: categories
+        .filter(c => c._id)
+        .map(c => ({ category: c._id, count: c.count, kg: Math.round((c.kg || 0) * 10) / 10, serves: c.serves || 0 })),
+      release_reasons: releaseReasons.map(r => ({ reason: r._id || 'Unknown', count: r.count })),
+      top_ngos: topNGOs,
+      top_donors: topDonors
+    });
+  } catch (error) {
+    console.error('getExportAnalytics error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getPendingVerifications,
   verifyUser,
@@ -453,5 +656,6 @@ module.exports = {
   getProfilePicture,
   deleteProfilePicture,
   toggleUserStatus,
-  getUserDetail
+  getUserDetail,
+  getExportAnalytics
 };

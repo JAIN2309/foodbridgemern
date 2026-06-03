@@ -12,7 +12,8 @@ const {
   getProfilePicture,
   deleteProfilePicture,
   toggleUserStatus,
-  getUserDetail
+  getUserDetail,
+  getExportAnalytics
 } = require('../controllers/userController');
 const { auth, requireRole } = require('../middleware/auth');
 
@@ -36,6 +37,7 @@ router.put('/:userId/verify', auth, requireRole(['admin']), verifyUser);
 router.put('/:userId/status', auth, requireRole(['admin']), toggleUserStatus);
 router.get('/:userId/detail', auth, requireRole(['admin']), getUserDetail);
 router.get('/stats', auth, requireRole(['admin']), getAdminStats);
+router.get('/export/analytics', auth, requireRole(['admin']), getExportAnalytics);
 router.get('/donations/all', auth, requireRole(['admin']), getAllActiveDonations);
 router.get('/all', auth, requireRole(['admin']), getAllUsers);
 

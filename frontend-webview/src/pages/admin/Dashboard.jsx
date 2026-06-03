@@ -43,6 +43,7 @@ const AdminDashboard = () => {
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [analyticsStats, setAnalyticsStats] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
@@ -206,122 +207,240 @@ const AdminDashboard = () => {
     }
   };
 
-  // d = the stats object to export (filtered or all-time)
-  const exportCSV = (d) => {
-    const period = d?.date_range?.start
-      ? `${d.date_range.start} to ${d.date_range.end || 'today'}`
-      : 'All time';
-    const rows = [
-      ['FoodBridge Analytics Export'],
-      [`Period: ${period}`],
-      [`Generated: ${new Date().toLocaleString()}`],
-      [],
-      ['DONATION STATUS'],
-      ['Metric', 'Value'],
-      ['Total Donations',   d?.donations?.total        ?? 0],
-      ['Available',         d?.donations?.active       ?? 0],
-      ['Reserved',          d?.donations?.reserved     ?? 0],
-      ['Completed',         d?.donations?.completed    ?? 0],
-      ['Expired',           d?.donations?.expired      ?? 0],
-      ['Completion Rate',   `${d?.donations?.completion_rate ?? 0}%`],
-      [],
-      ['IMPACT'],
-      ['Meals Served',      d?.meals_served   ?? 0],
-      ['Meals Pending',     d?.meals_pending  ?? 0],
-      ['Kg Food Saved',     `${d?.kg_saved ?? 0} kg`],
-      [],
-      ['PICKUP ANALYTICS'],
-      ['Instant Pickups',       d?.pickup?.instant          ?? 0],
-      ['Scheduled Pickups',     d?.pickup?.scheduled        ?? 0],
-      ['Instant %',             `${d?.pickup?.instant_pct   ?? 0}%`],
-      ['Scheduled %',           `${d?.pickup?.scheduled_pct ?? 0}%`],
-      ['Upcoming Scheduled',    d?.pickup?.upcoming_scheduled ?? 0],
-      ['Instant Active',        d?.pickup?.instant_active  ?? 0],
-      [],
-      ['USER STATISTICS'],
-      ['Total Users',       d?.users?.total              ?? 0],
-      ['Verified',          d?.users?.verified           ?? 0],
-      ['Pending',           d?.users?.pending            ?? 0],
-      ['Donors',            d?.users?.donors             ?? 0],
-      ['NGOs',              d?.users?.ngos               ?? 0],
-      ['Verification Rate', `${d?.users?.verification_rate ?? 0}%`],
+  const fetchExportData = async () => {
+    const params = new URLSearchParams();
+    if (dateRange.start) params.set('startDate', dateRange.start);
+    if (dateRange.end)   params.set('endDate',   dateRange.end);
+    const query = params.toString() ? `?${params}` : '';
+    const res = await api.get(`/users/export/analytics${query}`);
+    return res.data;
+  };
+
+  const generateCSV = (d) => {
+    const period = d.period.is_all_time ? 'All time' : `${d.period.start} to ${d.period.end || 'today'}`;
+    const c = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const row = (...cells) => cells.map(c).join(',');
+    const blank = () => '';
+
+    const sections = [
+      row('FOODBRIDGE ANALYTICS EXPORT'), row(`Period: ${period}`), row(`Generated: ${new Date(d.generated_at).toLocaleString()}`), blank(),
+
+      row('SECTION 1: DONATION STATUS SUMMARY'),
+      row('Metric', 'Count', 'Notes'),
+      row('Total Donations',    d.summary.donations.total,     ''),
+      row('Available',          d.summary.donations.available, 'Waiting to be claimed'),
+      row('Reserved',           d.summary.donations.reserved,  'Claimed — pickup pending'),
+      row('Completed',          d.summary.donations.collected, 'Successfully collected'),
+      row('Expired',            d.summary.donations.expired,   'Pickup window passed'),
+      row('Completion Rate',    `${d.summary.donations.completion_rate}%`, '(Collected / Total)'),
+      blank(),
+
+      row('SECTION 2: PLATFORM IMPACT'),
+      row('Metric', 'Value'),
+      row('Meals Served',       d.summary.impact.meals_served),
+      row('Meals Pending',      d.summary.impact.meals_pending),
+      row('Food Saved (kg)',     `${d.summary.impact.kg_saved} kg`),
+      blank(),
+
+      row('SECTION 3: PICKUP TYPE ANALYTICS'),
+      row('Type', 'Count', 'Percentage', 'Avg Kg'),
+      row('Instant',    d.summary.pickup.instant,   `${d.summary.pickup.instant_pct}%`,   ''),
+      row('Scheduled',  d.summary.pickup.scheduled, `${d.summary.pickup.scheduled_pct}%`, ''),
+      blank(),
+
+      row('SECTION 4: USER STATISTICS'),
+      row('Metric', 'Count'),
+      row('Total Users',        d.summary.users.total),
+      row('Verified',           d.summary.users.verified),
+      row('Pending Approval',   d.summary.users.pending),
+      row('Donors',             d.summary.users.donors),
+      row('NGOs',               d.summary.users.ngos),
+      blank(),
+
+      row('SECTION 5: DAILY BREAKDOWN', `(${d.period.daily_from} to ${d.period.daily_to})`),
+      row('Date', 'Total', 'Collected', 'Reserved', 'Expired', 'Kg', 'Serves'),
+      ...d.daily_breakdown.map(x => row(x.date, x.total, x.collected, x.reserved, x.expired, x.kg, x.serves)),
+      blank(),
+
+      row('SECTION 6: FOOD CATEGORIES'),
+      row('Category', 'Donations', 'Kg', 'Serves'),
+      ...d.food_categories.map(x => row(x.category || 'Unknown', x.count, x.kg, x.serves)),
+      blank(),
+
+      row('SECTION 7: TOP NGOs BY COLLECTIONS'),
+      row('Rank', 'NGO Name', 'Claimed', 'Collected', 'Success Rate', 'Kg Saved', 'Meals Delivered'),
+      ...d.top_ngos.map((x, i) => row(i + 1, x.name, x.claimed, x.collected, `${x.success_rate ?? 0}%`, x.kg_saved, x.serves)),
+      blank(),
+
+      row('SECTION 8: TOP DONORS BY DONATIONS POSTED'),
+      row('Rank', 'Donor Name', 'Posted', 'Collected', 'Kg Donated', 'Serves'),
+      ...d.top_donors.map((x, i) => row(i + 1, x.name, x.posted, x.collected, x.kg, x.serves)),
+      blank(),
+
+      row('SECTION 9: RELEASE / CANCELLATION REASONS'),
+      row('Reason', 'Count'),
+      ...d.release_reasons.map(x => row(x.reason, x.count)),
     ];
-    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+
+    const csv = sections.join('\r\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `foodbridge-analytics-${new Date().toISOString().slice(0, 10)}.csv`;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `foodbridge-analytics-${d.period.start || 'all'}-to-${d.period.end || new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const exportPDF = (d) => {
-    const period = d?.date_range?.start
-      ? `${d.date_range.start} to ${d.date_range.end || 'today'}`
-      : 'All time';
-    const row  = (label, value) => `<tr><td>${label}</td><td class="val">${value}</td></tr>`;
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
-      <title>FoodBridge Analytics</title>
-      <style>
-        *{box-sizing:border-box;margin:0;padding:0}
-        body{font-family:Arial,sans-serif;padding:32px;color:#111;font-size:13px}
-        h1{color:#16a34a;font-size:22px;margin-bottom:4px}
-        .meta{color:#6b7280;font-size:12px;margin-bottom:24px}
-        h2{font-size:14px;font-weight:700;color:#374151;border-bottom:2px solid #e5e7eb;padding-bottom:6px;margin:20px 0 10px}
-        table{width:100%;border-collapse:collapse;margin-bottom:16px}
-        td{padding:7px 10px;border:1px solid #e5e7eb;font-size:12px}
-        tr:nth-child(even) td{background:#f9fafb}
-        .val{font-weight:700;color:#16a34a;text-align:right}
-        .grid{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}
-        @media print{body{padding:16px}button{display:none}}
-      </style></head><body>
+  const generatePDF = (d) => {
+    const period = d.period.is_all_time ? 'All time' : `${d.period.start} → ${d.period.end || 'today'}`;
+    const r = (label, value, extra = '') =>
+      `<tr><td>${label}</td><td class="val">${value}</td>${extra ? `<td class="note">${extra}</td>` : ''}</tr>`;
+    const th = (...cols) => `<tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr>`;
+    const td = (...cols) => `<tr>${cols.map(c => `<td>${c}</td>`).join('')}</tr>`;
+
+    const bar = (pct, color) =>
+      `<div style="background:#e5e7eb;border-radius:4px;height:8px;margin-top:3px"><div style="background:${color};height:8px;border-radius:4px;width:${pct}%"></div></div>`;
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>FoodBridge Report</title>
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:Arial,sans-serif;padding:28px;color:#111;font-size:12px;line-height:1.5}
+      .header{background:linear-gradient(135deg,#15803d,#22c55e);color:#fff;padding:20px 24px;border-radius:12px;margin-bottom:20px}
+      .header h1{font-size:20px;font-weight:800;margin-bottom:2px}
+      .header .sub{font-size:11px;opacity:.85}
+      .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+      .kpi{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px;text-align:center}
+      .kpi .v{font-size:22px;font-weight:800;color:#16a34a}
+      .kpi .l{font-size:10px;color:#6b7280;margin-top:2px}
+      .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+      h2{font-size:13px;font-weight:700;color:#374151;border-bottom:2px solid #16a34a;padding-bottom:5px;margin:16px 0 8px}
+      table{width:100%;border-collapse:collapse;font-size:11px}
+      th{background:#f3f4f6;padding:7px 8px;text-align:left;font-weight:700;font-size:10px;text-transform:uppercase;color:#6b7280;border:1px solid #e5e7eb}
+      td{padding:6px 8px;border:1px solid #e5e7eb}
+      tr:nth-child(even) td{background:#fafafa}
+      .val{font-weight:700;color:#16a34a;text-align:right}
+      .note{color:#9ca3af;font-size:10px;font-style:italic}
+      .rank{font-weight:700;color:#374151;text-align:center}
+      .badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700}
+      .green{background:#dcfce7;color:#15803d}
+      .blue{background:#dbeafe;color:#1d4ed8}
+      .amber{background:#fef3c7;color:#b45309}
+      .red{background:#fee2e2;color:#b91c1c}
+      .footer{margin-top:20px;text-align:center;font-size:10px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:10px}
+      @media print{body{padding:12px}}
+    </style></head><body>
+
+    <div class="header">
       <h1>🌱 FoodBridge Analytics Report</h1>
-      <div class="meta">Period: <strong>${period}</strong> &nbsp;·&nbsp; Generated: ${new Date().toLocaleString()}</div>
-      <div class="grid">
-        <div>
-          <h2>Donation Status</h2>
-          <table>
-            ${row('Total Donations', d?.donations?.total ?? 0)}
-            ${row('Available', d?.donations?.active ?? 0)}
-            ${row('Reserved', d?.donations?.reserved ?? 0)}
-            ${row('Completed', d?.donations?.completed ?? 0)}
-            ${row('Expired', d?.donations?.expired ?? 0)}
-            ${row('Completion Rate', `${d?.donations?.completion_rate ?? 0}%`)}
-          </table>
-          <h2>Platform Impact</h2>
-          <table>
-            ${row('Meals Served', d?.meals_served ?? 0)}
-            ${row('Meals Pending', d?.meals_pending ?? 0)}
-            ${row('Kg Food Saved', `${d?.kg_saved ?? 0} kg`)}
-          </table>
-        </div>
-        <div>
-          <h2>Pickup Analytics</h2>
-          <table>
-            ${row('Instant Pickups', `${d?.pickup?.instant ?? 0} (${d?.pickup?.instant_pct ?? 0}%)`)}
-            ${row('Scheduled Pickups', `${d?.pickup?.scheduled ?? 0} (${d?.pickup?.scheduled_pct ?? 0}%)`)}
-            ${row('Upcoming Scheduled', d?.pickup?.upcoming_scheduled ?? 0)}
-            ${row('Instant Active', d?.pickup?.instant_active ?? 0)}
-          </table>
-          <h2>User Statistics</h2>
-          <table>
-            ${row('Total Users', d?.users?.total ?? 0)}
-            ${row('Verified Users', d?.users?.verified ?? 0)}
-            ${row('Pending', d?.users?.pending ?? 0)}
-            ${row('Donors', d?.users?.donors ?? 0)}
-            ${row('NGOs', d?.users?.ngos ?? 0)}
-            ${row('Verification Rate', `${d?.users?.verification_rate ?? 0}%`)}
-          </table>
-        </div>
+      <div class="sub">Period: <strong>${period}</strong> &nbsp;·&nbsp; Generated: ${new Date(d.generated_at).toLocaleString()} &nbsp;·&nbsp; Daily trend: ${d.period.daily_from} to ${d.period.daily_to}</div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi"><div class="v">${d.summary.donations.total}</div><div class="l">Total Donations</div></div>
+      <div class="kpi"><div class="v" style="color:#16a34a">${d.summary.donations.collected}</div><div class="l">Collected</div>${bar(d.summary.donations.completion_rate,'#16a34a')}</div>
+      <div class="kpi"><div class="v" style="color:#0891b2">${d.summary.impact.meals_served}</div><div class="l">Meals Served</div></div>
+      <div class="kpi"><div class="v" style="color:#7c3aed">${d.summary.impact.kg_saved} kg</div><div class="l">Food Saved</div></div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <h2>Donation Status</h2>
+        <table>
+          ${th('Status','Count','% of Total')}
+          ${td('<span class="badge green">Available</span>',   d.summary.donations.available, `${d.summary.donations.total ? Math.round(d.summary.donations.available/d.summary.donations.total*100) : 0}%`)}
+          ${td('<span class="badge amber">Reserved</span>',    d.summary.donations.reserved,  `${d.summary.donations.total ? Math.round(d.summary.donations.reserved/d.summary.donations.total*100) : 0}%`)}
+          ${td('<span class="badge green">Collected</span>',   d.summary.donations.collected, `${d.summary.donations.completion_rate}%`)}
+          ${td('<span class="badge red">Expired</span>',       d.summary.donations.expired,   `${d.summary.donations.total ? Math.round(d.summary.donations.expired/d.summary.donations.total*100) : 0}%`)}
+        </table>
+
+        <h2>Platform Impact</h2>
+        <table>
+          ${th('Metric','Value')}
+          ${r('Meals Served',        d.summary.impact.meals_served)}
+          ${r('Meals Pending',       d.summary.impact.meals_pending,   'in available/reserved')}
+          ${r('Kg Food Saved',       `${d.summary.impact.kg_saved} kg`)}
+        </table>
+
+        <h2>User Statistics</h2>
+        <table>
+          ${th('Metric','Count')}
+          ${r('Total Users',         d.summary.users.total)}
+          ${r('Verified',            d.summary.users.verified)}
+          ${r('Pending Approval',    d.summary.users.pending)}
+          ${r('Donors',              d.summary.users.donors)}
+          ${r('NGOs',                d.summary.users.ngos)}
+        </table>
       </div>
-      <p style="margin-top:24px;font-size:11px;color:#9ca3af;text-align:center">FoodBridge &nbsp;·&nbsp; Reducing food waste, one donation at a time</p>
-      </body></html>`;
-    const win = window.open('', '_blank', 'width=900,height=700');
+      <div>
+        <h2>Pickup Type Analysis</h2>
+        <table>
+          ${th('Type','Count','Share')}
+          ${td('⚡ Instant',   d.summary.pickup.instant,   `${d.summary.pickup.instant_pct}%`)}
+          ${td('📅 Scheduled', d.summary.pickup.scheduled, `${d.summary.pickup.scheduled_pct}%`)}
+        </table>
+        ${bar(d.summary.pickup.instant_pct,'#f59e0b')}
+        <p style="font-size:10px;color:#9ca3af;margin-top:4px">⚡ Instant ${d.summary.pickup.instant_pct}% &nbsp; 📅 Scheduled ${d.summary.pickup.scheduled_pct}%</p>
+
+        <h2>Food Categories</h2>
+        <table>
+          ${th('Category','Donations','Kg','Serves')}
+          ${d.food_categories.map(x => td(x.category||'Unknown', x.count, x.kg, x.serves)).join('')}
+        </table>
+
+        <h2>Release Reasons (Top 10)</h2>
+        <table>
+          ${th('Reason','Count')}
+          ${d.release_reasons.map(x => td(x.reason, x.count)).join('')}
+        </table>
+      </div>
+    </div>
+
+    <h2>Daily Breakdown (${d.period.daily_from} → ${d.period.daily_to})</h2>
+    <table>
+      ${th('Date','Posted','Collected','Reserved','Expired','Kg Saved','Serves')}
+      ${d.daily_breakdown.map(x => td(x.date,`<strong>${x.total}</strong>`,`<span class="badge green">${x.collected}</span>`,x.reserved,`<span class="badge red">${x.expired}</span>`,x.kg,x.serves)).join('')}
+    </table>
+
+    <div class="grid2">
+      <div>
+        <h2>Top 10 NGOs by Collections</h2>
+        <table>
+          ${th('#','NGO','Claimed','Collected','Success %','Kg Saved')}
+          ${d.top_ngos.map((x,i) => td(`<span class="rank">${i+1}</span>`, x.name, x.claimed, `<strong>${x.collected}</strong>`, `${x.success_rate??0}%`, x.kg_saved)).join('')}
+        </table>
+      </div>
+      <div>
+        <h2>Top 10 Donors by Donations</h2>
+        <table>
+          ${th('#','Donor','Posted','Collected','Kg Donated')}
+          ${d.top_donors.map((x,i) => td(`<span class="rank">${i+1}</span>`, x.name, `<strong>${x.posted}</strong>`, x.collected, x.kg)).join('')}
+        </table>
+      </div>
+    </div>
+
+    <div class="footer">FoodBridge &nbsp;·&nbsp; Reducing food waste, one donation at a time &nbsp;·&nbsp; foodbridge.app</div>
+    </body></html>`;
+
+    const win = window.open('', '_blank', 'width=1000,height=780');
     win.document.write(html);
     win.document.close();
     win.focus();
-    setTimeout(() => win.print(), 400);
+    setTimeout(() => win.print(), 500);
+  };
+
+  const handleExportCSV = async () => {
+    setExportLoading(true);
+    try { generateCSV(await fetchExportData()); }
+    catch { toast.error('Export failed'); }
+    finally { setExportLoading(false); }
+  };
+
+  const handleExportPDF = async () => {
+    setExportLoading(true);
+    try { generatePDF(await fetchExportData()); }
+    catch { toast.error('Export failed'); }
+    finally { setExportLoading(false); }
   };
 
   const handleVerifyUser = async () => {
@@ -735,18 +854,26 @@ const AdminDashboard = () => {
                 {/* Export buttons */}
                 <div className="flex gap-2">
                   <button
-                    onClick={() => exportCSV(display)}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-xl hover:bg-emerald-700 transition-colors"
+                    onClick={handleExportCSV}
+                    disabled={exportLoading}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
                   >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                    CSV
+                    {exportLoading
+                      ? <span className="animate-spin">⟳</span>
+                      : <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    }
+                    ⬇ CSV
                   </button>
                   <button
-                    onClick={() => exportPDF(display)}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-red-600 text-white text-xs font-semibold rounded-xl hover:bg-red-700 transition-colors"
+                    onClick={handleExportPDF}
+                    disabled={exportLoading}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-red-600 text-white text-xs font-semibold rounded-xl hover:bg-red-700 disabled:opacity-50 transition-colors"
                   >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                    PDF
+                    {exportLoading
+                      ? <span className="animate-spin">⟳</span>
+                      : <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                    }
+                    📄 PDF
                   </button>
                 </div>
               </div>
