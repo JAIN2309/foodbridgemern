@@ -277,6 +277,7 @@ const emailTemplates = {
           <table class="info-table">
             <tr><td>Food Items</td><td><strong>${donation.food_items.map(item => item.name).join(', ')}</strong></td></tr>
             <tr><td>Quantity</td><td><strong>🍽️ Serves ${donation.quantity_serves} people</strong></td></tr>
+            ${donation.weight_kg ? `<tr><td>Food Weight</td><td><strong>⚖️ ${donation.weight_kg} kg saved from waste</strong></td></tr>` : ''}
             <tr><td>Donor</td><td>${donor.organization_name}</td></tr>
             <tr><td>Status</td><td><span class="badge approved">COMPLETED</span></td></tr>
             <tr><td>Completed On</td><td>${new Date().toLocaleString('en-IN')}</td></tr>
@@ -284,7 +285,7 @@ const emailTemplates = {
         </div>
         <div class="stats-grid">
           <div class="stat-card"><p class="stat-value">${donation.quantity_serves}</p><p class="stat-label">People Fed</p></div>
-          <div class="stat-card"><p class="stat-value">100%</p><p class="stat-label">Food Saved</p></div>
+          <div class="stat-card"><p class="stat-value">${donation.weight_kg ? donation.weight_kg + 'kg' : '—'}</p><p class="stat-label">Waste Prevented</p></div>
         </div>
         <div style="text-align: center;">
           <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" class="cta-button">📊 View Your Impact</a>
@@ -295,12 +296,13 @@ const emailTemplates = {
       subject: '✨ Your Donation Made an Impact!',
       html: getEmailBase(`
         <p class="greeting">Dear ${donor.contact_person},</p>
-        <p class="message">✨ <strong>Wonderful news!</strong> Your food donation has been successfully collected and will help feed ${donation.quantity_serves} people!</p>
+        <p class="message">✨ <strong>Wonderful news!</strong> Your food donation has been successfully collected and will help feed ${donation.quantity_serves} people${donation.weight_kg ? `, preventing <strong>${donation.weight_kg}kg</strong> of food waste` : ''}!</p>
         <div class="info-card success">
           <h3>🎯 Impact Summary</h3>
           <table class="info-table">
             <tr><td>Food Items</td><td><strong>${donation.food_items.map(item => item.name).join(', ')}</strong></td></tr>
             <tr><td>People Fed</td><td><strong>🍽️ ${donation.quantity_serves} people</strong></td></tr>
+            ${donation.weight_kg ? `<tr><td>Food Rescued</td><td><strong>♻️ ${donation.weight_kg} kg saved from waste</strong></td></tr>` : ''}
             <tr><td>Collected By</td><td>${ngo.organization_name}</td></tr>
             <tr><td>Status</td><td><span class="badge approved">COMPLETED</span></td></tr>
             <tr><td>Completed On</td><td>${new Date().toLocaleString('en-IN')}</td></tr>
@@ -308,7 +310,7 @@ const emailTemplates = {
         </div>
         <div class="stats-grid">
           <div class="stat-card"><p class="stat-value">${donation.quantity_serves}</p><p class="stat-label">People Helped</p></div>
-          <div class="stat-card"><p class="stat-value">0kg</p><p class="stat-label">Waste Prevented</p></div>
+          <div class="stat-card"><p class="stat-value">${donation.weight_kg ? donation.weight_kg + 'kg' : '—'}</p><p class="stat-label">Waste Prevented</p></div>
         </div>
         <div style="text-align: center;">
           <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" class="cta-button">📊 View Your Impact Dashboard</a>
