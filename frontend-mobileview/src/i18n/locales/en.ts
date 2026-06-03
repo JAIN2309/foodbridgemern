@@ -161,6 +161,7 @@ export default {
       scheduledFor: 'Scheduled for',
       pickupBy: 'Pick up by',
       pickupBeforeWindowEnd: 'Must be before',
+      releaseHistoryTitle: 'Why not picked up?',
     },
     admin: {
       greeting: 'Hello',

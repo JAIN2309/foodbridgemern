@@ -404,6 +404,28 @@ export default function NGODashboard() {
                   </TouchableOpacity>
                 </View>
               )}
+              {/* Release history pill tags */}
+              {d.release_history?.length > 0 && (
+                <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 }}>
+                    <Ionicons name="information-circle-outline" size={13} color="#9ca3af" />
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('dashboard.ngo.releaseHistoryTitle')}</Text>
+                  </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  {d.release_history.map((r: any, i: number) => (
+                    <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#fff7ed', borderWidth: 1, borderColor: '#fed7aa', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 }}>
+                      <Ionicons name="close-circle-outline" size={12} color="#f97316" />
+                      <Text style={{ fontSize: 11, color: '#c2410c', fontWeight: '600', maxWidth: 130 }} numberOfLines={1}>{r.reason}</Text>
+                      {r.released_at && (
+                        <Text style={{ fontSize: 10, color: '#fb923c', fontWeight: '400' }}>
+                          · {new Date(r.released_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                      )}
+                    </View>
+                  ))}
+                </View>
+                </View>
+              )}
             </View>
           ))}
         )}

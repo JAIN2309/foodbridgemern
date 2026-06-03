@@ -232,7 +232,8 @@
       "confirmPickupBtn": "Confirm Pickup",
       "scheduledFor": "Scheduled for",
       "pickupBy": "Pick up by",
-      "pickupBeforeWindowEnd": "Must be before"
+      "pickupBeforeWindowEnd": "Must be before",
+      "releaseHistoryTitle": "Why not picked up?"
     },
     "admin": {
       "history":"History",

@@ -232,7 +232,8 @@
       "confirmPickupBtn": "પિકઅપ નિશ્ચિત કરો",
       "scheduledFor": "શેડ્યૂલ છે",
       "pickupBy": "પિકઅપ કરો",
-      "pickupBeforeWindowEnd": "આ પહેલા હોવું જોઈએ"
+      "pickupBeforeWindowEnd": "આ પહેલા હોવું જોઈએ",
+      "releaseHistoryTitle": "પિકઅપ કેમ ન થઈ?"
     },
     "admin": {
       "history":"ઇતિહાસ",

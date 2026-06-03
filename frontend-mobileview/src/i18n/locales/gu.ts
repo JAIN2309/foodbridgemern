@@ -161,6 +161,7 @@ export default {
       scheduledFor: 'શેડ્યૂલ છે',
       pickupBy: 'પિકઅપ કરો',
       pickupBeforeWindowEnd: 'આ પહેલા હોવું જોઈએ',
+      releaseHistoryTitle: 'પિકઅપ કેમ ન થઈ?',
     },
     admin: {
       greeting: 'નમસ્તે',
