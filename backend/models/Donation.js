@@ -79,6 +79,11 @@ const donationSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  release_history: [{
+    ngo_id:     { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    reason:     { type: String },
+    released_at:{ type: Date, default: Date.now }
+  }],
   special_instructions: {
     type: String,
     maxlength: 500

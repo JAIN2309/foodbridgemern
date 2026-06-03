@@ -491,6 +491,7 @@ const handleFailedPickup = async (donationId, ngoId, reason = 'timeout') => {
 const releaseDonation = async (req, res) => {
   try {
     const { donationId } = req.params;
+    const { reason } = req.body;
     const ngoId = req.user._id;
 
     const donation = await Donation.findOne({
@@ -506,7 +507,14 @@ const releaseDonation = async (req, res) => {
     await Donation.findByIdAndUpdate(donationId, {
       status: 'available',
       claimed_by: null,
-      claimed_at: null
+      claimed_at: null,
+      $push: {
+        release_history: {
+          ngo_id: ngoId,
+          reason: reason || 'No reason provided',
+          released_at: new Date()
+        }
+      }
     });
 
     // Log as failed pickup (voluntary release)
