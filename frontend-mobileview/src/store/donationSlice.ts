@@ -50,6 +50,30 @@ export const claimDonation = createAsyncThunk(
   }
 );
 
+export const markDonationCollected = createAsyncThunk(
+  'donations/markCollected',
+  async (donationId: string, { rejectWithValue }) => {
+    try {
+      const response = await api.post(`/donations/${donationId}/collect`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to mark collected');
+    }
+  }
+);
+
+export const releaseDonation = createAsyncThunk(
+  'donations/release',
+  async ({ donationId, reason }: { donationId: string; reason: string }, { rejectWithValue }) => {
+    try {
+      const response = await api.post(`/donations/${donationId}/release`, { reason });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to release donation');
+    }
+  }
+);
+
 export const fetchClaimedDonations = createAsyncThunk(
   'donations/fetchClaimed',
   async (_, { rejectWithValue }) => {
@@ -111,6 +135,20 @@ const donationSlice = createSlice({
       })
       .addCase(fetchClaimedDonations.fulfilled, (state, action) => {
         state.claimedDonations = action.payload;
+      })
+      .addCase(markDonationCollected.fulfilled, (state, action) => {
+        const id = action.payload?.donation?._id;
+        if (id) {
+          state.claimedDonations = state.claimedDonations.map(d =>
+            d._id === id ? { ...d, status: 'collected' } : d
+          );
+        }
+      })
+      .addCase(releaseDonation.fulfilled, (state, action) => {
+        // Remove from claimed list — donation went back to available
+        state.claimedDonations = state.claimedDonations.filter(
+          d => d._id !== action.meta.arg.donationId
+        );
       });
   },
 });

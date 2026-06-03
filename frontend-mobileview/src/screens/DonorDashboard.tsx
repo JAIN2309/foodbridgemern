@@ -8,6 +8,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAppDispatch, useAppSelector } from '../hooks/useRedux';
 import { createDonation, fetchDonorHistory } from '../store/donationSlice';
 import { useLocation } from '../hooks/useLocation';
+import { useOfflineSync } from '../hooks/useOfflineSync';
+import { enqueue } from '../utils/offlineQueue';
 import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 import { loadUser } from '../store/authSlice';
@@ -18,6 +20,7 @@ export default function DonorDashboard() {
   const { userDonations, isLoading } = useAppSelector((state) => state.donations);
   const { user } = useAppSelector((state) => state.auth);
   const { location } = useLocation();
+  const { isOnline, pendingCount, isSyncing } = useOfflineSync();
   const [activeTab, setActiveTab] = useState('overview');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -135,6 +138,36 @@ export default function DonorDashboard() {
     donationFormData.append('special_instructions', data.formData.special_instructions || '');
 
     try {
+      if (!isOnline) {
+        // Queue without photo — photos require connectivity
+        await enqueue({
+          type: 'create_donation',
+          payload: {
+            coordinates: JSON.stringify([location!.longitude, location!.latitude]),
+            food_items: JSON.stringify(data.formData.food_items.split(',').map((item: string) => ({
+              name: item.trim(),
+              category: data.formData.food_category,
+              storage_conditions: data.formData.storage_conditions,
+              preparation_time: data.dates.preparation_time.toISOString(),
+              expiry_date: data.dates.expiry_date.toISOString(),
+            }))),
+            quantity_serves: data.formData.quantity_serves,
+            weight_kg: data.formData.weight_kg,
+            pickup_address: data.formData.pickup_address.trim(),
+            pickup_window_start: data.dates.pickup_start.toISOString(),
+            pickup_window_end: data.dates.pickup_end.toISOString(),
+            special_instructions: data.formData.special_instructions || '',
+          }
+        });
+        Toast.show({ type: 'info', text1: t('offline.savedOffline'), text2: t('offline.donationWillSync') });
+        setFormData({ food_items: '', food_category: 'vegetarian', quantity_serves: '', weight_kg: '', pickup_address: '', special_instructions: '', storage_conditions: 'refrigerated' });
+        setPhotoUri(null);
+        setShowBiometricConfirm(false);
+        setPendingFormData(null);
+        setActiveTab('overview');
+        return;
+      }
+
       await dispatch(createDonation(donationFormData)).unwrap();
       Toast.show({ type: 'success', text1: t('common.success'), text2: 'Donation posted successfully!' });
       setFormData({ food_items: '', food_category: 'vegetarian', quantity_serves: '', weight_kg: '', pickup_address: '', special_instructions: '', storage_conditions: 'refrigerated' });
@@ -232,6 +265,15 @@ export default function DonorDashboard() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f7fa' }} edges={['bottom']}>
+      {/* Offline / Sync Banner */}
+      {(!isOnline || pendingCount > 0) && (
+        <View style={{ backgroundColor: isOnline ? '#f59e0b' : '#ef4444', paddingVertical: 6, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Ionicons name={isOnline ? 'sync' : 'cloud-offline'} size={14} color="#fff" />
+          <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600', flex: 1 }}>
+            {!isOnline ? t('offline.banner') : `${t('offline.pending')} ${pendingCount} ${t('offline.actions')}${isSyncing ? ` — ${t('offline.syncing')}` : ''}`}
+          </Text>
+        </View>
+      )}
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
 
         {/* Image Modal */}

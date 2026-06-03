@@ -7,8 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAppDispatch, useAppSelector } from '../hooks/useRedux';
-import { fetchNearbyDonations, claimDonation, fetchClaimedDonations } from '../store/donationSlice';
+import { fetchNearbyDonations, claimDonation, fetchClaimedDonations, markDonationCollected, releaseDonation } from '../store/donationSlice';
 import { useLocation } from '../hooks/useLocation';
+import { useOfflineSync } from '../hooks/useOfflineSync';
+import { enqueue, cacheNearbyDonations, getCachedNearbyDonations } from '../utils/offlineQueue';
 import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 
@@ -18,23 +20,85 @@ export default function NGODashboard() {
   const { donations, claimedDonations } = useAppSelector((state) => state.donations);
   const { user } = useAppSelector((state) => state.auth);
   const { location } = useLocation();
+  const { isOnline, pendingCount, isSyncing } = useOfflineSync();
   const [activeTab, setActiveTab] = useState('feed');
   const [refreshing, setRefreshing] = useState(false);
+  const [releaseModal, setReleaseModal] = useState({ open: false, donationId: '', donationName: '' });
+  const [releaseReason, setReleaseReason] = useState('');
 
   useEffect(() => {
-    if (location) {
-      dispatch(fetchNearbyDonations({ latitude: location.latitude, longitude: location.longitude }));
+    if (location && isOnline) {
+      dispatch(fetchNearbyDonations({ latitude: location.latitude, longitude: location.longitude }))
+        .unwrap()
+        .then((data: any) => { if (data) cacheNearbyDonations(data); })
+        .catch(() => {});
       dispatch(fetchClaimedDonations());
+    } else if (!isOnline) {
+      // Load cached donations when offline
+      getCachedNearbyDonations().then(cached => {
+        if (cached) Toast.show({ type: 'info', text1: t('offline.showingCached'), text2: t('offline.cachedAt', { time: new Date(cached.cachedAt).toLocaleTimeString() }) });
+      });
     }
-  }, [location]);
+  }, [location, isOnline]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    if (location) {
+    if (location && isOnline) {
       await dispatch(fetchNearbyDonations({ latitude: location.latitude, longitude: location.longitude }));
       await dispatch(fetchClaimedDonations());
     }
     setRefreshing(false);
+  };
+
+  const handleMarkCollected = (donationId: string) => {
+    Alert.alert(
+      t('dashboard.ngo.markCollected'),
+      t('dashboard.ngo.confirmCollect'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('dashboard.ngo.markCollected'),
+          style: 'default',
+          onPress: async () => {
+            if (!isOnline) {
+              await enqueue({ type: 'mark_collected', donationId });
+              Toast.show({ type: 'info', text1: t('offline.savedOffline'), text2: t('offline.willSync') });
+              return;
+            }
+            try {
+              await dispatch(markDonationCollected(donationId)).unwrap();
+              Toast.show({ type: 'success', text1: t('dashboard.ngo.markedCollected') });
+              dispatch(fetchClaimedDonations());
+            } catch (error: any) {
+              Toast.show({ type: 'error', text1: t('dashboard.ngo.collectFailed') });
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleRelease = (donationId: string, donationName: string) => {
+    setReleaseReason('');
+    setReleaseModal({ open: true, donationId, donationName });
+  };
+
+  const submitRelease = async () => {
+    const reason = releaseReason.trim() || t('dashboard.ngo.releaseReasonOther');
+    setReleaseModal({ open: false, donationId: '', donationName: '' });
+
+    if (!isOnline) {
+      await enqueue({ type: 'release_donation', donationId: releaseModal.donationId, reason });
+      Toast.show({ type: 'info', text1: t('offline.savedOffline'), text2: t('offline.willSync') });
+      return;
+    }
+    try {
+      await dispatch(releaseDonation({ donationId: releaseModal.donationId, reason })).unwrap();
+      Toast.show({ type: 'success', text1: t('dashboard.ngo.releaseSuccess') });
+      dispatch(fetchClaimedDonations());
+    } catch {
+      Toast.show({ type: 'error', text1: t('dashboard.ngo.releaseFailed') });
+    }
   };
 
   const handleClaim = (donationId: string, donationName: string) => {
@@ -47,6 +111,11 @@ export default function NGODashboard() {
           text: t('dashboard.ngo.claimBtn'),
           style: 'default',
           onPress: async () => {
+            if (!isOnline) {
+              await enqueue({ type: 'claim_donation', donationId });
+              Toast.show({ type: 'info', text1: t('offline.savedOffline'), text2: t('offline.willSync') });
+              return;
+            }
             try {
               await dispatch(claimDonation(donationId)).unwrap();
               Toast.show({ type: 'success', text1: t('dashboard.ngo.claimSuccess') });
@@ -191,6 +260,16 @@ export default function NGODashboard() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f7fa' }} edges={['bottom']}>
 
+      {/* Offline / Sync Banner */}
+      {(!isOnline || pendingCount > 0) && (
+        <View style={{ backgroundColor: isOnline ? '#f59e0b' : '#ef4444', paddingVertical: 6, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Ionicons name={isOnline ? 'sync' : 'cloud-offline'} size={14} color="#fff" />
+          <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600', flex: 1 }}>
+            {!isOnline ? t('offline.banner') : `${t('offline.pending')} ${pendingCount} ${t('offline.actions')}${isSyncing ? ` — ${t('offline.syncing')}` : ''}`}
+          </Text>
+        </View>
+      )}
+
       {/* Gradient Header */}
       <LinearGradient colors={['#16a34a', '#22c55e']} style={styles.header}>
         <View>
@@ -260,9 +339,68 @@ export default function NGODashboard() {
               <Text style={styles.emptyTitle}>{t('dashboard.ngo.noClaims')}</Text>
               <Text style={styles.emptyDesc}>{t('dashboard.ngo.noClaimsDesc')}</Text>
             </View>
-          ) : claimedDonations.map((d: any) => <DonationCard key={d._id} d={d} showClaim={false} />)
+          ) : claimedDonations.map((d: any) => (
+            <View key={d._id}>
+              <DonationCard d={d} showClaim={false} />
+              {/* Action buttons for reserved donations */}
+              {d.status === 'reserved' && (
+                <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 12, marginTop: -8 }}>
+                  <TouchableOpacity
+                    onPress={() => handleMarkCollected(d._id)}
+                    style={{ flex: 1, backgroundColor: '#16a34a', paddingVertical: 10, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                  >
+                    <Ionicons name="checkmark-circle" size={16} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{t('dashboard.ngo.markCollected')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleRelease(d._id, d.food_items?.map((i: any) => i.name).join(', ') || '')}
+                    style={{ flex: 1, backgroundColor: '#f97316', paddingVertical: 10, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                  >
+                    <Ionicons name="arrow-undo" size={16} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{t('dashboard.ngo.releaseDonation')}</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          ))}
         )}
       </ScrollView>
+
+      {/* Release Reason Modal */}
+      {releaseModal.open && (
+        <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 24, width: '100%' }}>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1f2937', textAlign: 'center', marginBottom: 6 }}>{t('dashboard.ngo.releaseModalTitle')}</Text>
+            <Text style={{ fontSize: 13, color: '#6b7280', textAlign: 'center', marginBottom: 16 }}>"{releaseModal.donationName}"</Text>
+            {[
+              t('dashboard.ngo.releaseReasonDistance'),
+              t('dashboard.ngo.releaseReasonTransport'),
+              t('dashboard.ngo.releaseReasonFoodGone'),
+              t('dashboard.ngo.releaseReasonEmergency'),
+              t('dashboard.ngo.releaseReasonOther'),
+            ].map((reason) => (
+              <TouchableOpacity
+                key={reason}
+                onPress={() => setReleaseReason(reason)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, marginBottom: 8, borderWidth: 2, borderColor: releaseReason === reason ? '#f97316' : '#e5e7eb', backgroundColor: releaseReason === reason ? '#fff7ed' : '#f9fafb' }}
+              >
+                <View style={{ width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: releaseReason === reason ? '#f97316' : '#9ca3af', backgroundColor: releaseReason === reason ? '#f97316' : 'transparent', justifyContent: 'center', alignItems: 'center' }}>
+                  {releaseReason === reason && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' }} />}
+                </View>
+                <Text style={{ fontSize: 14, color: '#374151', flex: 1 }}>{reason}</Text>
+              </TouchableOpacity>
+            ))}
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+              <TouchableOpacity onPress={() => setReleaseModal({ open: false, donationId: '', donationName: '' })} style={{ flex: 1, paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, borderColor: '#d1d5db', alignItems: 'center' }}>
+                <Text style={{ fontWeight: '600', color: '#374151' }}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={submitRelease} disabled={!releaseReason} style={{ flex: 1, paddingVertical: 12, borderRadius: 12, backgroundColor: releaseReason ? '#f97316' : '#e5e7eb', alignItems: 'center' }}>
+                <Text style={{ fontWeight: '700', color: releaseReason ? '#fff' : '#9ca3af' }}>{t('dashboard.ngo.confirmReleaseBtn')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }

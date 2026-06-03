@@ -348,6 +348,23 @@ export default {
     from: 'From',
     allUsers: 'All Users',
   },
+  offline: {
+    banner: 'You are offline — actions will be saved and synced when connected',
+    savedOffline: 'Saved offline',
+    willSync: 'Will sync automatically when internet is restored',
+    donationWillSync: 'Donation queued — will be posted when connected (photo not included)',
+    pending: 'Pending sync:',
+    actions: 'action(s)',
+    syncing: 'syncing now',
+    showingCached: 'Showing cached donations',
+    cachedAt: 'Cached at {{time}}',
+    confirmCollect: 'Confirm this donation was picked up and collected?',
+  },
+  ngoOffline: {
+    claimQueued: 'Claim saved — will process when connected',
+    collectQueued: 'Collection saved — will sync when connected',
+    releaseQueued: 'Release saved — will sync when connected',
+  },
   donationDetails: {
     postedOn: 'Posted',
     availableForPickup: '🟢 Available for Pickup',

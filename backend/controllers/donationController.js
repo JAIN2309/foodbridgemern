@@ -567,22 +567,53 @@ const syncOfflineActions = async (req, res) => {
   try {
     const { pending_actions } = req.body;
     const results = [];
-    
+
     for (const action of pending_actions) {
       try {
         switch (action.action) {
-          case 'claim_donation':
-            // Process offline claim
-            const claimResult = await processClaim(action.data.donationId, req.user._id);
-            results.push({ action: action.action, success: true, result: claimResult });
+          case 'claim_donation': {
+            const donation = await Donation.findOneAndUpdate(
+              { _id: action.data.donationId, status: 'available', expiresAt: { $gt: new Date() } },
+              { status: 'reserved', claimed_by: req.user._id, claimed_at: new Date() },
+              { new: true }
+            );
+            if (!donation) throw new Error('Donation no longer available');
+            await User.findByIdAndUpdate(req.user._id, { $inc: { 'activity_stats.donations_claimed': 1 } });
+            await performanceService.invalidateLocationCache(donation.location?.coordinates?.[0], donation.location?.coordinates?.[1]);
+            results.push({ action: action.action, success: true, donationId: action.data.donationId });
             break;
-            
-          case 'mark_collected':
-            // Process offline collection
-            const collectResult = await processCollection(action.data.donationId, req.user._id);
-            results.push({ action: action.action, success: true, result: collectResult });
+          }
+
+          case 'mark_collected': {
+            const donation = await Donation.findOneAndUpdate(
+              { _id: action.data.donationId, claimed_by: req.user._id, status: 'reserved' },
+              { status: 'collected', collected_at: new Date() },
+              { new: true }
+            );
+            if (!donation) throw new Error('Donation not found or already collected');
+            await Promise.all([
+              User.findByIdAndUpdate(req.user._id, { $inc: { 'activity_stats.successful_pickups': 1 } }),
+              User.findByIdAndUpdate(donation.donor_id, { $inc: { 'activity_stats.successful_pickups': 1 } })
+            ]);
+            await redis.del('admin:stats');
+            results.push({ action: action.action, success: true, donationId: action.data.donationId });
             break;
-            
+          }
+
+          case 'release_donation': {
+            const donation = await Donation.findOneAndUpdate(
+              { _id: action.data.donationId, claimed_by: req.user._id, status: 'reserved' },
+              { status: 'available', claimed_by: null, claimed_at: null,
+                $push: { release_history: { ngo_id: req.user._id, reason: action.data.reason || 'Offline release', released_at: new Date() } }
+              },
+              { new: true }
+            );
+            if (!donation) throw new Error('Donation not found');
+            await performanceService.invalidateLocationCache(donation.location?.coordinates?.[0], donation.location?.coordinates?.[1]);
+            results.push({ action: action.action, success: true, donationId: action.data.donationId });
+            break;
+          }
+
           default:
             results.push({ action: action.action, success: false, error: 'Unknown action' });
         }
@@ -590,13 +621,12 @@ const syncOfflineActions = async (req, res) => {
         results.push({ action: action.action, success: false, error: error.message });
       }
     }
-    
-    // Update user's last sync time
+
     await User.findByIdAndUpdate(req.user._id, {
       'offline_mode.last_sync': new Date(),
       'offline_mode.pending_actions': []
     });
-    
+
     res.json({ results, synced_at: new Date() });
   } catch (error) {
     res.status(500).json({ message: error.message });

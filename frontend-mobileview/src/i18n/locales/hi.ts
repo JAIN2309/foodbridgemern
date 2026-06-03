@@ -348,6 +348,18 @@ export default {
     from: 'से',
     allUsers: 'सभी उपयोगकर्ता',
   },
+  offline: {
+    banner: 'आप ऑफलाइन हैं — कार्य सहेजे जाएंगे और कनेक्ट होने पर सिंक होंगे',
+    savedOffline: 'ऑफलाइन सहेजा गया',
+    willSync: 'इंटरनेट बहाल होने पर स्वचालित रूप से सिंक होगा',
+    donationWillSync: 'दान कतारबद्ध — कनेक्ट होने पर पोस्ट होगा (फोटो शामिल नहीं)',
+    pending: 'सिंक लंबित:',
+    actions: 'कार्य',
+    syncing: 'अभी सिंक हो रहा है',
+    showingCached: 'कैश्ड दान दिखाए जा रहे हैं',
+    cachedAt: '{{time}} पर कैश किया गया',
+    confirmCollect: 'क्या यह दान उठाया और एकत्र किया गया?',
+  },
   donationDetails: {
     postedOn: 'पोस्ट किया',
     availableForPickup: '🟢 पिकअप के लिए उपलब्ध',
