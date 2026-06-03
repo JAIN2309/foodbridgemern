@@ -4,6 +4,8 @@ const {
   getNearbyDonations,
   claimDonation,
   markCollected,
+  releaseDonation,
+  adminReleaseDonation,
   getDonorHistory,
   getNGOHistory,
   getAdminDonationHistory,
@@ -23,10 +25,12 @@ router.get('/history/donor', auth, requireRole(['donor']), getDonorHistory);
 router.get('/nearby', auth, requireRole(['ngo']), requireVerified, getNearbyDonations);
 router.post('/:donationId/claim', auth, requireRole(['ngo']), requireVerified, claimDonation);
 router.post('/:donationId/collect', auth, requireRole(['ngo']), requireVerified, markCollected);
+router.post('/:donationId/release', auth, requireRole(['ngo']), requireVerified, releaseDonation);
 router.get('/history/ngo', auth, requireRole(['ngo']), getNGOHistory);
 
 // Admin routes
 router.get('/admin/history', auth, requireRole(['admin']), getAdminDonationHistory);
+router.post('/:donationId/admin-release', auth, requireRole(['admin']), adminReleaseDonation);
 
 // Enhanced features
 router.post('/sync-offline', auth, syncOfflineActions);

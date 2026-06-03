@@ -204,6 +204,10 @@
       "markCollected": "Mark as Collected",
       "markedCollected": "Donation marked as collected!",
       "collectFailed": "Failed to mark as collected",
+      "releaseDonation": "Cannot Pickup",
+      "confirmRelease": "Release this donation back to available? Other NGOs will be able to claim it.",
+      "releaseSuccess": "Donation released — now available for other NGOs",
+      "releaseFailed": "Failed to release donation",
       "claimedOn": "Claimed",
       "collectedOn": "Collected on"
     },

@@ -204,6 +204,10 @@
       "markCollected": "એકત્રિત તરીકે ચિહ્નિત કરો",
       "markedCollected": "દાન એકત્રિત તરીકે ચિહ્નિત!",
       "collectFailed": "એકત્રિત તરીકે ચિહ્નિત કરવામાં નિષ્ફળ",
+      "releaseDonation": "પિકઅપ શક્ય ન થઈ",
+      "confirmRelease": "આ દાન પાછું ઉપલબ્ધ કરો? અન્ય NGO તેનો દાવો કરી શકશે.",
+      "releaseSuccess": "દાન જારી — અન્ય NGO માટે ઉપલબ્ધ",
+      "releaseFailed": "દાન જારી કરવામાં નિષ્ફળ",
       "claimedOn": "દાવો કર્યો",
       "collectedOn": "એકત્રિત કર્યું"
     },

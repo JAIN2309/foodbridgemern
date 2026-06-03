@@ -487,6 +487,73 @@ const handleFailedPickup = async (donationId, ngoId, reason = 'timeout') => {
   }
 };
 
+// NGO releases a claimed donation back to available
+const releaseDonation = async (req, res) => {
+  try {
+    const { donationId } = req.params;
+    const ngoId = req.user._id;
+
+    const donation = await Donation.findOne({
+      _id: donationId,
+      claimed_by: ngoId,
+      status: 'reserved'
+    });
+
+    if (!donation) {
+      return res.status(404).json({ message: 'Donation not found or not claimed by you' });
+    }
+
+    await Donation.findByIdAndUpdate(donationId, {
+      status: 'available',
+      claimed_by: null,
+      claimed_at: null
+    });
+
+    // Log as failed pickup (voluntary release)
+    await User.findByIdAndUpdate(ngoId, {
+      $inc: { 'activity_stats.failed_pickups': 1 }
+    });
+
+    // Invalidate nearby cache so other NGOs see it immediately
+    if (donation.location?.coordinates) {
+      const [lng, lat] = donation.location.coordinates;
+      await performanceService.invalidateLocationCache(lng, lat);
+    }
+    await redis.del('admin:stats');
+
+    res.json({ message: 'Donation released back to available' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Admin force-releases any reserved donation back to available
+const adminReleaseDonation = async (req, res) => {
+  try {
+    const { donationId } = req.params;
+
+    const donation = await Donation.findOneAndUpdate(
+      { _id: donationId, status: 'reserved' },
+      { status: 'available', claimed_by: null, claimed_at: null },
+      { new: true }
+    );
+
+    if (!donation) {
+      return res.status(404).json({ message: 'Donation not found or not in reserved state' });
+    }
+
+    if (donation.location?.coordinates) {
+      const [lng, lat] = donation.location.coordinates;
+      await performanceService.invalidateLocationCache(lng, lat);
+    }
+    await redis.del('admin:stats');
+
+    res.json({ message: 'Donation force-released to available', donation });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Offline sync endpoint
 const syncOfflineActions = async (req, res) => {
   try {
@@ -693,6 +760,8 @@ module.exports = {
   getNearbyDonations,
   claimDonation,
   markCollected,
+  releaseDonation,
+  adminReleaseDonation,
   getDonorHistory,
   getNGOHistory,
   getAdminDonationHistory,

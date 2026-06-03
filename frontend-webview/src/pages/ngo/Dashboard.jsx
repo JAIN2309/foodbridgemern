@@ -586,22 +586,41 @@ const NGODashboard = () => {
                             </p>
                           )}
 
-                          {/* Mark Collected button */}
+                          {/* Action buttons for reserved donations */}
                           {donation.status === 'reserved' && (
-                            <button
-                              onClick={async () => {
-                                try {
-                                  await api.post(`/donations/${donation._id}/collect`);
-                                  toast.success(t('dashboard.ngo.markedCollected'));
-                                  dispatch(fetchNGOHistory());
-                                } catch {
-                                  toast.error(t('dashboard.ngo.collectFailed'));
-                                }
-                              }}
-                              className="w-full mt-1 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors"
-                            >
-                              ✅ {t('dashboard.ngo.markCollected')}
-                            </button>
+                            <div className="flex gap-2 mt-1">
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await api.post(`/donations/${donation._id}/collect`);
+                                    toast.success(t('dashboard.ngo.markedCollected'));
+                                    dispatch(fetchNGOHistory());
+                                    if (geoLocation) dispatch(fetchNearbyDonations({ longitude: geoLocation.longitude, latitude: geoLocation.latitude, maxDistance: 10000 }));
+                                  } catch {
+                                    toast.error(t('dashboard.ngo.collectFailed'));
+                                  }
+                                }}
+                                className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors"
+                              >
+                                ✅ {t('dashboard.ngo.markCollected')}
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (!window.confirm(t('dashboard.ngo.confirmRelease'))) return;
+                                  try {
+                                    await api.post(`/donations/${donation._id}/release`);
+                                    toast.success(t('dashboard.ngo.releaseSuccess'));
+                                    dispatch(fetchNGOHistory());
+                                    if (geoLocation) dispatch(fetchNearbyDonations({ longitude: geoLocation.longitude, latitude: geoLocation.latitude, maxDistance: 10000 }));
+                                  } catch {
+                                    toast.error(t('dashboard.ngo.releaseFailed'));
+                                  }
+                                }}
+                                className="flex-1 px-3 py-2 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 transition-colors"
+                              >
+                                🔄 {t('dashboard.ngo.releaseDonation')}
+                              </button>
+                            </div>
                           )}
 
                           {/* Collected banner */}
