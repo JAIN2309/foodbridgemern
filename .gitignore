@@ -71,3 +71,7 @@ temp/
 
 # Project documents
 foodbridge.pdf
+
+# Firebase config (contains API keys)
+google-services.json
+GoogleService-Info.plist

@@ -14,9 +14,13 @@
     },
     "android": {
       "package": "com.foodbridge.mobile",
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "RECEIVE_BOOT_COMPLETED",
+        "FOREGROUND_SERVICE",
+        "VIBRATE"
       ]
     },
     "web": {
@@ -30,6 +34,8 @@
           "locationAlwaysAndWhenInUsePermission": "Allow FoodBridge to use your location to find nearby food donations."
         }
       ],
+      "expo-background-fetch",
+      "expo-task-manager",
       "expo-asset"
     ],
     "scheme": "foodbridge"

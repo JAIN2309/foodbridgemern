@@ -109,6 +109,10 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  push_token: {
+    type: String,
+    default: null
+  },
   email_encrypted: String,
   phone_encrypted: String,
   license_number_encrypted: String,

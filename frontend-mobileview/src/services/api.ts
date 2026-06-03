@@ -3,8 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import { LocationData } from './mapService';
 
 const API_BASE_URL = 'http://10.17.24.65:5001/api'; // Your Computer IP
-
-console.log('🔧 API Base URL:', API_BASE_URL);
+export { API_BASE_URL };
 
 const api = axios.create({
   baseURL: API_BASE_URL,

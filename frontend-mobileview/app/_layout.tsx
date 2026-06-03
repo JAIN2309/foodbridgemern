@@ -7,6 +7,11 @@ import { store } from '../src/store';
 import '../src/i18n';
 import { useAppSelector, useAppDispatch } from '../src/hooks/useRedux';
 import { setToken, loadUser } from '../src/store/authSlice';
+import { registerBackgroundSync, storeApiBase } from '../src/utils/backgroundSync';
+import { registerPushToken, setupPushListeners } from '../src/utils/pushNotifications';
+import { API_BASE_URL } from '../src/services/api';
+import { getQueue, clearQueue } from '../src/utils/offlineQueue';
+import api from '../src/services/api';
 
 function RootLayoutNav() {
   const segments = useSegments();
@@ -26,6 +31,35 @@ function RootLayoutNav() {
       setIsNavigationReady(true);
     };
     loadToken();
+
+    // Register background sync task — works even when app is closed
+    registerBackgroundSync();
+    storeApiBase(API_BASE_URL);
+
+    // Register for push notifications → stores token in backend
+    registerPushToken();
+
+    // Handle silent push from server (fires after sync completes)
+    const unsubscribe = setupPushListeners(async () => {
+      // Server told us to refresh — drain any remaining queue
+      const queue = await getQueue();
+      if (queue.length > 0) {
+        const pending = queue
+          .filter(a => a.type !== 'create_donation')
+          .map(a => {
+            if (a.type === 'claim_donation') return { action: 'claim_donation', data: { donationId: a.donationId } };
+            if (a.type === 'mark_collected') return { action: 'mark_collected', data: { donationId: a.donationId } };
+            if (a.type === 'release_donation') return { action: 'release_donation', data: { donationId: a.donationId, reason: a.reason } };
+            return null;
+          })
+          .filter(Boolean);
+        if (pending.length > 0) {
+          try { await api.post('/donations/sync-offline', { pending_actions: pending }); } catch {}
+        }
+        await clearQueue();
+      }
+    });
+    return unsubscribe;
   }, []);
 
   // Check for incomplete profile and reload if needed
@@ -36,7 +70,6 @@ function RootLayoutNav() {
       const missingFields = requiredFields.filter(field => !user[field]);
       
       if (missingFields.length > 0) {
-        console.log('⚠️ INCOMPLETE PROFILE DETECTED, LOADING FULL DATA...');
         dispatch(loadUser());
       }
     }

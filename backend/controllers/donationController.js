@@ -5,6 +5,7 @@ const User = require('../models/User');
 const redis = require('../utils/redisClient');
 const { sendEmail, emailTemplates } = require('../services/emailService');
 const performanceService = require('../services/performanceService');
+const { pushToUser, silentSyncToUser } = require('../services/pushService');
 
 // Food safety validation
 const validateFoodSafety = (food_items) => {
@@ -302,6 +303,13 @@ const claimDonation = async (req, res) => {
       ngo_trust_score: req.user.trust_score
     });
 
+    // Push notification to donor — instant even if their app is closed
+    pushToUser(donation.donor_id._id, {
+      title: '🤝 Your donation was claimed!',
+      body: `${req.user.organization_name} has claimed "${donation.food_items.map(i => i.name).join(', ')}"`,
+      data: { type: 'donation_claimed', donationId: donation._id.toString() }
+    }).catch(() => {});
+
     try {
       const ngoUser = await User.findById(ngoId);
       const donorUser = donation.donor_id;
@@ -418,6 +426,13 @@ const markCollected = async (req, res) => {
     } catch (emailError) {
       console.error('Completion notification emails failed:', emailError);
     }
+
+    // Push to donor — instant notification even if app is closed
+    pushToUser(donation.donor_id._id, {
+      title: '✅ Your food made an impact!',
+      body: `${donation.food_items.map(i => i.name).join(', ')} was collected${donation.weight_kg ? ` — ${donation.weight_kg}kg saved from waste` : ''}`,
+      data: { type: 'donation_collected', donationId: donation._id.toString() }
+    }).catch(() => {});
 
     // Invalidate cache + clear admin stats cache so counts update
     if (donation.location?.coordinates) {
@@ -626,6 +641,9 @@ const syncOfflineActions = async (req, res) => {
       'offline_mode.last_sync': new Date(),
       'offline_mode.pending_actions': []
     });
+
+    // Silent push to the user to refresh their data after sync
+    silentSyncToUser(req.user._id, { synced: results.length }).catch(() => {});
 
     res.json({ results, synced_at: new Date() });
   } catch (error) {

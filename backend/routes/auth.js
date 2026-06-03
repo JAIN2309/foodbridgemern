@@ -14,5 +14,16 @@ router.post('/reset-password', passwordResetLimiter, resetPassword);
 router.get('/profile', auth, getProfile);
 router.put('/profile', auth, updateProfile);
 router.post('/logout', auth, logout);
+router.put('/push-token', auth, async (req, res) => {
+  try {
+    const { push_token } = req.body;
+    const userId = req.user._id || req.user.id;
+    await (require('../models/User')).findByIdAndUpdate(userId, { push_token });
+    await (require('../utils/redisClient')).del(`user:${userId}`);
+    res.json({ message: 'Push token saved' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 module.exports = router;
