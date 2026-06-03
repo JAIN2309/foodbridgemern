@@ -216,78 +216,192 @@ const AdminDashboard = () => {
     return res.data;
   };
 
-  const generateCSV = (d) => {
-    const period = d.period.is_all_time ? 'All time' : `${d.period.start} to ${d.period.end || 'today'}`;
-    const c = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const row = (...cells) => cells.map(c).join(',');
-    const blank = () => '';
+  const generateExcel = (d) => {
+    const period = d.period.is_all_time ? 'All time' : `${d.period.start} → ${d.period.end || 'today'}`;
+    const pct  = (n, tot) => tot > 0 ? `${Math.round(n / tot * 100)}%` : '0%';
 
-    const sections = [
-      row('FOODBRIDGE ANALYTICS EXPORT'), row(`Period: ${period}`), row(`Generated: ${new Date(d.generated_at).toLocaleString()}`), blank(),
+    // Style helpers — all inline so Excel renders them
+    const S = {
+      header:   'background:#15803d;color:#fff;font-size:16pt;font-weight:bold;padding:10px 14px;border:none',
+      subhead:  'background:#166534;color:#e2f8ea;font-size:9pt;padding:4px 14px;border:none',
+      section:  'background:#1e293b;color:#f1f5f9;font-size:10pt;font-weight:bold;padding:7px 10px;border:1px solid #334155',
+      colHead:  'background:#bbf7d0;color:#14532d;font-size:9pt;font-weight:bold;padding:6px 8px;border:1px solid #86efac;text-align:center',
+      kpiVal:   (c) => `background:#f0fdf4;color:${c};font-size:18pt;font-weight:bold;text-align:center;padding:10px 4px;border:1px solid #bbf7d0`,
+      kpiLbl:   'background:#f0fdf4;color:#6b7280;font-size:8pt;text-align:center;padding:0 4px 8px;border:1px solid #bbf7d0;border-top:none',
+      cellL:    (i) => `background:${i%2===0?'#fff':'#f8fafc'};padding:5px 8px;border:1px solid #e2e8f0;font-size:9pt`,
+      cellC:    (i) => `background:${i%2===0?'#fff':'#f8fafc'};padding:5px 8px;border:1px solid #e2e8f0;font-size:9pt;text-align:center`,
+      rank:     'background:#fef3c7;color:#92400e;font-weight:bold;text-align:center;padding:5px 8px;border:1px solid #fde68a;font-size:9pt',
+      green:    (i) => `background:${i%2===0?'#dcfce7':'#d1fae5'};color:#15803d;font-weight:bold;text-align:center;padding:5px 8px;border:1px solid #86efac;font-size:9pt`,
+      amber:    (i) => `background:${i%2===0?'#fef3c7':'#fde68a'};color:#92400e;font-weight:bold;text-align:center;padding:5px 8px;border:1px solid #fde68a;font-size:9pt`,
+      red:      (i) => `background:${i%2===0?'#fee2e2':'#fecaca'};color:#b91c1c;font-weight:bold;text-align:center;padding:5px 8px;border:1px solid #fca5a5;font-size:9pt`,
+      blue:     (i) => `background:${i%2===0?'#dbeafe':'#bfdbfe'};color:#1d4ed8;font-weight:bold;text-align:center;padding:5px 8px;border:1px solid #93c5fd;font-size:9pt`,
+      empty:    'background:#f1f5f9;border:none;padding:4px',
+    };
 
-      row('SECTION 1: DONATION STATUS SUMMARY'),
-      row('Metric', 'Count', 'Notes'),
-      row('Total Donations',    d.summary.donations.total,     ''),
-      row('Available',          d.summary.donations.available, 'Waiting to be claimed'),
-      row('Reserved',           d.summary.donations.reserved,  'Claimed — pickup pending'),
-      row('Completed',          d.summary.donations.collected, 'Successfully collected'),
-      row('Expired',            d.summary.donations.expired,   'Pickup window passed'),
-      row('Completion Rate',    `${d.summary.donations.completion_rate}%`, '(Collected / Total)'),
-      blank(),
+    const COLS = 8; // max columns used
+    const banner = (label, sub = '') => `
+      <tr><td colspan="${COLS}" style="${S.section}">${label}</td></tr>
+      ${sub ? `<tr><td colspan="${COLS}" style="background:#334155;color:#94a3b8;font-size:8pt;padding:3px 10px;border:1px solid #334155;font-style:italic">${sub}</td></tr>` : ''}`;
+    const spacer = () => `<tr>${Array(COLS).fill(`<td style="${S.empty}"></td>`).join('')}</tr>`;
+    const thead  = (...cols) => `<tr>${cols.map(c => `<td style="${S.colHead}">${c}</td>`).join('')}</tr>`;
 
-      row('SECTION 2: PLATFORM IMPACT'),
-      row('Metric', 'Value'),
-      row('Meals Served',       d.summary.impact.meals_served),
-      row('Meals Pending',      d.summary.impact.meals_pending),
-      row('Food Saved (kg)',     `${d.summary.impact.kg_saved} kg`),
-      blank(),
+    const tot = d.summary.donations.total || 1;
 
-      row('SECTION 3: PICKUP TYPE ANALYTICS'),
-      row('Type', 'Count', 'Percentage', 'Avg Kg'),
-      row('Instant',    d.summary.pickup.instant,   `${d.summary.pickup.instant_pct}%`,   ''),
-      row('Scheduled',  d.summary.pickup.scheduled, `${d.summary.pickup.scheduled_pct}%`, ''),
-      blank(),
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:x="urn:schemas-microsoft-com:office:excel"
+      xmlns="http://www.w3.org/TR/REC-html40">
+    <head><meta charset="UTF-8">
+    <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>
+      <x:ExcelWorksheet><x:Name>FoodBridge Analytics</x:Name>
+      <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+    </x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+    </head><body>
+    <table cellspacing="0" cellpadding="0" style="font-family:Calibri,Arial,sans-serif;border-collapse:collapse;width:100%">
 
-      row('SECTION 4: USER STATISTICS'),
-      row('Metric', 'Count'),
-      row('Total Users',        d.summary.users.total),
-      row('Verified',           d.summary.users.verified),
-      row('Pending Approval',   d.summary.users.pending),
-      row('Donors',             d.summary.users.donors),
-      row('NGOs',               d.summary.users.ngos),
-      blank(),
+      <!-- HEADER -->
+      <tr><td colspan="${COLS}" style="${S.header}">🌱&nbsp; FoodBridge Analytics Report</td></tr>
+      <tr><td colspan="${COLS}" style="${S.subhead}">Period: ${period} &nbsp;|&nbsp; Generated: ${new Date(d.generated_at).toLocaleString()} &nbsp;|&nbsp; Trend window: ${d.period.daily_from} → ${d.period.daily_to}</td></tr>
+      ${spacer()}
 
-      row('SECTION 5: DAILY BREAKDOWN', `(${d.period.daily_from} to ${d.period.daily_to})`),
-      row('Date', 'Total', 'Collected', 'Reserved', 'Expired', 'Kg', 'Serves'),
-      ...d.daily_breakdown.map(x => row(x.date, x.total, x.collected, x.reserved, x.expired, x.kg, x.serves)),
-      blank(),
+      <!-- KPI ROW -->
+      <tr>
+        <td colspan="2" style="${S.kpiVal('#15803d')}">${d.summary.donations.total}</td>
+        <td colspan="2" style="${S.kpiVal('#16a34a')}">${d.summary.donations.collected}</td>
+        <td colspan="2" style="${S.kpiVal('#0891b2')}">${d.summary.impact.meals_served}</td>
+        <td colspan="2" style="${S.kpiVal('#7c3aed')}">${d.summary.impact.kg_saved} kg</td>
+      </tr>
+      <tr>
+        <td colspan="2" style="${S.kpiLbl}">Total Donations</td>
+        <td colspan="2" style="${S.kpiLbl}">Collected (${d.summary.donations.completion_rate}% rate)</td>
+        <td colspan="2" style="${S.kpiLbl}">Meals Served</td>
+        <td colspan="2" style="${S.kpiLbl}">Food Saved</td>
+      </tr>
+      ${spacer()}
 
-      row('SECTION 6: FOOD CATEGORIES'),
-      row('Category', 'Donations', 'Kg', 'Serves'),
-      ...d.food_categories.map(x => row(x.category || 'Unknown', x.count, x.kg, x.serves)),
-      blank(),
+      <!-- SECTION 1: DONATION STATUS -->
+      ${banner('📊  SECTION 1 — DONATION STATUS BREAKDOWN')}
+      ${thead('Status', 'Count', '% of Total', 'Notes', '', '', '', '')}
+      <tr>
+        <td style="${S.cellL(0)}">🟢 Available</td>
+        <td style="${S.green(0)}">${d.summary.donations.available}</td>
+        <td style="${S.green(0)}">${pct(d.summary.donations.available, tot)}</td>
+        <td colspan="5" style="${S.cellL(0)}">Waiting to be claimed by NGO</td>
+      </tr>
+      <tr>
+        <td style="${S.cellL(1)}">🟡 Reserved</td>
+        <td style="${S.amber(1)}">${d.summary.donations.reserved}</td>
+        <td style="${S.amber(1)}">${pct(d.summary.donations.reserved, tot)}</td>
+        <td colspan="5" style="${S.cellL(1)}">Claimed — pickup in progress</td>
+      </tr>
+      <tr>
+        <td style="${S.cellL(0)}">✅ Collected</td>
+        <td style="${S.green(0)}">${d.summary.donations.collected}</td>
+        <td style="${S.green(0)}">${pct(d.summary.donations.collected, tot)}</td>
+        <td colspan="5" style="${S.cellL(0)}">Successfully delivered to NGO</td>
+      </tr>
+      <tr>
+        <td style="${S.cellL(1)}">🔴 Expired</td>
+        <td style="${S.red(1)}">${d.summary.donations.expired}</td>
+        <td style="${S.red(1)}">${pct(d.summary.donations.expired, tot)}</td>
+        <td colspan="5" style="${S.cellL(1)}">Pickup window passed unclaimed</td>
+      </tr>
+      ${spacer()}
 
-      row('SECTION 7: TOP NGOs BY COLLECTIONS'),
-      row('Rank', 'NGO Name', 'Claimed', 'Collected', 'Success Rate', 'Kg Saved', 'Meals Delivered'),
-      ...d.top_ngos.map((x, i) => row(i + 1, x.name, x.claimed, x.collected, `${x.success_rate ?? 0}%`, x.kg_saved, x.serves)),
-      blank(),
+      <!-- SECTION 2: IMPACT + USERS + PICKUP -->
+      ${banner('🌍  SECTION 2 — PLATFORM IMPACT &amp; USER STATISTICS')}
+      ${thead('Impact Metric', 'Value', '', 'User Metric', 'Count', '', 'Pickup Type', 'Count / %')}
+      ${[
+        ['Meals Served',     d.summary.impact.meals_served,   '', 'Total Users',    d.summary.users.total,    '', '⚡ Instant',   `${d.summary.pickup.instant} (${d.summary.pickup.instant_pct}%)`],
+        ['Meals Pending',    d.summary.impact.meals_pending,  '', 'Verified Users', d.summary.users.verified, '', '📅 Scheduled', `${d.summary.pickup.scheduled} (${d.summary.pickup.scheduled_pct}%)`],
+        ['Kg Food Saved',    `${d.summary.impact.kg_saved} kg`, '', 'Pending Approval', d.summary.users.pending, '', 'Donors', d.summary.users.donors],
+        ['Completion Rate',  `${d.summary.donations.completion_rate}%`, '', 'NGOs', d.summary.users.ngos, '', '', ''],
+      ].map((r, i) => `<tr>
+        <td style="${S.cellL(i)}">${r[0]}</td><td style="${S.blue(i)}">${r[1]}</td><td style="${S.empty}"></td>
+        <td style="${S.cellL(i)}">${r[3]}</td><td style="${S.blue(i)}">${r[4]}</td><td style="${S.empty}"></td>
+        <td style="${S.cellL(i)}">${r[6]}</td><td style="${S.blue(i)}">${r[7]}</td>
+      </tr>`).join('')}
+      ${spacer()}
 
-      row('SECTION 8: TOP DONORS BY DONATIONS POSTED'),
-      row('Rank', 'Donor Name', 'Posted', 'Collected', 'Kg Donated', 'Serves'),
-      ...d.top_donors.map((x, i) => row(i + 1, x.name, x.posted, x.collected, x.kg, x.serves)),
-      blank(),
+      <!-- SECTION 3: DAILY BREAKDOWN -->
+      ${banner(`📅  SECTION 3 — DAILY BREAKDOWN`, `Trend window: ${d.period.daily_from} to ${d.period.daily_to}`)}
+      ${thead('Date', 'Total Posted', 'Collected', 'Reserved', 'Expired', 'Kg Saved', 'People Served', '')}
+      ${d.daily_breakdown.map((x, i) => `<tr>
+        <td style="${S.cellL(i)};font-weight:bold">${x.date}</td>
+        <td style="${S.cellC(i)};font-weight:bold">${x.total}</td>
+        <td style="${S.green(i)}">${x.collected}</td>
+        <td style="${S.amber(i)}">${x.reserved}</td>
+        <td style="${S.red(i)}">${x.expired}</td>
+        <td style="${S.blue(i)}">${x.kg}</td>
+        <td style="${S.cellC(i)}">${x.serves}</td>
+        <td style="${S.empty}"></td>
+      </tr>`).join('')}
+      ${spacer()}
 
-      row('SECTION 9: RELEASE / CANCELLATION REASONS'),
-      row('Reason', 'Count'),
-      ...d.release_reasons.map(x => row(x.reason, x.count)),
-    ];
+      <!-- SECTION 4: FOOD CATEGORIES -->
+      ${banner('🍱  SECTION 4 — FOOD CATEGORIES')}
+      ${thead('Category', 'Donations', '% of Total', 'Kg Food', 'People Served', '', '', '')}
+      ${d.food_categories.map((x, i) => `<tr>
+        <td style="${S.cellL(i)};font-weight:600;text-transform:capitalize">${x.category || 'Unknown'}</td>
+        <td style="${S.cellC(i)};font-weight:bold">${x.count}</td>
+        <td style="${S.cellC(i)}">${pct(x.count, tot)}</td>
+        <td style="${S.blue(i)}">${x.kg} kg</td>
+        <td style="${S.cellC(i)}">${x.serves}</td>
+        <td colspan="3" style="${S.empty}"></td>
+      </tr>`).join('')}
+      ${spacer()}
 
-    const csv = sections.join('\r\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `foodbridge-analytics-${d.period.start || 'all'}-to-${d.period.end || new Date().toISOString().slice(0, 10)}.csv`;
+      <!-- SECTION 5: TOP NGOs -->
+      ${banner('🏆  SECTION 5 — TOP 10 NGOs BY COLLECTIONS')}
+      ${thead('#', 'NGO Name', 'Claimed', 'Collected', 'Success Rate', 'Kg Saved', 'Meals Delivered', '')}
+      ${d.top_ngos.map((x, i) => `<tr>
+        <td style="${S.rank}">${i + 1}</td>
+        <td style="${S.cellL(i)};font-weight:600">${x.name}</td>
+        <td style="${S.cellC(i)}">${x.claimed}</td>
+        <td style="${S.green(i)}">${x.collected}</td>
+        <td style="${i === 0 ? S.green(i) : S.cellC(i)}">${x.success_rate ?? 0}%</td>
+        <td style="${S.blue(i)}">${x.kg_saved} kg</td>
+        <td style="${S.cellC(i)}">${x.serves ?? 0}</td>
+        <td style="${S.empty}"></td>
+      </tr>`).join('')}
+      ${spacer()}
+
+      <!-- SECTION 6: TOP DONORS -->
+      ${banner('🥇  SECTION 6 — TOP 10 DONORS BY DONATIONS POSTED')}
+      ${thead('#', 'Donor / Restaurant', 'Donations Posted', 'Collected by NGO', 'Kg Donated', 'People Served', '', '')}
+      ${d.top_donors.map((x, i) => `<tr>
+        <td style="${S.rank}">${i + 1}</td>
+        <td style="${S.cellL(i)};font-weight:600">${x.name}</td>
+        <td style="${S.cellC(i)};font-weight:bold">${x.posted}</td>
+        <td style="${S.green(i)}">${x.collected}</td>
+        <td style="${S.blue(i)}">${x.kg} kg</td>
+        <td style="${S.cellC(i)}">${x.serves ?? 0}</td>
+        <td colspan="2" style="${S.empty}"></td>
+      </tr>`).join('')}
+      ${spacer()}
+
+      <!-- SECTION 7: RELEASE REASONS -->
+      ${banner('⚠️  SECTION 7 — RELEASE / CANCELLATION REASONS (TOP 10)')}
+      ${thead('Reason', 'Count', '% of Releases', '', '', '', '', '')}
+      ${(() => { const rt = d.release_reasons.reduce((s,x) => s + x.count, 0) || 1; return d.release_reasons.map((x, i) => `<tr>
+        <td style="${S.cellL(i)}">${x.reason}</td>
+        <td style="${S.amber(i)}">${x.count}</td>
+        <td style="${S.cellC(i)}">${pct(x.count, rt)}</td>
+        <td colspan="5" style="${S.empty}"></td>
+      </tr>`).join(''); })()}
+      ${spacer()}
+
+      <!-- FOOTER -->
+      <tr><td colspan="${COLS}" style="background:#f1f5f9;color:#94a3b8;font-size:8pt;text-align:center;padding:8px;border-top:2px solid #e2e8f0">
+        FoodBridge Analytics &nbsp;·&nbsp; Reducing food waste, one donation at a time &nbsp;·&nbsp; Generated ${new Date(d.generated_at).toLocaleString()}
+      </td></tr>
+
+    </table></body></html>`;
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `foodbridge-analytics-${d.period.start || 'all'}-to-${d.period.end || new Date().toISOString().slice(0, 10)}.xls`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -431,7 +545,7 @@ const AdminDashboard = () => {
 
   const handleExportCSV = async () => {
     setExportLoading(true);
-    try { generateCSV(await fetchExportData()); }
+    try { generateExcel(await fetchExportData()); }
     catch { toast.error('Export failed'); }
     finally { setExportLoading(false); }
   };
@@ -862,7 +976,7 @@ const AdminDashboard = () => {
                       ? <span className="animate-spin">⟳</span>
                       : <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                     }
-                    ⬇ CSV
+                    ⬇ Excel
                   </button>
                   <button
                     onClick={handleExportPDF}
