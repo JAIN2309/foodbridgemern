@@ -287,6 +287,7 @@
       "completionRate": "Completion Rate",
       "totalDonations": "Total Donations",
       "active": "Active",
+      "available": "Available",
       "completed": "Completed",
       "reserved": "Reserved",
       "expired": "Expired",
