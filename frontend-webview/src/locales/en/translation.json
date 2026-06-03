@@ -336,7 +336,27 @@
       "pickupTypeSplit": "Pickup Type Split (All Time)",
       "instantPickup": "Instant Pickup",
       "scheduledPickup": "Scheduled Pickup",
-      "pickupTypeNote": "Based on total claimed donations:"
+      "pickupTypeNote": "Based on total claimed donations:",
+      "accountStatus": "Account Status",
+      "accountActive": "Active",
+      "accountDeactivated": "Deactivated",
+      "actions": "Actions",
+      "moreInfo": "More Info",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "confirmActivateTitle": "Activate Account?",
+      "confirmActivateMsg": "This will allow the user to log in again:",
+      "confirmActivate": "Yes, Activate",
+      "confirmDeactivateTitle": "Deactivate Account?",
+      "confirmDeactivateMsg": "This will immediately block login for:",
+      "confirmDeactivate": "Yes, Deactivate",
+      "deactivateWarning": "The user will be logged out on their next request and cannot log in until reactivated.",
+      "userActivated": "User account activated",
+      "userDeactivated": "User account deactivated",
+      "statusChangeFailed": "Failed to change account status",
+      "contactInfo": "Contact Information",
+      "timeline": "Account Timeline",
+      "activityStats": "Activity Statistics"
     }
   },
   "donationDetails": {

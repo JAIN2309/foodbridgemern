@@ -131,6 +131,11 @@ const login = async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
+    // Check account active status
+    if (user.is_active === false) {
+      return res.status(403).json({ message: 'Your account has been deactivated by admin. Please contact support.' });
+    }
+
     const token = generateToken(user._id);
 
     await User.findByIdAndUpdate(user._id, { last_login: new Date() });

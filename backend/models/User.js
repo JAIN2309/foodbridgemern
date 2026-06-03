@@ -57,6 +57,10 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  is_active: {
+    type: Boolean,
+    default: true
+  },
   verification_documents: [{
     type: String // Cloudinary URLs
   }],

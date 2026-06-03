@@ -340,6 +340,90 @@ const deleteProfilePicture = async (req, res) => {
   }
 };
 
+const toggleUserStatus = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { is_active } = req.body;
+
+    if (typeof is_active !== 'boolean') {
+      return res.status(400).json({ message: 'is_active must be a boolean' });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { is_active },
+      { new: true }
+    ).select('-password');
+
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Evict from Redis so the next request re-reads the updated status
+    await redis.del(`user:${userId}`);
+    await redis.del('admin:stats:v2');
+
+    // Notify the user by email
+    try {
+      const { decryptUserFields } = require('../utils/userHelper');
+      const decrypted = decryptUserFields(user);
+      await require('../services/emailService').sendEmail(
+        decrypted.email,
+        {
+          subject: is_active ? 'FoodBridge — Account Activated' : 'FoodBridge — Account Deactivated',
+          html: is_active
+            ? `<p>Hi ${user.contact_person},</p><p>Your FoodBridge account has been <strong>activated</strong> by the admin. You can now log in.</p>`
+            : `<p>Hi ${user.contact_person},</p><p>Your FoodBridge account has been <strong>deactivated</strong> by the admin. Please contact support if you believe this is a mistake.</p>`
+        }
+      );
+    } catch {}
+
+    res.json({ message: `User ${is_active ? 'activated' : 'deactivated'} successfully`, is_active });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getUserDetail = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const Donation = require('../models/Donation');
+
+    const [user, donationStats] = await Promise.all([
+      User.findById(userId).select('-password'),
+      Donation.aggregate([
+        {
+          $facet: {
+            posted:    [{ $match: { donor_id:   require('mongoose').Types.ObjectId.createFromHexString(userId) } }, { $group: { _id: '$status', count: { $sum: 1 }, kg: { $sum: '$weight_kg' }, serves: { $sum: '$quantity_serves' } } }],
+            claimed:   [{ $match: { claimed_by: require('mongoose').Types.ObjectId.createFromHexString(userId) } }, { $group: { _id: '$status', count: { $sum: 1 }, kg: { $sum: '$weight_kg' }, serves: { $sum: '$quantity_serves' } } }]
+          }
+        }
+      ])
+    ]);
+
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const { decryptUserFields } = require('../utils/userHelper');
+    const decrypted = decryptUserFields(user);
+
+    const posted  = (donationStats[0]?.posted  || []).reduce((a, s) => { a[s._id] = s; return a; }, {});
+    const claimed = (donationStats[0]?.claimed || []).reduce((a, s) => { a[s._id] = s; return a; }, {});
+
+    res.json({
+      user: decrypted,
+      stats: {
+        posted_total:    Object.values(posted).reduce((s, v) => s + v.count, 0),
+        posted_collected: posted.collected?.count || 0,
+        posted_kg:       Math.round((Object.values(posted).reduce((s, v) => s + (v.kg || 0), 0)) * 10) / 10,
+        claimed_total:   Object.values(claimed).reduce((s, v) => s + v.count, 0),
+        claimed_collected: claimed.collected?.count || 0,
+        claimed_kg:      Math.round((Object.values(claimed).reduce((s, v) => s + (v.kg || 0), 0)) * 10) / 10,
+        claimed_reserved: claimed.reserved?.count || 0
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getPendingVerifications,
   verifyUser,
@@ -351,5 +435,7 @@ module.exports = {
   getBiometricStatus,
   uploadProfilePicture,
   getProfilePicture,
-  deleteProfilePicture
+  deleteProfilePicture,
+  toggleUserStatus,
+  getUserDetail
 };
