@@ -146,6 +146,7 @@ export default function NGODashboard() {
         scheduled_pickup_time: pickupType === 'scheduled' ? scheduledDate.toISOString() : undefined
       })).unwrap();
       Toast.show({ type: 'success', text1: t('dashboard.ngo.claimSuccess') });
+      setActiveTab('claims'); // switch to My Claims so NGO sees their reservation
       dispatch(fetchClaimedDonations());
     } catch (error: any) {
       Toast.show({ type: 'error', text1: t('dashboard.ngo.claimFailed'), text2: error?.message || error });

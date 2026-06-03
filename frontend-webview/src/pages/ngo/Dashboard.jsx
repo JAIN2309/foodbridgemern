@@ -136,9 +136,10 @@ const NGODashboard = () => {
       await dispatch(claimDonation({
         donationId,
         pickup_type: pickupType,
-        scheduled_pickup_time: pickupType === 'scheduled' ? scheduledTime : undefined
+        scheduled_pickup_time: pickupType === 'scheduled' && scheduledTime ? new Date(scheduledTime).toISOString() : undefined
       })).unwrap();
       toast.success(t('dashboard.ngo.claimSuccess'));
+      setActiveTab('history'); // switch to My Claims so NGO sees their reservation
       const coords = geoLocation || { latitude: 28.6139, longitude: 77.2090 };
       dispatch(fetchNearbyDonations({ longitude: coords.longitude, latitude: coords.latitude, maxDistance: 10000 }));
       dispatch(fetchNGOHistory());

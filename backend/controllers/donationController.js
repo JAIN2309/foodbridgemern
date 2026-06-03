@@ -258,7 +258,7 @@ const claimDonation = async (req, res) => {
       _id: donationId,
       status: 'available',
       expiresAt: { $gt: now },
-      quality_score: { $gte: 3 }
+      quality_score: { $not: { $lt: 3 } } // allows null/missing quality_score
     };
     // Scheduled: validate time is within the donation's pickup window
     if (pickup_type === 'scheduled' && parsedScheduledTime) {
@@ -624,7 +624,7 @@ const syncOfflineActions = async (req, res) => {
         switch (action.action) {
           case 'claim_donation': {
             const donation = await Donation.findOneAndUpdate(
-              { _id: action.data.donationId, status: 'available', expiresAt: { $gt: new Date() } },
+              { _id: action.data.donationId, status: 'available', expiresAt: { $gt: new Date() }, quality_score: { $not: { $lt: 3 } } },
               { status: 'reserved', claimed_by: req.user._id, claimed_at: new Date() },
               { new: true }
             );
