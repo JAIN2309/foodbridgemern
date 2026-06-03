@@ -35,7 +35,7 @@ class PerformanceService {
             pipeline: [{ $project: { organization_name: 1, phone: 1, trust_score: 1, address: 1 } }]
           }
         },
-        { $unwind: { path: '$donor_id', preserveNullAndEmpty: true } },
+        { $unwind: { path: '$donor_id', preserveNullAndEmptyArrays: true } },
         { $limit: 50 },
         { $sort: { distance: 1, createdAt: -1 } }
       ]);
