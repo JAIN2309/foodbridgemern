@@ -490,7 +490,12 @@ const markCollected = async (req, res) => {
 // Handle failed pickups and auto-reassignment
 const handleFailedPickup = async (donationId, ngoId, reason = 'timeout') => {
   try {
-    // Update logistics
+    // SAFETY: verify still reserved before doing anything — prevents wiping a
+    // collected donation due to race condition (setTimeout fires after collection,
+    // or expiry scheduler runs between find and update).
+    const current = await Donation.findOne({ _id: donationId, status: 'reserved' });
+    if (!current) return; // already collected or released
+
     await Logistics.findOneAndUpdate(
       { donation_id: donationId },
       {
@@ -499,38 +504,31 @@ const handleFailedPickup = async (donationId, ngoId, reason = 'timeout') => {
           'pickup_attempts.$[elem].failure_reason': reason
         }
       },
-      {
-        arrayFilters: [{ 'elem.ngo_id': ngoId, 'elem.status': 'scheduled' }]
-      }
+      { arrayFilters: [{ 'elem.ngo_id': ngoId, 'elem.status': 'scheduled' }] }
     );
-    
-    // Update NGO stats (penalty)
+
     await User.findByIdAndUpdate(ngoId, {
-      $inc: { 
-        'activity_stats.failed_pickups': 1,
-        'trust_score': -5 // Penalty for failed pickup
-      }
+      $inc: { 'activity_stats.failed_pickups': 1, 'trust_score': -5 }
     });
-    
-    // Check if we should reassign
+
     const logistics = await Logistics.findOne({ donation_id: donationId });
-    const failedAttempts = logistics.pickup_attempts.filter(a => a.status === 'failed').length;
-    
-    if (failedAttempts < logistics.auto_reassignment.max_attempts) {
-      // Release donation back to available
-      await Donation.findByIdAndUpdate(donationId, {
-        status: 'available',
-        claimed_by: null,
-        claimed_at: null
-      });
-      
-      console.log(`Donation ${donationId} reassigned after failed pickup`);
+    const maxAttempts = logistics?.auto_reassignment?.max_attempts ?? 3;
+    const failedAttempts = (logistics?.pickup_attempts || []).filter(a => a.status === 'failed').length;
+
+    if (failedAttempts < maxAttempts) {
+      // Second atomic guard — only revert if STILL reserved (no window for race)
+      const reverted = await Donation.findOneAndUpdate(
+        { _id: donationId, status: 'reserved' },
+        { status: 'available', claimed_by: null, claimed_at: null,
+          scheduled_pickup_time: null, pickup_deadline: null },
+        { new: true }
+      );
+      if (reverted) console.log(`Donation ${donationId} reverted to available (${reason})`);
     } else {
-      // Mark as expired after max attempts
-      await Donation.findByIdAndUpdate(donationId, {
-        status: 'expired'
-      });
-      
+      await Donation.findOneAndUpdate(
+        { _id: donationId, status: 'reserved' },
+        { status: 'expired' }
+      );
       console.log(`Donation ${donationId} expired after ${failedAttempts} failed attempts`);
     }
   } catch (error) {
