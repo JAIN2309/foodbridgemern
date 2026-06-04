@@ -1238,6 +1238,7 @@ const AdminDashboard = () => {
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('dashboard.admin.contact')}</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('dashboard.admin.status')}</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('dashboard.admin.accountStatus')}</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('dashboard.admin.rating')}</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('dashboard.admin.lastLogin')}</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('dashboard.admin.actions')}</th>
                       </tr>
@@ -1278,6 +1279,20 @@ const AdminDashboard = () => {
                               <span className={`w-1.5 h-1.5 rounded-full ${user.is_active !== false ? 'bg-emerald-500' : 'bg-red-500'}`} />
                               {user.is_active !== false ? t('dashboard.admin.accountActive') : t('dashboard.admin.accountDeactivated')}
                             </span>
+                          </td>
+                          {/* Rating */}
+                          <td className="px-4 py-4">
+                            {user.ratings?.count > 0 ? (
+                              <div>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-amber-400 text-sm">★</span>
+                                  <span className="text-sm font-bold text-gray-800 dark:text-gray-100">{(user.ratings.average || 0).toFixed(1)}</span>
+                                </div>
+                                <p className="text-xs text-gray-400 mt-0.5">{user.ratings.count} review{user.ratings.count !== 1 ? 's' : ''}</p>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-300 dark:text-gray-600 italic">No ratings</span>
+                            )}
                           </td>
                           <td className="px-4 py-4 text-xs text-gray-500 dark:text-gray-400">
                             {user.last_login
@@ -1666,19 +1681,97 @@ const AdminDashboard = () => {
                 </div>
               )}
 
-              {/* Trust score */}
-              {detailDrawer.data?.user?.trust_score != null && (
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="text-xs font-bold text-gray-400 uppercase">Trust Score</h4>
-                    <span className="text-lg font-bold text-amber-600">⭐ {detailDrawer.data.user.trust_score}</span>
+              {/* Trust score + Ratings */}
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 space-y-4">
+                {/* Trust score row */}
+                {detailDrawer.data?.user?.trust_score != null && (
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Trust Score</h4>
+                      <span className="text-base font-bold text-amber-600">⭐ {detailDrawer.data.user.trust_score}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                      <div className="bg-amber-400 h-2 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(100, detailDrawer.data.user.trust_score)}%` }} />
+                    </div>
                   </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
-                    <div className="bg-amber-400 h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min(100, detailDrawer.data.user.trust_score)}%` }} />
-                  </div>
-                </div>
-              )}
+                )}
+
+                {/* Ratings summary */}
+                {(() => {
+                  const ratings = detailDrawer.data?.user?.ratings;
+                  const avg = ratings?.average || 0;
+                  const count = ratings?.count || 0;
+                  const reviews = ratings?.reviews || [];
+                  return (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide">{t('dashboard.admin.ratingsReceived')}</h4>
+                        {count > 0 && (
+                          <div className="flex items-center gap-1.5">
+                            <div className="flex">
+                              {[1,2,3,4,5].map(s => (
+                                <span key={s} className={`text-sm ${s <= Math.round(avg) ? 'text-amber-400' : 'text-gray-300'}`}>★</span>
+                              ))}
+                            </div>
+                            <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{avg.toFixed(1)}</span>
+                            <span className="text-xs text-gray-400">({count})</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {count === 0 ? (
+                        <p className="text-xs text-gray-400 italic">No ratings yet</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {/* Rating distribution bars */}
+                          {[5,4,3,2,1].map(star => {
+                            const starCount = reviews.filter(r => r.rating === star).length;
+                            const pct = count > 0 ? Math.round((starCount / count) * 100) : 0;
+                            return (
+                              <div key={star} className="flex items-center gap-2 text-xs">
+                                <span className="text-amber-400 w-3">{star}</span>
+                                <span className="text-amber-400 text-xs">★</span>
+                                <div className="flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+                                  <div className="bg-amber-400 h-1.5 rounded-full" style={{ width: `${pct}%` }} />
+                                </div>
+                                <span className="text-gray-400 w-6 text-right">{starCount}</span>
+                              </div>
+                            );
+                          })}
+
+                          {/* Recent reviews */}
+                          {reviews.length > 0 && (
+                            <div className="mt-3 space-y-2 border-t border-gray-200 dark:border-gray-600 pt-3">
+                              <p className="text-xs font-semibold text-gray-400 uppercase">{t('dashboard.admin.recentReviews')}</p>
+                              {[...reviews].reverse().slice(0, 5).map((r, i) => (
+                                <div key={i} className="bg-white dark:bg-gray-700 rounded-lg p-2.5 border border-gray-100 dark:border-gray-600">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <div className="flex">
+                                      {[1,2,3,4,5].map(s => (
+                                        <span key={s} className={`text-xs ${s <= r.rating ? 'text-amber-400' : 'text-gray-200'}`}>★</span>
+                                      ))}
+                                    </div>
+                                    <span className="text-xs text-gray-400">
+                                      {r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
+                                    </span>
+                                  </div>
+                                  {r.comment && (
+                                    <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">"{r.comment}"</p>
+                                  )}
+                                </div>
+                              ))}
+                              {reviews.length > 5 && (
+                                <p className="text-xs text-gray-400 text-center">+{reviews.length - 5} more reviews</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
 
               {/* Quick action */}
               <button
