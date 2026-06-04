@@ -22,23 +22,50 @@ const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || '*',
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const allowed = process.env.CLIENT_URL
+        ? process.env.CLIENT_URL.split(',').map(o => o.trim())
+        : ['http://localhost:5173', 'http://localhost:3000'];
+      callback(null, allowed.includes(origin));
+    },
     methods: ['GET', 'POST']
   }
 });
 
-// Security headers — CSP relaxed for API-only backend (no HTML served)
+// Security headers
 app.use(helmet({
-  contentSecurityPolicy: false, // frontend handles its own CSP
-  crossOriginEmbedderPolicy: false
+  contentSecurityPolicy: false,       // frontend (Vite) manages its own CSP
+  crossOriginEmbedderPolicy: false,   // needed for leaflet map tiles
+  permissionsPolicy: {
+    policy: {
+      geolocation:      ['self'],     // only our frontend can request GPS
+      camera:           ['self'],     // only our frontend can use camera
+      microphone:       [],           // nobody — no voice features
+      payment:          [],           // nobody — no payment APIs
+      usb:              [],           // nobody — no hardware access
+      'interest-cohort': [],          // opt out of FLoC tracking
+    }
+  }
 }));
 
-// Strip MongoDB operator injection ($gt, $where, etc.) from request bodies
+// Strip MongoDB operator injection ($gt, $where, etc.) from req body/query/params
 app.use(mongoSanitize());
 
+// CORS — explicit allowlist; '*' wildcard is a CSRF attack surface in production
+const allowedOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(',').map(o => o.trim())
+  : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:5174'];
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
 app.use(express.json({ limit: '1mb' }));

@@ -16,6 +16,7 @@ const {
   getExportAnalytics
 } = require('../controllers/userController');
 const { auth, requireRole } = require('../middleware/auth');
+const { validateAdminUserAction } = require('../middleware/validators');
 
 const router = express.Router();
 
@@ -33,8 +34,8 @@ router.delete('/profile-picture', auth, deleteProfilePicture);
 
 // Admin routes
 router.get('/pending', auth, requireRole(['admin']), getPendingVerifications);
-router.put('/:userId/verify', auth, requireRole(['admin']), verifyUser);
-router.put('/:userId/status', auth, requireRole(['admin']), toggleUserStatus);
+router.put('/:userId/verify', auth, requireRole(['admin']), validateAdminUserAction, verifyUser);
+router.put('/:userId/status', auth, requireRole(['admin']), validateAdminUserAction, toggleUserStatus);
 router.get('/:userId/detail', auth, requireRole(['admin']), getUserDetail);
 router.get('/stats', auth, requireRole(['admin']), getAdminStats);
 router.get('/export/analytics', auth, requireRole(['admin']), getExportAnalytics);

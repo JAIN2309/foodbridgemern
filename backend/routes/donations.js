@@ -14,16 +14,17 @@ const {
 const { auth, requireRole, requireVerified } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const offlineService = require('../services/offlineService');
+const { validateCreateDonation, validateClaimDonation } = require('../middleware/validators');
 
 const router = express.Router();
 
 // Donor routes
-router.post('/', auth, requireRole(['donor']), requireVerified, upload.single('photo'), createDonation);
+router.post('/', auth, requireRole(['donor']), requireVerified, upload.single('photo'), validateCreateDonation, createDonation);
 router.get('/history/donor', auth, requireRole(['donor']), getDonorHistory);
 
 // NGO routes
 router.get('/nearby', auth, requireRole(['ngo']), requireVerified, getNearbyDonations);
-router.post('/:donationId/claim', auth, requireRole(['ngo']), requireVerified, claimDonation);
+router.post('/:donationId/claim', auth, requireRole(['ngo']), requireVerified, validateClaimDonation, claimDonation);
 router.post('/:donationId/collect', auth, requireRole(['ngo']), requireVerified, markCollected);
 router.post('/:donationId/release', auth, requireRole(['ngo']), requireVerified, releaseDonation);
 router.get('/history/ngo', auth, requireRole(['ngo']), getNGOHistory);
