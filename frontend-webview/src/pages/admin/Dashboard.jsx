@@ -44,6 +44,8 @@ const AdminDashboard = () => {
   const [analyticsStats, setAnalyticsStats] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  // Computed outside JSX to avoid IIFE-in-JSX which breaks Babel's JSX parser
+  const analyticsDisplay = analyticsStats || stats;
 
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
@@ -922,9 +924,7 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {activeTab === 'analytics' && (() => {
-            const display = analyticsStats || stats;
-            return (
+          {activeTab === 'analytics' && (
             <div className="space-y-6">
               {/* Header row: title + date range filter + export buttons */}
               <div className="flex flex-col md:flex-row md:items-end gap-3">
@@ -932,7 +932,7 @@ const AdminDashboard = () => {
                   <h3 className="text-lg font-medium">{t('dashboard.admin.platformAnalytics')}</h3>
                   {display?.date_range?.start && (
                     <p className="text-xs text-blue-600 mt-0.5">
-                      📅 {t('dashboard.admin.filteredPeriod')}: {display.date_range.start} → {display.date_range.end || t('dashboard.admin.today')}
+                      📅 {t('dashboard.admin.filteredPeriod')}: {analyticsDisplay.date_range.start} → {analyticsDisplay.date_range.end || t('dashboard.admin.today')}
                     </p>
                   )}
                 </div>
@@ -994,8 +994,8 @@ const AdminDashboard = () => {
                     <Package className="w-4 h-4 text-blue-600" />
                     <p className="text-xs text-blue-600 font-medium">{t('dashboard.admin.totalDonations')}</p>
                   </div>
-                  <p className="text-2xl font-bold text-blue-700">{display.donations?.total ?? 0}</p>
-                  <p className="text-xs text-blue-400 mt-1">{display.donations?.active ?? 0} {t('dashboard.admin.activeNow').toLowerCase()}</p>
+                  <p className="text-2xl font-bold text-blue-700">{analyticsDisplay.donations?.total ?? 0}</p>
+                  <p className="text-xs text-blue-400 mt-1">{analyticsDisplay.donations?.active ?? 0} {t('dashboard.admin.activeNow').toLowerCase()}</p>
                 </div>
 
                 <div className="bg-green-50 rounded-lg p-4">
@@ -1003,8 +1003,8 @@ const AdminDashboard = () => {
                     <Utensils className="w-4 h-4 text-green-600" />
                     <p className="text-xs text-green-600 font-medium">{t('dashboard.admin.mealsServed')}</p>
                   </div>
-                  <p className="text-2xl font-bold text-green-700">{display.meals_served ?? 0}</p>
-                  <p className="text-xs text-green-400 mt-1">{display.meals_pending ?? 0} pending</p>
+                  <p className="text-2xl font-bold text-green-700">{analyticsDisplay.meals_served ?? 0}</p>
+                  <p className="text-xs text-green-400 mt-1">{analyticsDisplay.meals_pending ?? 0} pending</p>
                 </div>
 
                 <div className="bg-purple-50 rounded-lg p-4">
@@ -1012,8 +1012,8 @@ const AdminDashboard = () => {
                     <TrendingUp className="w-4 h-4 text-purple-600" />
                     <p className="text-xs text-purple-600 font-medium">{t('dashboard.admin.completionRate')}</p>
                   </div>
-                  <p className="text-2xl font-bold text-purple-700">{display.donations?.completion_rate ?? 0}%</p>
-                  <p className="text-xs text-purple-400 mt-1">{display.donations?.completed ?? 0} {t('dashboard.admin.completed').toLowerCase()}</p>
+                  <p className="text-2xl font-bold text-purple-700">{analyticsDisplay.donations?.completion_rate ?? 0}%</p>
+                  <p className="text-xs text-purple-400 mt-1">{analyticsDisplay.donations?.completed ?? 0} {t('dashboard.admin.completed').toLowerCase()}</p>
                 </div>
 
                 <div className="bg-orange-50 rounded-lg p-4">
@@ -1021,8 +1021,8 @@ const AdminDashboard = () => {
                     <ShieldCheck className="w-4 h-4 text-orange-600" />
                     <p className="text-xs text-orange-600 font-medium">{t('dashboard.admin.verificationRate')}</p>
                   </div>
-                  <p className="text-2xl font-bold text-orange-700">{display.users?.verification_rate ?? 0}%</p>
-                  <p className="text-xs text-orange-400 mt-1">{display.users?.verified ?? 0} / {display.users?.total ?? 0} users</p>
+                  <p className="text-2xl font-bold text-orange-700">{analyticsDisplay.users?.verification_rate ?? 0}%</p>
+                  <p className="text-xs text-orange-400 mt-1">{analyticsDisplay.users?.verified ?? 0} / {analyticsDisplay.users?.total ?? 0} users</p>
                 </div>
               </div>
 
@@ -1033,12 +1033,12 @@ const AdminDashboard = () => {
                 </h4>
                 {(() => {
                   const items = [
-                    { label: t('dashboard.admin.active'),    value: display.donations?.active    ?? 0, color: 'bg-blue-500' },
-                    { label: t('dashboard.admin.reserved'),  value: display.donations?.reserved  ?? 0, color: 'bg-yellow-500' },
-                    { label: t('dashboard.admin.completed'), value: display.donations?.completed ?? 0, color: 'bg-green-500' },
-                    { label: t('dashboard.admin.expired'),   value: display.donations?.expired   ?? 0, color: 'bg-red-400' },
+                    { label: t('dashboard.admin.active'),    value: analyticsDisplay.donations?.active    ?? 0, color: 'bg-blue-500' },
+                    { label: t('dashboard.admin.reserved'),  value: analyticsDisplay.donations?.reserved  ?? 0, color: 'bg-yellow-500' },
+                    { label: t('dashboard.admin.completed'), value: analyticsDisplay.donations?.completed ?? 0, color: 'bg-green-500' },
+                    { label: t('dashboard.admin.expired'),   value: analyticsDisplay.donations?.expired   ?? 0, color: 'bg-red-400' },
                   ];
-                  const total = display.donations?.total || 1;
+                  const total = analyticsDisplay.donations?.total || 1;
                   return (
                     <div className="space-y-3">
                       {items.map(({ label, value, color }) => (
@@ -1067,10 +1067,10 @@ const AdminDashboard = () => {
                 {/* Donation status pipeline tiles */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
                   {[
-                    { label: t('dashboard.admin.available'),        value: display.donations?.active    ?? 0, icon: '🟢', bg: 'bg-green-50 dark:bg-green-900/20',   text: 'text-green-700 dark:text-green-300',  sub: t('dashboard.admin.waitingPickup') },
-                    { label: t('dashboard.admin.instantActive'),    value: display.pickup?.instant_active ?? 0, icon: '⚡', bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-300',  sub: t('dashboard.admin.within30min') },
-                    { label: t('dashboard.admin.upcomingScheduled'),value: display.pickup?.upcoming_scheduled ?? 0, icon: '📅', bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-700 dark:text-blue-300', sub: t('dashboard.admin.futureScheduled') },
-                    { label: t('dashboard.admin.completed'),        value: display.donations?.completed ?? 0, icon: '✅', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-300', sub: t('dashboard.admin.allTime') },
+                    { label: t('dashboard.admin.available'),        value: analyticsDisplay.donations?.active    ?? 0, icon: '🟢', bg: 'bg-green-50 dark:bg-green-900/20',   text: 'text-green-700 dark:text-green-300',  sub: t('dashboard.admin.waitingPickup') },
+                    { label: t('dashboard.admin.instantActive'),    value: analyticsDisplay.pickup?.instant_active ?? 0, icon: '⚡', bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-300',  sub: t('dashboard.admin.within30min') },
+                    { label: t('dashboard.admin.upcomingScheduled'),value: analyticsDisplay.pickup?.upcoming_scheduled ?? 0, icon: '📅', bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-700 dark:text-blue-300', sub: t('dashboard.admin.futureScheduled') },
+                    { label: t('dashboard.admin.completed'),        value: analyticsDisplay.donations?.completed ?? 0, icon: '✅', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-300', sub: t('dashboard.admin.allTime') },
                   ].map(({ label, value, icon, bg, text, sub }) => (
                     <div key={label} className={`${bg} rounded-xl p-3 border border-white/50`}>
                       <div className="flex items-center justify-between mb-1">
@@ -1087,9 +1087,9 @@ const AdminDashboard = () => {
                 <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">{t('dashboard.admin.pickupTypeSplit')}</p>
                   {(() => {
-                    const inst  = display.pickup?.instant   ?? 0;
-                    const sched = display.pickup?.scheduled ?? 0;
-                    const tot   = display.pickup?.total || 1;
+                    const inst  = analyticsDisplay.pickup?.instant   ?? 0;
+                    const sched = analyticsDisplay.pickup?.scheduled ?? 0;
+                    const tot   = analyticsDisplay.pickup?.total || 1;
                     const instPct  = Math.round((inst  / tot) * 100);
                     const schedPct = Math.round((sched / tot) * 100);
                     return (
@@ -1127,11 +1127,11 @@ const AdminDashboard = () => {
                   </h4>
                   <div className="space-y-3">
                     {[
-                      { label: t('dashboard.admin.donorOnly'),  value: display.users?.donors  ?? 0, color: 'bg-blue-500' },
-                      { label: t('dashboard.admin.ngoOnly'),    value: display.users?.ngos    ?? 0, color: 'bg-green-500' },
-                      { label: t('dashboard.admin.pending'),    value: display.users?.pending ?? 0, color: 'bg-yellow-400' },
+                      { label: t('dashboard.admin.donorOnly'),  value: analyticsDisplay.users?.donors  ?? 0, color: 'bg-blue-500' },
+                      { label: t('dashboard.admin.ngoOnly'),    value: analyticsDisplay.users?.ngos    ?? 0, color: 'bg-green-500' },
+                      { label: t('dashboard.admin.pending'),    value: analyticsDisplay.users?.pending ?? 0, color: 'bg-yellow-400' },
                     ].map(({ label, value, color }) => {
-                      const total = (display.users?.total || 1);
+                      const total = (analyticsDisplay.users?.total || 1);
                       return (
                         <div key={label}>
                           <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 dark:text-gray-500 mb-1">
@@ -1156,29 +1156,28 @@ const AdminDashboard = () => {
                     <div>
                       <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 dark:text-gray-500 mb-1">
                         <span>{t('dashboard.admin.donationSuccessRate')}</span>
-                        <span className="font-semibold text-green-600">{display.donations?.completion_rate ?? 0}%</span>
+                        <span className="font-semibold text-green-600">{analyticsDisplay.donations?.completion_rate ?? 0}%</span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                         <div className="bg-green-500 h-2.5 rounded-full transition-all duration-500"
-                          style={{ width: `${display.donations?.completion_rate ?? 0}%` }} />
+                          style={{ width: `${analyticsDisplay.donations?.completion_rate ?? 0}%` }} />
                       </div>
                     </div>
                     <div>
                       <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 dark:text-gray-500 mb-1">
                         <span>{t('dashboard.admin.userVerificationRate')}</span>
-                        <span className="font-semibold text-blue-600">{display.users?.verification_rate ?? 0}%</span>
+                        <span className="font-semibold text-blue-600">{analyticsDisplay.users?.verification_rate ?? 0}%</span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                         <div className="bg-blue-500 h-2.5 rounded-full transition-all duration-500"
-                          style={{ width: `${display.users?.verification_rate ?? 0}%` }} />
+                          style={{ width: `${analyticsDisplay.users?.verification_rate ?? 0}%` }} />
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-            );
-          })()}
+          )}
 
           {activeTab === 'users' && (
             <div className="space-y-4">
