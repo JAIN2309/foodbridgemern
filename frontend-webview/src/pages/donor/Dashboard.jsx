@@ -307,9 +307,10 @@ const DonorDashboard = () => {
               <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl mb-6 ${getStatusColor(selectedDonation.status)} border`}>
                 <div className="w-2 h-2 rounded-full bg-current" />
                 <span className="text-sm font-bold capitalize">
-                  {selectedDonation.status === 'available' ? t('donationDetails.availableForPickup') : 
-                   selectedDonation.status === 'reserved' ? t('donationDetails.reservedByNGO') : 
-                   t('donationDetails.successfullyCollected')}
+                  {selectedDonation.status === 'available' ? t('donationDetails.availableForPickup') :
+                   selectedDonation.status === 'reserved'  ? t('donationDetails.reservedByNGO') :
+                   selectedDonation.status === 'collected' ? t('donationDetails.successfullyCollected') :
+                   t('donationDetails.expired')}
                 </span>
               </div>
 
