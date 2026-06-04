@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { useAppDispatch, useAppSelector } from '../hooks/useRedux';
 import { createDonation, fetchDonorHistory } from '../store/donationSlice';
+import api from '../services/api';
 import { useLocation } from '../hooks/useLocation';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import { enqueue } from '../utils/offlineQueue';
@@ -255,15 +256,17 @@ export default function DonorDashboard() {
     if (!ngoRating.stars || !selectedDonation) return;
     setNgoRating(r => ({ ...r, loading: true }));
     try {
-      await (await import('../services/api')).default.post(`/donations/${selectedDonation._id}/rate-ngo`, {
+      await api.post(`/donations/${selectedDonation._id}/rate-ngo`, {
         rating: ngoRating.stars,
         review: ngoRating.comment.trim() || undefined,
       });
       setNgoRating(r => ({ ...r, loading: false, submitted: true }));
       setSelectedDonation((d: any) => ({ ...d, donor_rated: true }));
+      Toast.show({ type: 'success', text1: t('donationDetails.ngoRated') });
       dispatch(fetchDonorHistory({ page: donorPage, limit: DONOR_LIMIT }));
-    } catch {
+    } catch (err: any) {
       setNgoRating(r => ({ ...r, loading: false }));
+      Toast.show({ type: 'error', text1: err?.response?.data?.message || 'Failed to submit rating' });
     }
   };
 
@@ -577,36 +580,6 @@ export default function DonorDashboard() {
                         <Text style={{ fontSize: 11, color: '#059669', fontWeight: '600' }}>{t('donationDetails.thankYouImpact')}</Text>
                       </View>
 
-                      {/* Rate the NGO */}
-                      <View style={{ borderTopWidth: 1, borderTopColor: '#bfdbfe', marginTop: 10, paddingTop: 10 }}>
-                        {ngoRating.submitted ? (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Text style={{ fontSize: 14 }}>⭐</Text>
-                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#1d4ed8' }}>{t('donationDetails.ngoRated')}</Text>
-                          </View>
-                        ) : (
-                          <>
-                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#2563eb', marginBottom: 8 }}>{t('donationDetails.rateNGOTitle')}</Text>
-                            <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
-                              {[1,2,3,4,5].map(s => (
-                                <TouchableOpacity key={s} onPress={() => setNgoRating(r => ({ ...r, stars: s }))}>
-                                  <Text style={{ fontSize: 28 }}>{s <= ngoRating.stars ? '⭐' : '☆'}</Text>
-                                </TouchableOpacity>
-                              ))}
-                            </View>
-                            {ngoRating.stars > 0 && (
-                              <TouchableOpacity
-                                onPress={submitNGORating}
-                                disabled={ngoRating.loading}
-                                style={{ backgroundColor: ngoRating.loading ? '#93c5fd' : '#2563eb', paddingVertical: 8, borderRadius: 10, alignItems: 'center' }}>
-                                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>
-                                  {ngoRating.loading ? '...' : `⭐ ${t('donationDetails.submitNGORating')}`}
-                                </Text>
-                              </TouchableOpacity>
-                            )}
-                          </>
-                        )}
-                      </View>
                     </View>
                   )}
 

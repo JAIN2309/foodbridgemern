@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { Plus, Clock, MapPin, Users } from 'lucide-react';
 import { createDonation, fetchDonorHistory } from '../../store/slices/donationSlice';
+import api from '../../services/api';
 import socketService from '../../services/socket';
 import { useGeolocation } from '../../hooks/useGeolocation';
 import BiometricGuard from '../../components/common/BiometricGuard';
@@ -274,11 +275,12 @@ const DonorDashboard = () => {
         review: ngoRating.comment.trim() || undefined
       });
       setNgoRating(r => ({ ...r, loading: false, submitted: true }));
-      // Update local state so re-opening shows "already rated"
       setSelectedDonation(d => ({ ...d, donor_rated: true }));
+      toast.success(t('donationDetails.ngoRated'));
       dispatch(fetchDonorHistory({ page: donorPage, limit: DONOR_LIMIT }));
-    } catch {
+    } catch (err) {
       setNgoRating(r => ({ ...r, loading: false }));
+      toast.error(err?.response?.data?.message || 'Failed to submit rating');
     }
   };
 
@@ -540,48 +542,6 @@ const DonorDashboard = () => {
                     <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">{t('donationDetails.thankYouImpact')}</p>
                   </div>
 
-                  {/* Rate the NGO — shown once, hidden after submit */}
-                  <div className="mt-3 border-t border-blue-200 dark:border-blue-700 pt-3">
-                    {ngoRating.submitted ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-base">⭐</span>
-                        <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">{t('donationDetails.ngoRated')}</p>
-                      </div>
-                    ) : (
-                      <>
-                        <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-2">{t('donationDetails.rateNGOTitle')}</p>
-                        <div className="flex gap-1 mb-2">
-                          {[1,2,3,4,5].map(s => (
-                            <button key={s}
-                              onMouseEnter={() => setNgoRating(r => ({ ...r, hover: s }))}
-                              onMouseLeave={() => setNgoRating(r => ({ ...r, hover: 0 }))}
-                              onClick={() => setNgoRating(r => ({ ...r, stars: s }))}
-                              className="text-2xl transition-transform hover:scale-110 focus:outline-none">
-                              {s <= (ngoRating.hover || ngoRating.stars) ? '⭐' : '☆'}
-                            </button>
-                          ))}
-                        </div>
-                        {ngoRating.stars > 0 && (
-                          <>
-                            <input
-                              type="text"
-                              value={ngoRating.comment}
-                              onChange={e => setNgoRating(r => ({ ...r, comment: e.target.value }))}
-                              placeholder={t('donationDetails.rateNGOCommentPlaceholder')}
-                              maxLength={200}
-                              className="w-full px-2.5 py-1.5 text-xs border border-blue-200 dark:border-blue-600 dark:bg-gray-700 dark:text-white rounded-lg mb-2 focus:outline-none focus:border-blue-400"
-                            />
-                            <button
-                              onClick={submitNGORating}
-                              disabled={ngoRating.loading}
-                              className="w-full py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
-                              {ngoRating.loading ? '...' : `⭐ ${t('donationDetails.submitNGORating')}`}
-                            </button>
-                          </>
-                        )}
-                      </>
-                    )}
-                  </div>
                 </div>
               )}
 
