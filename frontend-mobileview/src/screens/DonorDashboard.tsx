@@ -419,6 +419,44 @@ export default function DonorDashboard() {
                     </View>
                   </View>
 
+                  {/* ── Rate NGO banner — prominent, right at top when collected ── */}
+                  {selectedDonation.status === 'collected' && !ngoRating.submitted && (
+                    <View style={{ marginHorizontal: 20, marginBottom: 16, backgroundColor: '#fffbeb', borderWidth: 2, borderColor: '#f59e0b', borderRadius: 14, padding: 16 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: '#92400e', marginBottom: 12 }}>
+                        ⭐ {t('donationDetails.rateNGOTitle')}
+                      </Text>
+                      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                        {[1,2,3,4,5].map(s => (
+                          <TouchableOpacity key={s} onPress={() => setNgoRating(r => ({ ...r, stars: s }))}>
+                            <Text style={{ fontSize: 32 }}>{s <= ngoRating.stars ? '⭐' : '☆'}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      {ngoRating.stars > 0 && (
+                        <>
+                          <Text style={{ fontSize: 12, color: '#d97706', fontWeight: '600', marginBottom: 8 }}>
+                            {['','⭐ Poor','⭐⭐ Below avg','⭐⭐⭐ Good','⭐⭐⭐⭐ Very good','⭐⭐⭐⭐⭐ Excellent'][ngoRating.stars]}
+                          </Text>
+                          <TouchableOpacity
+                            onPress={submitNGORating}
+                            disabled={ngoRating.loading}
+                            style={{ backgroundColor: ngoRating.loading ? '#fcd34d' : '#f59e0b', paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}>
+                            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>
+                              {ngoRating.loading ? '...' : `⭐ ${t('donationDetails.submitNGORating')}`}
+                            </Text>
+                          </TouchableOpacity>
+                        </>
+                      )}
+                    </View>
+                  )}
+
+                  {selectedDonation.status === 'collected' && ngoRating.submitted && (
+                    <View style={{ marginHorizontal: 20, marginBottom: 12, backgroundColor: '#f0fdf4', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#bbf7d0' }}>
+                      <Text style={{ fontSize: 18 }}>⭐</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#15803d' }}>{t('donationDetails.ngoRated')}</Text>
+                    </View>
+                  )}
+
                   {/* Image Card */}
                   <View style={styles.imageCard}>
                     <TouchableOpacity

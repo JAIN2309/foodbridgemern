@@ -331,7 +331,7 @@ const DonorDashboard = () => {
               </div>
 
               {/* Status Badge */}
-              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl mb-6 ${getStatusColor(selectedDonation.status)} border`}>
+              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl mb-4 ${getStatusColor(selectedDonation.status)} border`}>
                 <div className="w-2 h-2 rounded-full bg-current" />
                 <span className="text-sm font-bold capitalize">
                   {selectedDonation.status === 'available' ? t('donationDetails.availableForPickup') :
@@ -340,6 +340,54 @@ const DonorDashboard = () => {
                    t('donationDetails.expired')}
                 </span>
               </div>
+
+              {/* ── Rate NGO banner — visible immediately at top when collected + not yet rated ── */}
+              {selectedDonation.status === 'collected' && !ngoRating.submitted && (
+                <div className="mb-5 bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-300 dark:border-amber-700 rounded-xl p-4">
+                  <p className="text-sm font-bold text-amber-800 dark:text-amber-200 mb-3 flex items-center gap-2">
+                    ⭐ {t('donationDetails.rateNGOTitle')}
+                  </p>
+                  <div className="flex gap-2 mb-3">
+                    {[1,2,3,4,5].map(s => (
+                      <button key={s}
+                        onMouseEnter={() => setNgoRating(r => ({ ...r, hover: s }))}
+                        onMouseLeave={() => setNgoRating(r => ({ ...r, hover: 0 }))}
+                        onClick={() => setNgoRating(r => ({ ...r, stars: s }))}
+                        className="text-3xl transition-all hover:scale-125 focus:outline-none">
+                        {s <= (ngoRating.hover || ngoRating.stars) ? '⭐' : '☆'}
+                      </button>
+                    ))}
+                  </div>
+                  {ngoRating.stars > 0 && (
+                    <>
+                      <p className="text-xs text-amber-600 font-semibold mb-2">
+                        {['','⭐ Poor','⭐⭐ Below avg','⭐⭐⭐ Good','⭐⭐⭐⭐ Very good','⭐⭐⭐⭐⭐ Excellent'][ngoRating.stars]}
+                      </p>
+                      <input
+                        type="text"
+                        value={ngoRating.comment}
+                        onChange={e => setNgoRating(r => ({ ...r, comment: e.target.value }))}
+                        placeholder={t('donationDetails.rateNGOCommentPlaceholder')}
+                        maxLength={200}
+                        className="w-full px-3 py-2 text-sm border border-amber-300 dark:border-amber-600 dark:bg-gray-700 dark:text-white rounded-lg mb-2 focus:outline-none focus:border-amber-500"
+                      />
+                      <button
+                        onClick={submitNGORating}
+                        disabled={ngoRating.loading}
+                        className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold rounded-lg disabled:opacity-50 transition-colors">
+                        {ngoRating.loading ? '...' : `⭐ ${t('donationDetails.submitNGORating')}`}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {selectedDonation.status === 'collected' && ngoRating.submitted && (
+                <div className="mb-4 bg-green-50 dark:bg-green-900/20 border border-green-200 rounded-xl p-3 flex items-center gap-2">
+                  <span className="text-lg">⭐</span>
+                  <p className="text-sm font-semibold text-green-700 dark:text-green-300">{t('donationDetails.ngoRated')}</p>
+                </div>
+              )}
 
               {/* Image */}
               <div className="mb-6">
