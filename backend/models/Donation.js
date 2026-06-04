@@ -123,6 +123,10 @@ const donationSchema = new mongoose.Schema({
     // REMOVED TTL index - we'll handle expiry manually to preserve history
     // index: { expireAfterSeconds: 0 } // This was auto-deleting documents!
   },
+  donor_rated: {
+    type: Boolean,
+    default: false
+  },
   // Audit trail fields
   status_history: [{
     status: String,

@@ -6,6 +6,7 @@ const {
   markCollected,
   releaseDonation,
   adminReleaseDonation,
+  rateNGO,
   getDonorHistory,
   getNGOHistory,
   getAdminDonationHistory,
@@ -21,6 +22,7 @@ const router = express.Router();
 // Donor routes
 router.post('/', auth, requireRole(['donor']), requireVerified, upload.single('photo'), validateCreateDonation, createDonation);
 router.get('/history/donor', auth, requireRole(['donor']), getDonorHistory);
+router.post('/:donationId/rate-ngo', auth, requireRole(['donor']), rateNGO);
 
 // NGO routes
 router.get('/nearby', auth, requireRole(['ngo']), requireVerified, getNearbyDonations);

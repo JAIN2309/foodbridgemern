@@ -584,6 +584,74 @@ const releaseDonation = async (req, res) => {
   }
 };
 
+// Donor rates the NGO after their donation is collected
+const rateNGO = async (req, res) => {
+  try {
+    const { donationId } = req.params;
+    const { rating, review } = req.body;
+    const donorId = req.user._id;
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+    }
+
+    // Find the donation — must be collected, must belong to this donor, must not already be rated
+    const donation = await Donation.findOne({
+      _id: donationId,
+      donor_id: donorId,
+      status: 'collected',
+      donor_rated: { $ne: true }
+    }).populate('claimed_by', 'organization_name email');
+
+    if (!donation) {
+      return res.status(400).json({
+        message: 'Donation not found, not yet collected, or already rated'
+      });
+    }
+
+    if (!donation.claimed_by) {
+      return res.status(400).json({ message: 'No NGO associated with this donation' });
+    }
+
+    const ngoId = donation.claimed_by._id;
+
+    // Add rating to NGO's profile
+    await User.findByIdAndUpdate(ngoId, {
+      $push: {
+        'ratings.reviews': {
+          reviewer_id: donorId,
+          rating: parseInt(rating),
+          comment: review?.trim() || '',
+          created_at: new Date()
+        }
+      },
+      $inc: { 'ratings.count': 1 }
+    });
+
+    // Recalculate NGO average rating
+    const ngo = await User.findById(ngoId);
+    if (ngo) {
+      const total = ngo.ratings.reviews.reduce((s, r) => s + r.rating, 0);
+      const avg   = total / ngo.ratings.count;
+      await User.findByIdAndUpdate(ngoId, { 'ratings.average': Math.round(avg * 10) / 10 });
+      // Nudge trust score slightly for receiving a high rating
+      if (parseInt(rating) >= 4) {
+        await User.findByIdAndUpdate(ngoId, { $inc: { trust_score: 2 } });
+      }
+    }
+
+    // Mark donation as rated so donor can't submit twice
+    await Donation.findByIdAndUpdate(donationId, { donor_rated: true });
+
+    // Clear NGO user cache so updated ratings show immediately
+    await redis.del(`user:${ngoId}`);
+
+    res.json({ message: 'NGO rated successfully', rating: parseInt(rating) });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Admin force-releases any reserved donation back to available
 const adminReleaseDonation = async (req, res) => {
   try {
@@ -861,6 +929,7 @@ module.exports = {
   markCollected,
   releaseDonation,
   adminReleaseDonation,
+  rateNGO,
   getDonorHistory,
   getNGOHistory,
   getAdminDonationHistory,

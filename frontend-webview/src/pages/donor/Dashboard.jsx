@@ -36,6 +36,7 @@ const DonorDashboard = () => {
   const [pendingFormData, setPendingFormData] = useState(null);
   const [selectedDonation, setSelectedDonation] = useState(null);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+  const [ngoRating, setNgoRating] = useState({ stars: 0, hover: 0, comment: '', loading: false, submitted: false });
 
   const [dataFetched, setDataFetched] = useState(false);
 
@@ -253,6 +254,25 @@ const DonorDashboard = () => {
   const openDonationDetails = (donation) => {
     setSelectedDonation(donation);
     setDetailsModalVisible(true);
+    // Reset NGO rating state; mark already-submitted if donor_rated flag is set
+    setNgoRating({ stars: 0, hover: 0, comment: '', loading: false, submitted: !!donation.donor_rated });
+  };
+
+  const submitNGORating = async () => {
+    if (!ngoRating.stars || !selectedDonation) return;
+    setNgoRating(r => ({ ...r, loading: true }));
+    try {
+      await api.post(`/donations/${selectedDonation._id}/rate-ngo`, {
+        rating: ngoRating.stars,
+        review: ngoRating.comment.trim() || undefined
+      });
+      setNgoRating(r => ({ ...r, loading: false, submitted: true }));
+      // Update local state so re-opening shows "already rated"
+      setSelectedDonation(d => ({ ...d, donor_rated: true }));
+      dispatch(fetchDonorHistory());
+    } catch {
+      setNgoRating(r => ({ ...r, loading: false }));
+    }
   };
 
   return (
@@ -463,6 +483,49 @@ const DonorDashboard = () => {
                   <div className="mt-2 flex items-center gap-1.5">
                     <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">{t('donationDetails.thankYouImpact')}</p>
+                  </div>
+
+                  {/* Rate the NGO — shown once, hidden after submit */}
+                  <div className="mt-3 border-t border-blue-200 dark:border-blue-700 pt-3">
+                    {ngoRating.submitted ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">⭐</span>
+                        <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">{t('donationDetails.ngoRated')}</p>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-2">{t('donationDetails.rateNGOTitle')}</p>
+                        <div className="flex gap-1 mb-2">
+                          {[1,2,3,4,5].map(s => (
+                            <button key={s}
+                              onMouseEnter={() => setNgoRating(r => ({ ...r, hover: s }))}
+                              onMouseLeave={() => setNgoRating(r => ({ ...r, hover: 0 }))}
+                              onClick={() => setNgoRating(r => ({ ...r, stars: s }))}
+                              className="text-2xl transition-transform hover:scale-110 focus:outline-none">
+                              {s <= (ngoRating.hover || ngoRating.stars) ? '⭐' : '☆'}
+                            </button>
+                          ))}
+                        </div>
+                        {ngoRating.stars > 0 && (
+                          <>
+                            <input
+                              type="text"
+                              value={ngoRating.comment}
+                              onChange={e => setNgoRating(r => ({ ...r, comment: e.target.value }))}
+                              placeholder={t('donationDetails.rateNGOCommentPlaceholder')}
+                              maxLength={200}
+                              className="w-full px-2.5 py-1.5 text-xs border border-blue-200 dark:border-blue-600 dark:bg-gray-700 dark:text-white rounded-lg mb-2 focus:outline-none focus:border-blue-400"
+                            />
+                            <button
+                              onClick={submitNGORating}
+                              disabled={ngoRating.loading}
+                              className="w-full py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                              {ngoRating.loading ? '...' : `⭐ ${t('donationDetails.submitNGORating')}`}
+                            </button>
+                          </>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
               )}
