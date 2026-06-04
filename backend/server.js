@@ -85,8 +85,7 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' }));
 app.use(logger);
 
-// Sentry request tracking (must come before routes)
-if (Sentry) app.use(Sentry.Handlers.requestHandler());
+// Sentry v8: no requestHandler needed — init() auto-instruments express
 
 app.use('/api/auth', authRoutes);
 app.use('/api/donations', donationRoutes);
@@ -97,8 +96,8 @@ app.get('/', (req, res) => {
   res.json({ message: 'FoodBridge API is running!', timestamp: new Date().toISOString(), Status: 'OK' });
 });
 
-// Sentry error handler (must come after routes, before other error handlers)
-if (Sentry) app.use(Sentry.Handlers.errorHandler());
+// Sentry v8 error handler — captures unhandled errors and sends to Sentry
+if (Sentry) Sentry.setupExpressErrorHandler(app);
 
 // Real Socket.IO — clients join their own rooms so targeted events work
 io.on('connection', (socket) => {
