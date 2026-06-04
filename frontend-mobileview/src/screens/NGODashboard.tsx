@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  RefreshControl, Image, Modal,
+  RefreshControl, Image, Modal, TextInput,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,6 +23,7 @@ export default function NGODashboard() {
   const { location } = useLocation();
   const { isOnline, pendingCount, isSyncing } = useOfflineSync();
   const [activeTab, setActiveTab] = useState('feed');
+  const [filters, setFilters] = useState({ search: '', category: 'all', radius: 10, minServes: '', sortBy: 'time_remaining' });
   const [refreshing, setRefreshing] = useState(false);
   const [releaseModal, setReleaseModal] = useState({ open: false, donationId: '', donationName: '' });
   const [releaseReason, setReleaseReason] = useState('');
@@ -50,11 +51,39 @@ export default function NGODashboard() {
   const onRefresh = async () => {
     setRefreshing(true);
     if (location && isOnline) {
-      await dispatch(fetchNearbyDonations({ latitude: location.latitude, longitude: location.longitude }));
+      await dispatch(fetchNearbyDonations({ latitude: location.latitude, longitude: location.longitude, maxDistance: filters.radius * 1000 }));
       await dispatch(fetchClaimedDonations());
     }
     setRefreshing(false);
   };
+
+  // Re-fetch when radius changes
+  useEffect(() => {
+    if (location && isOnline) {
+      dispatch(fetchNearbyDonations({ latitude: location.latitude, longitude: location.longitude, maxDistance: filters.radius * 1000 }));
+    }
+  }, [filters.radius]);
+
+  const filteredFeed = (() => {
+    let result = donations.filter((d: any) => d.status === 'available');
+    const q = filters.search.trim().toLowerCase();
+    if (q) result = result.filter((d: any) =>
+      d.food_items?.some((i: any) => i.name.toLowerCase().includes(q)) ||
+      d.donor_id?.organization_name?.toLowerCase().includes(q) ||
+      d.pickup_address?.toLowerCase().includes(q)
+    );
+    if (filters.category !== 'all')
+      result = result.filter((d: any) => d.food_items?.some((i: any) => i.category === filters.category));
+    if (filters.minServes && parseInt(filters.minServes) > 0)
+      result = result.filter((d: any) => d.quantity_serves >= parseInt(filters.minServes));
+    if (filters.sortBy === 'time_remaining')
+      result = [...result].sort((a: any, b: any) => new Date(a.pickup_window_end).getTime() - new Date(b.pickup_window_end).getTime());
+    else if (filters.sortBy === 'newest')
+      result = [...result].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return result;
+  })();
+
+  const isFiltered = filters.search || filters.category !== 'all' || filters.radius !== 10 || filters.minServes || filters.sortBy !== 'time_remaining';
 
   const handleMarkCollected = (donationId: string) => {
     Alert.alert(
@@ -343,15 +372,92 @@ export default function NGODashboard() {
         showsVerticalScrollIndicator={false}
       >
         {activeTab === 'feed' && (
-          donations.length === 0 ? (
-            <View style={styles.empty}>
-              <LinearGradient colors={['#f0fdf4', '#dcfce7']} style={styles.emptyIcon}>
-                <Ionicons name="search-outline" size={48} color="#16a34a" />
-              </LinearGradient>
-              <Text style={styles.emptyTitle}>{t('dashboard.ngo.noDonations')}</Text>
-              <Text style={styles.emptyDesc}>{t('dashboard.ngo.noDonationsDesc')}</Text>
+          <>
+            {/* ── Filter Bar ── */}
+            <View style={{ backgroundColor: '#fff', paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
+              {/* Search box */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', paddingHorizontal: 10, marginBottom: 10, marginTop: 8 }}>
+                <Ionicons name="search-outline" size={16} color="#9ca3af" />
+                <TextInput
+                  value={filters.search}
+                  onChangeText={v => setFilters(f => ({ ...f, search: v }))}
+                  placeholder={t('dashboard.ngo.searchPlaceholder')}
+                  placeholderTextColor="#9ca3af"
+                  style={{ flex: 1, paddingVertical: 9, paddingHorizontal: 8, fontSize: 14, color: '#111827' }}
+                />
+                {filters.search ? <TouchableOpacity onPress={() => setFilters(f => ({ ...f, search: '' }))}><Ionicons name="close-circle" size={16} color="#9ca3af" /></TouchableOpacity> : null}
+              </View>
+
+              {/* Category chips */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+                <View style={{ flexDirection: 'row', gap: 6 }}>
+                  {[['all','All'],['vegetarian','🥦 Veg'],['non-vegetarian','🍗 Non-Veg'],['vegan','🌱 Vegan'],['mixed','🍱 Mixed']].map(([val, lbl]) => (
+                    <TouchableOpacity key={val} onPress={() => setFilters(f => ({ ...f, category: val }))}
+                      style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5,
+                        borderColor: filters.category === val ? '#16a34a' : '#e5e7eb',
+                        backgroundColor: filters.category === val ? '#16a34a' : '#fff' }}>
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: filters.category === val ? '#fff' : '#374151' }}>{lbl}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+
+              {/* Radius + Sort + Min serves row */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 11, color: '#9ca3af', fontWeight: '600' }}>RADIUS</Text>
+                  {[1,5,10].map(km => (
+                    <TouchableOpacity key={km} onPress={() => setFilters(f => ({ ...f, radius: km }))}
+                      style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16, borderWidth: 1.5,
+                        borderColor: filters.radius === km ? '#2563eb' : '#e5e7eb',
+                        backgroundColor: filters.radius === km ? '#2563eb' : '#fff' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: filters.radius === km ? '#fff' : '#374151' }}>{km}km</Text>
+                    </TouchableOpacity>
+                  ))}
+
+                  <View style={{ width: 1, height: 18, backgroundColor: '#e5e7eb', marginHorizontal: 4 }} />
+                  <Text style={{ fontSize: 11, color: '#9ca3af', fontWeight: '600' }}>SORT</Text>
+                  {[['time_remaining','⏱ Urgent'],['distance','📍 Near'],['newest','🕐 New']].map(([val, lbl]) => (
+                    <TouchableOpacity key={val} onPress={() => setFilters(f => ({ ...f, sortBy: val }))}
+                      style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16, borderWidth: 1.5,
+                        borderColor: filters.sortBy === val ? '#f59e0b' : '#e5e7eb',
+                        backgroundColor: filters.sortBy === val ? '#f59e0b' : '#fff' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: filters.sortBy === val ? '#fff' : '#374151' }}>{lbl}</Text>
+                    </TouchableOpacity>
+                  ))}
+
+                  <View style={{ width: 1, height: 18, backgroundColor: '#e5e7eb', marginHorizontal: 4 }} />
+                  <Text style={{ fontSize: 11, color: '#9ca3af', fontWeight: '600' }}>MIN</Text>
+                  <TextInput
+                    value={filters.minServes}
+                    onChangeText={v => setFilters(f => ({ ...f, minServes: v.replace(/[^0-9]/g, '') }))}
+                    placeholder="Any"
+                    placeholderTextColor="#9ca3af"
+                    keyboardType="number-pad"
+                    style={{ width: 44, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 10, borderWidth: 1.5, borderColor: filters.minServes ? '#2563eb' : '#e5e7eb', fontSize: 12, color: '#111827', backgroundColor: '#fff' }}
+                  />
+
+                  {isFiltered ? (
+                    <TouchableOpacity onPress={() => setFilters({ search: '', category: 'all', radius: 10, minServes: '', sortBy: 'time_remaining' })}
+                      style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16, borderWidth: 1.5, borderColor: '#ef4444', backgroundColor: '#fff', marginLeft: 4 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#ef4444' }}>✕ {t('dashboard.ngo.clearFilters')}</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </ScrollView>
             </View>
-          ) : donations.map((d: any) => <DonationCard key={d._id} d={d} showClaim />)
+            {/* ── End Filter Bar ── */}
+
+            {filteredFeed.length === 0 ? (
+              <View style={styles.empty}>
+                <LinearGradient colors={['#f0fdf4', '#dcfce7']} style={styles.emptyIcon}>
+                  <Ionicons name={isFiltered ? 'filter-outline' : 'search-outline'} size={48} color="#16a34a" />
+                </LinearGradient>
+                <Text style={styles.emptyTitle}>{isFiltered ? t('dashboard.ngo.noMatchFilters') : t('dashboard.ngo.noDonations')}</Text>
+                <Text style={styles.emptyDesc}>{isFiltered ? t('dashboard.ngo.tryDifferentFilters') : t('dashboard.ngo.noDonationsDesc')}</Text>
+              </View>
+            ) : (filteredFeed as any[]).map((d: any) => <DonationCard key={d._id} d={d} showClaim />)}
+          </>
         )}
 
         {activeTab === 'claims' && (

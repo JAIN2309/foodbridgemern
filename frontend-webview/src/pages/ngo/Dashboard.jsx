@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +25,9 @@ const NGODashboard = () => {
   const { location: geoLocation } = useGeolocation();
   const [activeTab, setActiveTab] = useState('feed');
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
+  const [filters, setFilters] = useState({
+    search: '', category: 'all', radius: 10, minServes: '', sortBy: 'time_remaining'
+  });
   const [pickupModal, setPickupModal] = useState({
     open: false, donationId: null, donationName: '',
     pickupWindowEnd: null, pickupType: 'instant', scheduledTime: '', error: ''
@@ -171,6 +174,34 @@ const NGODashboard = () => {
     return `${hours}h ${minutes}m left`;
   };
 
+  // Re-fetch when radius changes
+  useEffect(() => {
+    const coords = geoLocation || { latitude: 28.6139, longitude: 77.2090 };
+    dispatch(fetchNearbyDonations({ longitude: coords.longitude, latitude: coords.latitude, maxDistance: filters.radius * 1000 }));
+  }, [filters.radius]);
+
+  const filteredFeed = useMemo(() => {
+    let result = nearbyDonations.filter(d => d.status === 'available');
+    const q = filters.search.trim().toLowerCase();
+    if (q) result = result.filter(d =>
+      d.food_items?.some(i => i.name.toLowerCase().includes(q)) ||
+      d.donor_id?.organization_name?.toLowerCase().includes(q) ||
+      d.pickup_address?.toLowerCase().includes(q)
+    );
+    if (filters.category !== 'all')
+      result = result.filter(d => d.food_items?.some(i => i.category === filters.category));
+    if (filters.minServes && parseInt(filters.minServes) > 0)
+      result = result.filter(d => d.quantity_serves >= parseInt(filters.minServes));
+    if (filters.sortBy === 'time_remaining')
+      result = [...result].sort((a, b) => new Date(a.pickup_window_end) - new Date(b.pickup_window_end));
+    else if (filters.sortBy === 'newest')
+      result = [...result].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    // 'distance' = default backend $near order, no re-sort needed
+    return result;
+  }, [nearbyDonations, filters]);
+
+  const isFiltered = filters.search || filters.category !== 'all' || filters.radius !== 10 || filters.minServes || filters.sortBy !== 'time_remaining';
+
   const stats = {
     available: nearbyDonations.filter(d => d.status === 'available').length,
     claimed: userDonations.filter(d => d.status === 'reserved').length,
@@ -271,51 +302,110 @@ const NGODashboard = () => {
         <div className="p-6">
           {activeTab === 'feed' && (
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">{t('dashboard.ngo.availableDonations')}</h3>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-lg font-medium">{t('dashboard.ngo.availableDonations')} <span className="text-sm font-normal text-gray-400">({filteredFeed.length})</span></h3>
                 <div className="flex space-x-2">
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`px-3 py-1 rounded ${
-                      viewMode === 'list' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100'
-                    }`}
-                  >
-                    {t('dashboard.ngo.list')}
-                  </button>
-                  <button
-                    onClick={() => setViewMode('map')}
-                    className={`px-3 py-1 rounded ${
-                      viewMode === 'map' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100'
-                    }`}
-                  >
-                    {t('dashboard.ngo.map')}
-                  </button>
+                  <button onClick={() => setViewMode('list')} className={`px-3 py-1 rounded ${viewMode === 'list' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100'}`}>{t('dashboard.ngo.list')}</button>
+                  <button onClick={() => setViewMode('map')} className={`px-3 py-1 rounded ${viewMode === 'map' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100'}`}>{t('dashboard.ngo.map')}</button>
                 </div>
               </div>
 
+              {/* ── Filter Bar ── */}
+              <div className="space-y-2 mb-4">
+                {/* Search */}
+                <div className="relative">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" /></svg>
+                  <input
+                    type="text"
+                    placeholder={t('dashboard.ngo.searchPlaceholder')}
+                    value={filters.search}
+                    onChange={e => setFilters(f => ({ ...f, search: e.target.value }))}
+                    className="w-full pl-9 pr-9 py-2.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl text-sm focus:outline-none focus:border-primary-400"
+                  />
+                  {filters.search && (
+                    <button onClick={() => setFilters(f => ({ ...f, search: '' }))} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs">✕</button>
+                  )}
+                </div>
+
+                {/* Chips row */}
+                <div className="flex flex-wrap gap-2 items-center">
+                  {/* Category */}
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {[['all','All'],['vegetarian','🥦 Veg'],['non-vegetarian','🍗 Non-Veg'],['vegan','🌱 Vegan'],['mixed','🍱 Mixed']].map(([val, lbl]) => (
+                      <button key={val} onClick={() => setFilters(f => ({ ...f, category: val }))}
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${filters.category === val ? 'bg-primary-600 text-white border-primary-600' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-primary-300'}`}>
+                        {lbl}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="w-px h-5 bg-gray-200 dark:bg-gray-600" />
+
+                  {/* Radius */}
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-gray-500">{t('dashboard.ngo.radius')}:</span>
+                    {[1,5,10].map(km => (
+                      <button key={km} onClick={() => setFilters(f => ({ ...f, radius: km }))}
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${filters.radius === km ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-blue-300'}`}>
+                        {km}km
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="w-px h-5 bg-gray-200 dark:bg-gray-600" />
+
+                  {/* Min Serves */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-gray-500">{t('dashboard.ngo.minServes')}:</span>
+                    <input type="number" min="1" placeholder={t('dashboard.ngo.any')} value={filters.minServes}
+                      onChange={e => setFilters(f => ({ ...f, minServes: e.target.value }))}
+                      className="w-14 px-2 py-1 text-xs border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:border-blue-400" />
+                  </div>
+
+                  <div className="w-px h-5 bg-gray-200 dark:bg-gray-600" />
+
+                  {/* Sort */}
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-gray-500">{t('dashboard.ngo.sortBy')}:</span>
+                    {[['time_remaining','⏱ Urgency'],['distance','📍 Distance'],['newest','🕐 Newest']].map(([val, lbl]) => (
+                      <button key={val} onClick={() => setFilters(f => ({ ...f, sortBy: val }))}
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${filters.sortBy === val ? 'bg-amber-500 text-white border-amber-500' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-amber-300'}`}>
+                        {lbl}
+                      </button>
+                    ))}
+                  </div>
+
+                  {isFiltered && (
+                    <button onClick={() => setFilters({ search: '', category: 'all', radius: 10, minServes: '', sortBy: 'time_remaining' })}
+                      className="px-2.5 py-1 rounded-full text-xs font-semibold text-red-600 border border-red-200 hover:bg-red-50 transition-colors">
+                      {t('dashboard.ngo.clearFilters')}
+                    </button>
+                  )}
+                </div>
+              </div>
+              {/* ── End Filter Bar ── */}
+
               {viewMode === 'list' ? (
                 <div className="space-y-3">
-                  {nearbyDonations.filter(d => d.status === 'available').length === 0 ? (
+                  {filteredFeed.length === 0 ? (
                     <div className="text-center py-8">
-                      <p className="text-gray-500 dark:text-gray-400">{t('dashboard.ngo.noDonationsNearby')}</p>
-                      <button
-                        onClick={() => {
-                          const coords = geoLocation || { latitude: 28.6139, longitude: 77.2090 };
-                          dispatch(fetchNearbyDonations({
-                            longitude: coords.longitude,
-                            latitude: coords.latitude,
-                            maxDistance: 10000
-                          }));
-                        }}
-                        className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-                      >
-                        {t('dashboard.ngo.refreshDonations')}
-                      </button>
+                      <p className="text-gray-500 dark:text-gray-400">
+                        {isFiltered ? t('dashboard.ngo.noMatchFilters') : t('dashboard.ngo.noDonationsNearby')}
+                      </p>
+                      {isFiltered ? (
+                        <button onClick={() => setFilters({ search: '', category: 'all', radius: 10, minServes: '', sortBy: 'time_remaining' })}
+                          className="mt-3 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-200">
+                          {t('dashboard.ngo.clearFilters')}
+                        </button>
+                      ) : (
+                        <button onClick={() => { const c = geoLocation || { latitude: 28.6139, longitude: 77.2090 }; dispatch(fetchNearbyDonations({ longitude: c.longitude, latitude: c.latitude, maxDistance: filters.radius * 1000 })); }}
+                          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+                          {t('dashboard.ngo.refreshDonations')}
+                        </button>
+                      )}
                     </div>
                   ) : (
-                    nearbyDonations
-                      .filter(d => d.status === 'available')
-                      .map((donation) => (
+                    filteredFeed.map((donation) => (
                         <div key={donation._id} className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow bg-white">
                           <div className="flex gap-4">
                             {/* Image */}

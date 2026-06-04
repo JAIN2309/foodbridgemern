@@ -233,7 +233,15 @@
       "scheduledFor": "शेड्यूल किया",
       "pickupBy": "पिकअप करें",
       "pickupBeforeWindowEnd": "इससे पहले होना चाहिए",
-      "releaseHistoryTitle": "पिकअप क्यों नहीं हुआ?"
+      "releaseHistoryTitle": "पिकअप क्यों नहीं हुआ?",
+      "searchPlaceholder": "भोजन, दानकर्ता या पता खोजें...",
+      "radius": "दूरी",
+      "minServes": "न्यूनतम सेवाएं",
+      "sortBy": "क्रमबद्ध",
+      "any": "कोई भी",
+      "clearFilters": "फ़िल्टर साफ़ करें",
+      "noMatchFilters": "कोई दान फ़िल्टर से मेल नहीं खाता",
+      "tryDifferentFilters": "श्रेणी, दूरी या खोज बदलें"
     },
     "admin": {
       "history":"इतिहास",
