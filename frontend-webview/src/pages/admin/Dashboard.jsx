@@ -34,6 +34,8 @@ const AdminDashboard = () => {
   const [usersPage, setUsersPage] = useState(1);
   const [usersLimit] = useState(10);
   const [usersPagination, setUsersPagination] = useState({ total: 0, pages: 1 });
+  const [userSort, setUserSort] = useState({ field: null, dir: 'desc' });
+  const [expandedRating, setExpandedRating] = useState(null);
   const [usersLoading, setUsersLoading] = useState(false);
 
   const VALID_TABS = ['overview', 'verify', 'map', 'analytics', 'users', 'history'];
@@ -46,6 +48,25 @@ const AdminDashboard = () => {
   const [exportLoading, setExportLoading] = useState(false);
   // Computed outside JSX to avoid IIFE-in-JSX which breaks Babel's JSX parser
   const analyticsDisplay = analyticsStats || stats;
+
+  // Client-side sort for rating/trust columns (keeps server pagination intact)
+  const sortedUsers = userSort.field
+    ? [...allUsers].sort((a, b) => {
+        const av = userSort.field === 'rating' ? (a.ratings?.average || 0) : (a.trust_score || 0);
+        const bv = userSort.field === 'rating' ? (b.ratings?.average || 0) : (b.trust_score || 0);
+        return userSort.dir === 'desc' ? bv - av : av - bv;
+      })
+    : allUsers;
+
+  const toggleSort = (field) => setUserSort(s =>
+    s.field === field ? { field, dir: s.dir === 'desc' ? 'asc' : 'desc' } : { field, dir: 'desc' }
+  );
+
+  const SortArrow = ({ field }) => userSort.field !== field ? (
+    <span className="ml-1 text-gray-300">↕</span>
+  ) : (
+    <span className="ml-1 text-blue-500">{userSort.dir === 'desc' ? '↓' : '↑'}</span>
+  );
 
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
@@ -1238,13 +1259,19 @@ const AdminDashboard = () => {
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('dashboard.admin.contact')}</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('dashboard.admin.status')}</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('dashboard.admin.accountStatus')}</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('dashboard.admin.rating')}</th>
+                        <th
+                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:text-blue-600 select-none"
+                          onClick={() => toggleSort('rating')}
+                          title="Sort by rating"
+                        >
+                          {t('dashboard.admin.rating')}<SortArrow field="rating" />
+                        </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('dashboard.admin.lastLogin')}</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('dashboard.admin.actions')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {allUsers.map((user) => (
+                      {sortedUsers.map((user) => (
                         <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                           <td className="px-4 py-4">
                             <div>
@@ -1280,15 +1307,37 @@ const AdminDashboard = () => {
                               {user.is_active !== false ? t('dashboard.admin.accountActive') : t('dashboard.admin.accountDeactivated')}
                             </span>
                           </td>
-                          {/* Rating */}
+                          {/* Rating — click to expand inline reviews */}
                           <td className="px-4 py-4">
                             {user.ratings?.count > 0 ? (
                               <div>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-amber-400 text-sm">★</span>
+                                <button
+                                  onClick={() => setExpandedRating(expandedRating === user._id ? null : user._id)}
+                                  className="flex items-center gap-1 hover:opacity-75 transition-opacity"
+                                  title="Click to see reviews"
+                                >
+                                  <span className="text-amber-400">★</span>
                                   <span className="text-sm font-bold text-gray-800 dark:text-gray-100">{(user.ratings.average || 0).toFixed(1)}</span>
-                                </div>
-                                <p className="text-xs text-gray-400 mt-0.5">{user.ratings.count} review{user.ratings.count !== 1 ? 's' : ''}</p>
+                                  <span className="text-xs text-gray-400 ml-0.5">({user.ratings.count})</span>
+                                  <span className="text-xs text-gray-400 ml-1">{expandedRating === user._id ? '▲' : '▼'}</span>
+                                </button>
+                                {/* Inline review list */}
+                                {expandedRating === user._id && (
+                                  <div className="mt-2 space-y-1.5 max-w-xs">
+                                    {[...(user.ratings.reviews || [])].reverse().slice(0, 5).map((r, i) => (
+                                      <div key={i} className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-lg px-2.5 py-2">
+                                        <div className="flex items-center justify-between mb-0.5">
+                                          <span className="text-amber-400 text-xs tracking-tighter">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
+                                          <span className="text-xs text-gray-400">{r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}</span>
+                                        </div>
+                                        {r.comment && <p className="text-xs text-gray-600 dark:text-gray-300 leading-snug">"{r.comment}"</p>}
+                                      </div>
+                                    ))}
+                                    {(user.ratings.reviews?.length || 0) > 5 && (
+                                      <p className="text-xs text-gray-400 text-center">+{user.ratings.reviews.length - 5} more — open More Info for full list</p>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             ) : (
                               <span className="text-xs text-gray-300 dark:text-gray-600 italic">No ratings</span>
