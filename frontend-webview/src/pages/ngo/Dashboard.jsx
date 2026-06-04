@@ -5,11 +5,12 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { MapPin, Clock, Users, Phone } from 'lucide-react';
-import { 
-  fetchNearbyDonations, 
-  claimDonation, 
+import {
+  fetchNearbyDonations,
+  claimDonation,
   fetchNGOHistory,
-  addNewDonation 
+  markCollectedNGO,
+  addNewDonation
 } from '../../store/slices/donationSlice';
 import { useGeolocation } from '../../hooks/useGeolocation';
 import socketService from '../../services/socket';
@@ -760,12 +761,14 @@ const NGODashboard = () => {
                               <button
                                 onClick={async () => {
                                   try {
-                                    await api.post(`/donations/${donation._id}/collect`);
+                                    await dispatch(markCollectedNGO({ donationId: donation._id })).unwrap();
                                     toast.success(t('dashboard.ngo.markedCollected'));
+                                    // Redux state already updated in-place via markCollectedNGO.fulfilled
+                                    // Re-fetch history for fresh data from server
                                     dispatch(fetchNGOHistory());
-                                    if (geoLocation) dispatch(fetchNearbyDonations({ longitude: geoLocation.longitude, latitude: geoLocation.latitude, maxDistance: 10000 }));
-                                  } catch {
-                                    toast.error(t('dashboard.ngo.collectFailed'));
+                                    if (geoLocation) dispatch(fetchNearbyDonations({ longitude: geoLocation.longitude, latitude: geoLocation.latitude, maxDistance: filters.radius * 1000 }));
+                                  } catch (err) {
+                                    toast.error(err || t('dashboard.ngo.collectFailed'));
                                   }
                                 }}
                                 className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors"

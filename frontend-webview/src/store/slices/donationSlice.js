@@ -58,6 +58,18 @@ export const fetchDonorHistory = createAsyncThunk(
   }
 );
 
+export const markCollectedNGO = createAsyncThunk(
+  'donations/markCollectedNGO',
+  async ({ donationId, rating, review }, { rejectWithValue }) => {
+    try {
+      const response = await api.post(`/donations/${donationId}/collect`, { rating, review });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+
 export const fetchNGOHistory = createAsyncThunk(
   'donations/fetchNGOHistory',
   async (_, { rejectWithValue }) => {
@@ -121,6 +133,14 @@ const donationSlice = createSlice({
       .addCase(createDonation.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
+      })
+      // Mark collected (NGO) — updates userDonations in place so UI refreshes without re-fetch
+      .addCase(markCollectedNGO.fulfilled, (state, action) => {
+        const donationId = action.payload.donation._id;
+        const idx = state.userDonations.findIndex(d => d._id === donationId);
+        if (idx !== -1) state.userDonations[idx] = action.payload.donation;
+        // Also remove from nearbyDonations if present
+        state.nearbyDonations = state.nearbyDonations.filter(d => d._id !== donationId);
       })
       // Claim donation
       .addCase(claimDonation.fulfilled, (state, action) => {

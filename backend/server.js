@@ -3,6 +3,8 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet');
+const mongoSanitize = require('express-mongo-sanitize');
 
 const logger = require('./middleware/logger');
 const authRoutes = require('./routes/auth');
@@ -24,6 +26,15 @@ const io     = new Server(server, {
     methods: ['GET', 'POST']
   }
 });
+
+// Security headers — CSP relaxed for API-only backend (no HTML served)
+app.use(helmet({
+  contentSecurityPolicy: false, // frontend handles its own CSP
+  crossOriginEmbedderPolicy: false
+}));
+
+// Strip MongoDB operator injection ($gt, $where, etc.) from request bodies
+app.use(mongoSanitize());
 
 app.use(cors({
   origin: process.env.CLIENT_URL || '*',
