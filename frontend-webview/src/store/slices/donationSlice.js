@@ -48,12 +48,12 @@ export const claimDonation = createAsyncThunk(
 
 export const fetchDonorHistory = createAsyncThunk(
   'donations/fetchDonorHistory',
-  async (_, { rejectWithValue }) => {
+  async ({ page = 1, limit = 10 } = {}, { rejectWithValue }) => {
     try {
-      const response = await api.get('/donations/history/donor');
-      return response.data;
+      const response = await api.get(`/donations/history/donor?page=${page}&limit=${limit}`);
+      return response.data; // { donations, pagination }
     } catch (error) {
-      return rejectWithValue(error.response.data.message);
+      return rejectWithValue(error.response?.data?.message || error.message);
     }
   }
 );
@@ -87,6 +87,7 @@ const donationSlice = createSlice({
   initialState: {
     nearbyDonations: [],
     userDonations: [],
+    donorPagination: { total: 0, page: 1, pages: 1, limit: 10 },
     isLoading: false,
     error: null,
   },
@@ -158,7 +159,13 @@ const donationSlice = createSlice({
       })
       .addCase(fetchDonorHistory.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.userDonations = action.payload;
+        // Support both old array response and new paginated { donations, pagination }
+        if (Array.isArray(action.payload)) {
+          state.userDonations = action.payload;
+        } else {
+          state.userDonations    = action.payload.donations || [];
+          state.donorPagination  = action.payload.pagination || state.donorPagination;
+        }
       })
       .addCase(fetchDonorHistory.rejected, (state, action) => {
         state.isLoading = false;

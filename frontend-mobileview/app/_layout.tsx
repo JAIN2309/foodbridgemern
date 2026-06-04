@@ -1,4 +1,17 @@
 import { useEffect, useState } from 'react';
+// Sentry — graceful: app still runs even if package not yet installed
+// To activate: npx expo install @sentry/react-native  then add EXPO_PUBLIC_SENTRY_DSN to .env
+try {
+  const Sentry = require('@sentry/react-native');
+  if (process.env.EXPO_PUBLIC_SENTRY_DSN) {
+    Sentry.init({
+      dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+      environment: __DEV__ ? 'development' : 'production',
+      tracesSampleRate: __DEV__ ? 0 : 0.2,
+      enableNativeFramesTracking: !__DEV__,
+    });
+  }
+} catch { /* @sentry/react-native not installed yet */ }
 import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { Provider } from 'react-redux';
 import * as SecureStore from 'expo-secure-store';

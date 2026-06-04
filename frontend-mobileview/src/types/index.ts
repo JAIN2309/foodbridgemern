@@ -80,6 +80,7 @@ export interface DonationState {
   donations: Donation[];
   userDonations: Donation[];
   claimedDonations: Donation[];
+  donorPagination: { total: number; page: number; pages: number; limit: number };
   isLoading: boolean;
   error: string | null;
 }

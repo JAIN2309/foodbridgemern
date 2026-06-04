@@ -17,7 +17,9 @@ import { loadUser } from '../store/authSlice';
 export default function DonorDashboard() {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
-  const { userDonations, isLoading } = useAppSelector((state) => state.donations);
+  const { userDonations, donorPagination, isLoading } = useAppSelector((state) => state.donations);
+  const [donorPage, setDonorPage] = useState(1);
+  const DONOR_LIMIT = 10;
   const { user } = useAppSelector((state) => state.auth);
   const { location } = useLocation();
   const { isOnline, pendingCount, isSyncing } = useOfflineSync();
@@ -49,11 +51,11 @@ export default function DonorDashboard() {
   const [scrollIndicatorTop, setScrollIndicatorTop] = useState(0);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
 
-  useEffect(() => { dispatch(fetchDonorHistory()); }, []);
+  useEffect(() => { dispatch(fetchDonorHistory({ page: donorPage, limit: DONOR_LIMIT })); }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await dispatch(fetchDonorHistory());
+    await dispatch(fetchDonorHistory({ page: donorPage, limit: DONOR_LIMIT }));
     setRefreshing(false);
   };
 
@@ -181,7 +183,7 @@ export default function DonorDashboard() {
       setPhotoUri(null);
       setShowBiometricConfirm(false);
       setPendingFormData(null);
-      await dispatch(fetchDonorHistory());
+      await dispatch(fetchDonorHistory({ page: donorPage, limit: DONOR_LIMIT }));
       await dispatch(loadUser());
       setActiveTab('overview');
     } catch (error: any) {
@@ -259,7 +261,7 @@ export default function DonorDashboard() {
       });
       setNgoRating(r => ({ ...r, loading: false, submitted: true }));
       setSelectedDonation((d: any) => ({ ...d, donor_rated: true }));
-      dispatch(fetchDonorHistory());
+      dispatch(fetchDonorHistory({ page: donorPage, limit: DONOR_LIMIT }));
     } catch {
       setNgoRating(r => ({ ...r, loading: false }));
     }
@@ -794,6 +796,29 @@ export default function DonorDashboard() {
                 </TouchableOpacity>
               ))
             )
+          )}
+
+          {/* Load More / pagination for overview */}
+          {activeTab === 'overview' && userDonations.length > 0 && donorPagination.pages > 1 && (
+            <View style={{ paddingVertical: 12, alignItems: 'center', gap: 8 }}>
+              <Text style={{ fontSize: 12, color: '#9ca3af' }}>
+                {t('dashboard.admin.page')} {donorPagination.page} {t('dashboard.admin.of')} {donorPagination.pages} · {donorPagination.total} total
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity
+                  disabled={donorPage <= 1 || isLoading}
+                  onPress={() => { const p = donorPage - 1; setDonorPage(p); dispatch(fetchDonorHistory({ page: p, limit: DONOR_LIMIT })); }}
+                  style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10, borderWidth: 1.5, borderColor: donorPage <= 1 ? '#e5e7eb' : '#2563eb', backgroundColor: '#fff', opacity: donorPage <= 1 ? 0.4 : 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: donorPage <= 1 ? '#9ca3af' : '#2563eb' }}>← Prev</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  disabled={donorPage >= donorPagination.pages || isLoading}
+                  onPress={() => { const p = donorPage + 1; setDonorPage(p); dispatch(fetchDonorHistory({ page: p, limit: DONOR_LIMIT })); }}
+                  style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10, borderWidth: 1.5, borderColor: donorPage >= donorPagination.pages ? '#e5e7eb' : '#2563eb', backgroundColor: '#fff', opacity: donorPage >= donorPagination.pages ? 0.4 : 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: donorPage >= donorPagination.pages ? '#9ca3af' : '#2563eb' }}>Next →</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           )}
 
           {activeTab === 'post' && (

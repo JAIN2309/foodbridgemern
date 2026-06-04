@@ -14,6 +14,7 @@
     "re-encrypt": "node scripts/reEncryptData.js"
   },
   "dependencies": {
+    "@sentry/node": "^8.0.0",
     "argon2": "^0.31.2",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",

@@ -755,11 +755,23 @@ const syncOfflineActions = async (req, res) => {
 
 const getDonorHistory = async (req, res) => {
   try {
-    const donations = await Donation.find({ donor_id: req.user._id })
-      .populate('claimed_by', 'organization_name email phone contact_person address trust_score ratings activity_stats')
-      .sort({ createdAt: -1 });
-    
-    res.json(donations);
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.min(50, parseInt(req.query.limit) || 10);
+    const skip  = (page - 1) * limit;
+
+    const [donations, total] = await Promise.all([
+      Donation.find({ donor_id: req.user._id })
+        .populate('claimed_by', 'organization_name email phone contact_person address trust_score ratings activity_stats')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Donation.countDocuments({ donor_id: req.user._id })
+    ]);
+
+    res.json({
+      donations,
+      pagination: { total, page, limit, pages: Math.ceil(total / limit) }
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

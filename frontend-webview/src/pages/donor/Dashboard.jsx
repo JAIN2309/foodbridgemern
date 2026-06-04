@@ -16,7 +16,14 @@ const DonorDashboard = () => {
   const dispatch = useDispatch();
   const location = useLocation();
   const { user } = useSelector((state) => state.auth);
-  const { userDonations, isLoading } = useSelector((state) => state.donations);
+  const { userDonations, donorPagination, isLoading } = useSelector((state) => state.donations);
+  const [donorPage, setDonorPage] = React.useState(1);
+  const DONOR_LIMIT = 10;
+
+  // Re-fetch when page changes
+  React.useEffect(() => {
+    dispatch(fetchDonorHistory({ page: donorPage, limit: DONOR_LIMIT }));
+  }, [donorPage]);
   const { location: geoLocation } = useGeolocation();
   const [activeTab, setActiveTab] = useState(() => {
     // Restore tab from localStorage or default to 'overview'
@@ -42,13 +49,13 @@ const DonorDashboard = () => {
 
   // Initial fetch
   useEffect(() => {
-    dispatch(fetchDonorHistory());
+    dispatch(fetchDonorHistory({ page: donorPage, limit: DONOR_LIMIT }));
   }, [dispatch]);
 
   // Auto-refresh every 30 seconds — keeps status in sync
   useEffect(() => {
     const interval = setInterval(() => {
-      dispatch(fetchDonorHistory());
+      dispatch(fetchDonorHistory({ page: donorPage, limit: DONOR_LIMIT }));
     }, 30000);
     return () => clearInterval(interval);
   }, [dispatch]);
@@ -56,7 +63,7 @@ const DonorDashboard = () => {
   // Socket: refresh immediately when any NGO claims or collects a donation
   useEffect(() => {
     socketService.onDonationClaimed(() => {
-      dispatch(fetchDonorHistory());
+      dispatch(fetchDonorHistory({ page: donorPage, limit: DONOR_LIMIT }));
     });
     return () => socketService.offAllListeners();
   }, [dispatch]);
@@ -164,7 +171,7 @@ const DonorDashboard = () => {
       setPendingFormData(null);
       
       // Refetch the donation history to ensure UI is updated
-      await dispatch(fetchDonorHistory());
+      await dispatch(fetchDonorHistory({ page: donorPage, limit: DONOR_LIMIT }));
       
       setActiveTab('overview');
       localStorage.setItem('donorDashboardTab', 'overview');
@@ -269,7 +276,7 @@ const DonorDashboard = () => {
       setNgoRating(r => ({ ...r, loading: false, submitted: true }));
       // Update local state so re-opening shows "already rated"
       setSelectedDonation(d => ({ ...d, donor_rated: true }));
-      dispatch(fetchDonorHistory());
+      dispatch(fetchDonorHistory({ page: donorPage, limit: DONOR_LIMIT }));
     } catch {
       setNgoRating(r => ({ ...r, loading: false }));
     }
@@ -893,7 +900,7 @@ const DonorDashboard = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {userDonations.slice(0, 5).map((donation) => (
+                  {userDonations.map((donation) => (
                     <div 
                       key={donation._id} 
                       className="flex items-start justify-between p-4 border dark:border-gray-700 rounded-lg hover:shadow-md transition-shadow cursor-pointer"
@@ -943,6 +950,33 @@ const DonorDashboard = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Pagination controls */}
+              {donorPagination.pages > 1 && (
+                <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {t('dashboard.admin.page')} {donorPagination.page} {t('dashboard.admin.of')} {donorPagination.pages}
+                    &nbsp;·&nbsp; {donorPagination.total} {t('dashboard.donor.total').toLowerCase()}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setDonorPage(p => Math.max(1, p - 1))}
+                      disabled={donorPage === 1 || isLoading}
+                      className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      ← {t('dashboard.admin.prev')}
+                    </button>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 px-2">{donorPage}</span>
+                    <button
+                      onClick={() => setDonorPage(p => Math.min(donorPagination.pages, p + 1))}
+                      disabled={donorPage >= donorPagination.pages || isLoading}
+                      className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      {t('dashboard.admin.next')} →
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

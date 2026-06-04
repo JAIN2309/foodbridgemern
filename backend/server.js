@@ -1,5 +1,19 @@
 require('dotenv').config();
 
+// Sentry — graceful: app still starts even if package not yet installed
+let Sentry = null;
+try {
+  Sentry = require('@sentry/node');
+  if (process.env.SENTRY_DSN) {
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      environment: process.env.NODE_ENV || 'development',
+      tracesSampleRate: 0.2, // capture 20% of transactions for performance
+    });
+    console.log('✅ Sentry (backend) initialised');
+  }
+} catch { /* @sentry/node not installed yet — run: npm install @sentry/node */ }
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -71,6 +85,9 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' }));
 app.use(logger);
 
+// Sentry request tracking (must come before routes)
+if (Sentry) app.use(Sentry.Handlers.requestHandler());
+
 app.use('/api/auth', authRoutes);
 app.use('/api/donations', donationRoutes);
 app.use('/api/users', userRoutes);
@@ -79,6 +96,9 @@ app.use('/api/map', mapRoutes);
 app.get('/', (req, res) => {
   res.json({ message: 'FoodBridge API is running!', timestamp: new Date().toISOString(), Status: 'OK' });
 });
+
+// Sentry error handler (must come after routes, before other error handlers)
+if (Sentry) app.use(Sentry.Handlers.errorHandler());
 
 // Real Socket.IO — clients join their own rooms so targeted events work
 io.on('connection', (socket) => {

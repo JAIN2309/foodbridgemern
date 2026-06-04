@@ -28,10 +28,10 @@ export const createDonation = createAsyncThunk(
 
 export const fetchDonorHistory = createAsyncThunk(
   'donations/fetchDonorHistory',
-  async (_, { rejectWithValue }) => {
+  async ({ page = 1, limit = 10, append = false }: { page?: number; limit?: number; append?: boolean } = {}, { rejectWithValue }) => {
     try {
-      const response = await api.get('/donations/history/donor');
-      return response.data;
+      const response = await api.get(`/donations/history/donor?page=${page}&limit=${limit}`);
+      return { ...response.data, append };
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch history');
     }
@@ -93,6 +93,7 @@ const initialState: DonationState = {
   donations: [],
   userDonations: [],
   claimedDonations: [],
+  donorPagination: { total: 0, page: 1, pages: 1, limit: 10 },
   isLoading: false,
   error: null,
 };
@@ -130,7 +131,13 @@ const donationSlice = createSlice({
         state.error = action.payload as string;
       })
       .addCase(fetchDonorHistory.fulfilled, (state, action) => {
-        state.userDonations = action.payload;
+        const { donations, pagination, append } = action.payload as any;
+        if (append) {
+          state.userDonations = [...state.userDonations, ...(donations || [])];
+        } else {
+          state.userDonations = Array.isArray(action.payload) ? action.payload : (donations || []);
+        }
+        if (pagination) state.donorPagination = pagination;
       })
       .addCase(claimDonation.fulfilled, (state, action) => {
         state.donations = state.donations.filter(d => d._id !== action.payload._id);
