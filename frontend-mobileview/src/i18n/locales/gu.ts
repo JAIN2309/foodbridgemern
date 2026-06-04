@@ -391,6 +391,7 @@ export default {
     availableForPickup: '🟢 પિકઅપ માટે ઉપલબ્ધ',
     reservedByNGO: '🟡 એનજીઓ દ્વારા આરક્ષિત',
     successfullyCollected: '✅ સફળતાપૂર્વક એકત્ર કર્યું',
+    expired: '🔴 સમાપ્ત — પિકઅપ વિન્ડો પસાર',
     tapToEnlarge: 'મોટું કરવા ટેપ કરો',
     noPhotoAdded: 'કોઈ ફોટો જોડ્યો નથી',
     noPhotoDesc: 'આ દાન ફોટો વગર પોસ્ટ કરવામાં આવ્યું હતું',

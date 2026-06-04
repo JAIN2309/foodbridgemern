@@ -396,6 +396,7 @@ export default {
     availableForPickup: '🟢 Available for Pickup',
     reservedByNGO: '🟡 Reserved by NGO',
     successfullyCollected: '✅ Successfully Collected',
+    expired: '🔴 Expired — Pickup Window Passed',
     tapToEnlarge: 'Tap to enlarge',
     noPhotoAdded: 'No Photo Added',
     noPhotoDesc: 'This donation was posted without a photo',

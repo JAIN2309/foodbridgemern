@@ -367,10 +367,15 @@ export default function DonorDashboard() {
                   <View style={styles.sheetHeaderSection}>
                     <View style={styles.sheetTitleRow}>
                       <View style={[styles.statusIndicator, { backgroundColor: statusColor(selectedDonation.status) }]}>
-                        <Ionicons 
-                          name={selectedDonation.status === 'available' ? 'checkmark-circle' : selectedDonation.status === 'reserved' ? 'time' : 'checkmark-done'} 
-                          size={16} 
-                          color="#fff" 
+                        <Ionicons
+                          name={
+                            selectedDonation.status === 'available' ? 'checkmark-circle' :
+                            selectedDonation.status === 'reserved'  ? 'time' :
+                            selectedDonation.status === 'collected' ? 'checkmark-done' :
+                            'close-circle'
+                          }
+                          size={16}
+                          color="#fff"
                         />
                       </View>
                       <View style={{ flex: 1 }}>
@@ -386,7 +391,10 @@ export default function DonorDashboard() {
                     <View style={[styles.statusBadge, { backgroundColor: statusColor(selectedDonation.status) + '15', borderColor: statusColor(selectedDonation.status) + '30' }]}>
                       <View style={[styles.statusBadgeDot, { backgroundColor: statusColor(selectedDonation.status) }]} />
                       <Text style={[styles.statusBadgeText, { color: statusColor(selectedDonation.status) }]}>
-                        {selectedDonation.status === 'available' ? t('donationDetails.availableForPickup') : selectedDonation.status === 'reserved' ? t('donationDetails.reservedByNGO') : t('donationDetails.successfullyCollected')}
+                        {selectedDonation.status === 'available' ? t('donationDetails.availableForPickup') :
+                         selectedDonation.status === 'reserved'  ? t('donationDetails.reservedByNGO') :
+                         selectedDonation.status === 'collected' ? t('donationDetails.successfullyCollected') :
+                         t('donationDetails.expired')}
                       </Text>
                     </View>
                   </View>
