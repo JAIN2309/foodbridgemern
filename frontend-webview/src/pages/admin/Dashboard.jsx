@@ -39,6 +39,8 @@ const AdminDashboard = () => {
   const [usersLoading, setUsersLoading] = useState(false);
 
   const VALID_TABS = ['overview', 'verify', 'map', 'analytics', 'users', 'history', 'ratings'];
+  const activeTabRef = React.useRef(activeTab);
+  React.useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
   const [ratingsData, setRatingsData] = useState(null);
   const [ratingsLoading, setRatingsLoading] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({ open: false, userId: null, approved: null, userName: '' });
@@ -86,7 +88,7 @@ const AdminDashboard = () => {
     // Auto-refresh every 30 seconds
     const interval = setInterval(() => {
       fetchData();
-      fetchRatings();
+      if (activeTabRef.current === 'ratings') fetchRatings();
     }, 30000);
     
     // Listen for sidebar navigation events

@@ -476,6 +476,8 @@ const markCollected = async (req, res) => {
       await performanceService.invalidateLocationCache(lng, lat);
     }
     await redis.del('admin:stats:v2');
+    await redis.del('admin:active_donations');
+    await redis.del('admin:ratings'); // new rating submitted — invalidate ratings cache
 
     res.json({
       message: 'Donation marked as collected',
@@ -577,6 +579,7 @@ const releaseDonation = async (req, res) => {
       await performanceService.invalidateLocationCache(lng, lat);
     }
     await redis.del('admin:stats:v2');
+    await redis.del('admin:active_donations');
 
     res.json({ message: 'Donation released back to available' });
   } catch (error) {
@@ -645,6 +648,7 @@ const rateNGO = async (req, res) => {
 
     // Clear NGO user cache so updated ratings show immediately
     await redis.del(`user:${ngoId}`);
+    await redis.del('admin:ratings'); // donor rated NGO — invalidate ratings cache
 
     res.json({ message: 'NGO rated successfully', rating: parseInt(rating) });
   } catch (error) {
@@ -672,6 +676,7 @@ const adminReleaseDonation = async (req, res) => {
       await performanceService.invalidateLocationCache(lng, lat);
     }
     await redis.del('admin:stats:v2');
+    await redis.del('admin:active_donations');
 
     res.json({ message: 'Donation force-released to available', donation });
   } catch (error) {
@@ -713,6 +718,7 @@ const syncOfflineActions = async (req, res) => {
               User.findByIdAndUpdate(donation.donor_id, { $inc: { 'activity_stats.successful_pickups': 1 } })
             ]);
             await redis.del('admin:stats:v2');
+    await redis.del('admin:active_donations');
             results.push({ action: action.action, success: true, donationId: action.data.donationId });
             break;
           }

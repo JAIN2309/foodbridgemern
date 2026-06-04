@@ -8,15 +8,12 @@ const STATS_TTL = 300; // 5 minutes
 
 const getPendingVerifications = async (req, res) => {
   try {
-    console.log('getPendingVerifications called');
-    const users = await User.find({ 
-      is_verified: false,
-      role: { $ne: 'admin' }
-    }).select('-password');
-    
+    const cached = await redis.get('admin:pending');
+    if (cached) return res.json(JSON.parse(cached));
+
+    const users = await User.find({ is_verified: false, role: { $ne: 'admin' } }).select('-password');
     const decryptedUsers = users.map(user => decryptUserFields(user));
-    
-    console.log(`Found ${decryptedUsers.length} pending users`);
+    await redis.set('admin:pending', JSON.stringify(decryptedUsers), 60); // 1 min TTL
     res.json(decryptedUsers);
   } catch (error) {
     console.error('getPendingVerifications error:', error);
@@ -48,9 +45,8 @@ const verifyUser = async (req, res) => {
       console.error('Approval email failed:', emailError);
     }
 
-    // Invalidate stats cache so admin sees updated counts immediately
     await redis.del('admin:stats:v2');
-    // Invalidate user cache so the user's new is_verified state is reflected
+    await redis.del('admin:pending'); // user verified — remove from pending cache
     await redis.del(`user:${userId}`);
 
     res.json({
@@ -193,7 +189,8 @@ const getAdminStats = async (req, res) => {
 
 const getAllActiveDonations = async (req, res) => {
   try {
-    console.log('getAllActiveDonations called');
+    const cached = await redis.get('admin:active_donations');
+    if (cached) return res.json(JSON.parse(cached));
     const donations = await Donation.find({ 
       status: { $in: ['available', 'reserved'] },
       expiresAt: { $gt: new Date() }
@@ -202,7 +199,7 @@ const getAllActiveDonations = async (req, res) => {
     .populate('claimed_by', 'organization_name')
     .sort({ createdAt: -1 });
 
-    console.log(`Found ${donations.length} active donations`);
+    await redis.set('admin:active_donations', JSON.stringify(donations), 60); // 1 min TTL
     res.json(donations);
   } catch (error) {
     console.error('getAllActiveDonations error:', error);
@@ -645,6 +642,9 @@ const getExportAnalytics = async (req, res) => {
 
 const getRatingsSummary = async (req, res) => {
   try {
+    const cached = await redis.get('admin:ratings');
+    if (cached) return res.json(JSON.parse(cached));
+
     const [platformStats, topNGOs, topDonors, recentReviews] = await Promise.all([
 
       // Overall platform rating stats
@@ -710,7 +710,7 @@ const getRatingsSummary = async (req, res) => {
 
     const stats = platformStats[0] || { total_reviews: 0, platform_avg: 0, rated_users: 0 };
 
-    res.json({
+    const payload = {
       stats: {
         total_reviews: stats.total_reviews,
         platform_avg:  Math.round((stats.platform_avg || 0) * 10) / 10,
@@ -720,7 +720,10 @@ const getRatingsSummary = async (req, res) => {
       top_ngos:       topNGOs,
       top_donors:     topDonors,
       recent_reviews: recentReviews
-    });
+    };
+
+    await redis.set('admin:ratings', JSON.stringify(payload), 300); // 5 min TTL
+    res.json(payload);
   } catch (error) {
     console.error('getRatingsSummary error:', error);
     res.status(500).json({ message: error.message });
