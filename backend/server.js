@@ -8,7 +8,8 @@ try {
     Sentry.init({
       dsn: process.env.SENTRY_DSN,
       environment: process.env.NODE_ENV || 'development',
-      tracesSampleRate: 0.2, // capture 20% of transactions for performance
+      sendDefaultPii: true,        // captures user email, IP on every event
+      tracesSampleRate: 0.2,
     });
     console.log('✅ Sentry (backend) initialised');
   }
