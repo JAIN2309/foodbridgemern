@@ -930,7 +930,7 @@ const AdminDashboard = () => {
               <div className="flex flex-col md:flex-row md:items-end gap-3">
                 <div className="flex-1">
                   <h3 className="text-lg font-medium">{t('dashboard.admin.platformAnalytics')}</h3>
-                  {display?.date_range?.start && (
+                  {analyticsDisplay?.date_range?.start && (
                     <p className="text-xs text-blue-600 mt-0.5">
                       📅 {t('dashboard.admin.filteredPeriod')}: {analyticsDisplay.date_range.start} → {analyticsDisplay.date_range.end || t('dashboard.admin.today')}
                     </p>
