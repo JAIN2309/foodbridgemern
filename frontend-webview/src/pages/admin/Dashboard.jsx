@@ -81,9 +81,13 @@ const AdminDashboard = () => {
     
     checkBackendHealth();
     fetchData();
-    
+    fetchRatings();
+
     // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchData, 30000);
+    const interval = setInterval(() => {
+      fetchData();
+      fetchRatings();
+    }, 30000);
     
     // Listen for sidebar navigation events
     const handleTabChange = (event) => {
@@ -219,7 +223,6 @@ const AdminDashboard = () => {
   };
 
   const fetchRatings = async () => {
-    if (ratingsData) return; // already loaded
     setRatingsLoading(true);
     try {
       const res = await api.get('/users/ratings/summary');
