@@ -93,6 +93,14 @@ const register = async (req, res) => {
 
     await user.save();
 
+    // Bust admin user list cache — new user appears in pending/all-users tabs
+    try {
+      const redisCli = redis.getClient();
+      const uKeys = await redisCli?.keys('admin:users:*') || [];
+      if (uKeys.length) await redisCli.del(uKeys);
+      await redis.del('admin:pending');
+    } catch {}
+
     // Send registration email
     try {
       await sendEmail(user.email, emailTemplates.registration(user));

@@ -46,8 +46,11 @@ const verifyUser = async (req, res) => {
     }
 
     await redis.del('admin:stats:v2');
-    await redis.del('admin:pending'); // user verified — remove from pending cache
+    await redis.del('admin:pending');
     await redis.del(`user:${userId}`);
+    await redis.del(`admin:user_detail:${userId}`);
+    const userListKeys = await redis.getClient()?.keys('admin:users:*') || [];
+    if (userListKeys.length) await redis.getClient().del(userListKeys);
 
     res.json({
       message: `User ${approved ? 'approved' : 'rejected'} successfully`,
@@ -209,7 +212,13 @@ const getAllActiveDonations = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
   try {
-    const { role, search, page = 1, limit = 10 } = req.query;
+    const { role = 'all', search = '', page = 1, limit = 10 } = req.query;
+    // Skip cache for search queries (too many combinations) — only cache browsing
+    const cacheKey = search ? null : `admin:users:p${page}:r${role}`;
+    if (cacheKey) {
+      const cached = await redis.get(cacheKey);
+      if (cached) return res.json(JSON.parse(cached));
+    }
 
     const filter = {};
     if (role && role !== 'all') filter.role = role;
@@ -228,17 +237,13 @@ const getAllUsers = async (req, res) => {
       .limit(parseInt(limit));
 
     const decryptedUsers = users.map(user => decryptUserFields(user));
-    console.log(`Found ${decryptedUsers.length} users (page ${page}/${Math.ceil(total / limit)})`);
-
-    res.json({
+    const payload = {
       users: decryptedUsers,
-      pagination: {
-        total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        pages: Math.ceil(total / limit)
-      }
-    });
+      pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / limit) }
+    };
+
+    if (cacheKey) await redis.set(cacheKey, JSON.stringify(payload), 60); // 60s TTL
+    res.json(payload);
   } catch (error) {
     console.error('getAllUsers error:', error);
     res.status(500).json({ message: error.message });
@@ -370,9 +375,11 @@ const toggleUserStatus = async (req, res) => {
 
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Evict from Redis so the next request re-reads the updated status
     await redis.del(`user:${userId}`);
+    await redis.del(`admin:user_detail:${userId}`);
     await redis.del('admin:stats:v2');
+    const uKeys = await redis.getClient()?.keys('admin:users:*') || [];
+    if (uKeys.length) await redis.getClient().del(uKeys);
 
     // Notify the user by email
     try {
@@ -398,6 +405,10 @@ const toggleUserStatus = async (req, res) => {
 const getUserDetail = async (req, res) => {
   try {
     const { userId } = req.params;
+    const cacheKey = `admin:user_detail:${userId}`;
+    const cached = await redis.get(cacheKey);
+    if (cached) return res.json(JSON.parse(cached));
+
     const Donation = require('../models/Donation');
 
     const [user, donationStats] = await Promise.all([
@@ -420,18 +431,20 @@ const getUserDetail = async (req, res) => {
     const posted  = (donationStats[0]?.posted  || []).reduce((a, s) => { a[s._id] = s; return a; }, {});
     const claimed = (donationStats[0]?.claimed || []).reduce((a, s) => { a[s._id] = s; return a; }, {});
 
-    res.json({
+    const detail = {
       user: decrypted,
       stats: {
-        posted_total:    Object.values(posted).reduce((s, v) => s + v.count, 0),
+        posted_total:     Object.values(posted).reduce((s, v) => s + v.count, 0),
         posted_collected: posted.collected?.count || 0,
-        posted_kg:       Math.round((Object.values(posted).reduce((s, v) => s + (v.kg || 0), 0)) * 10) / 10,
-        claimed_total:   Object.values(claimed).reduce((s, v) => s + v.count, 0),
+        posted_kg:        Math.round((Object.values(posted).reduce((s, v) => s + (v.kg || 0), 0)) * 10) / 10,
+        claimed_total:    Object.values(claimed).reduce((s, v) => s + v.count, 0),
         claimed_collected: claimed.collected?.count || 0,
-        claimed_kg:      Math.round((Object.values(claimed).reduce((s, v) => s + (v.kg || 0), 0)) * 10) / 10,
+        claimed_kg:       Math.round((Object.values(claimed).reduce((s, v) => s + (v.kg || 0), 0)) * 10) / 10,
         claimed_reserved: claimed.reserved?.count || 0
       }
-    });
+    };
+    await redis.set(cacheKey, JSON.stringify(detail), 120); // 2 min TTL
+    res.json(detail);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

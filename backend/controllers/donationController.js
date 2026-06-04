@@ -325,6 +325,7 @@ const claimDonation = async (req, res) => {
       const [lng, lat] = donation.location.coordinates;
       await performanceService.invalidateLocationCache(lng, lat);
     }
+    await redis.del(`ngo:history:${ngoId}`); // NGO claimed → bust their history cache
 
     const io = req.app.get('io');
     io.to(`donor-${donation.donor_id._id}`).emit('donation-claimed', {
@@ -477,7 +478,9 @@ const markCollected = async (req, res) => {
     }
     await redis.del('admin:stats:v2');
     await redis.del('admin:active_donations');
-    await redis.del('admin:ratings'); // new rating submitted — invalidate ratings cache
+    await redis.del('admin:donation_history:p1');
+    await redis.del('admin:ratings');
+    await redis.del(`ngo:history:${req.user._id}`); // NGO collected → bust their history cache
 
     res.json({
       message: 'Donation marked as collected',
@@ -580,6 +583,8 @@ const releaseDonation = async (req, res) => {
     }
     await redis.del('admin:stats:v2');
     await redis.del('admin:active_donations');
+    await redis.del('admin:donation_history:p1');
+    await redis.del(`ngo:history:${req.user._id}`); // NGO released → bust their history cache
 
     res.json({ message: 'Donation released back to available' });
   } catch (error) {
@@ -677,6 +682,7 @@ const adminReleaseDonation = async (req, res) => {
     }
     await redis.del('admin:stats:v2');
     await redis.del('admin:active_donations');
+    await redis.del('admin:donation_history:p1');
 
     res.json({ message: 'Donation force-released to available', donation });
   } catch (error) {
@@ -719,6 +725,7 @@ const syncOfflineActions = async (req, res) => {
             ]);
             await redis.del('admin:stats:v2');
     await redis.del('admin:active_donations');
+    await redis.del('admin:donation_history:p1');
             results.push({ action: action.action, success: true, donationId: action.data.donationId });
             break;
           }
@@ -785,14 +792,18 @@ const getDonorHistory = async (req, res) => {
 
 const getNGOHistory = async (req, res) => {
   try {
-    // Get ALL claimed donations including expired/completed ones
-    const donations = await Donation.find({ 
+    const cacheKey = `ngo:history:${req.user._id}`;
+    const cached = await redis.get(cacheKey);
+    if (cached) return res.json(JSON.parse(cached));
+
+    const donations = await Donation.find({
       claimed_by: req.user._id,
       deletion_scheduled: { $ne: true }
     })
       .populate('donor_id', 'organization_name phone contact_person trust_score address')
       .sort({ claimed_at: -1 });
-    
+
+    await redis.set(cacheKey, JSON.stringify(donations), 30); // 30s TTL — matches dashboard refresh
     res.json(donations);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -802,16 +813,24 @@ const getNGOHistory = async (req, res) => {
 // Admin: Get complete donation history with full audit trail
 const getAdminDonationHistory = async (req, res) => {
   try {
-    const { 
-      status, 
-      startDate, 
-      endDate, 
-      donorId, 
+    const {
+      status,
+      startDate,
+      endDate,
+      donorId,
       ngoId,
       page = 1,
-      limit = 50 
+      limit = 50
     } = req.query;
-    
+
+    // Cache only unfiltered first page (most common admin use)
+    const isDefault = !status && !startDate && !endDate && !donorId && !ngoId && page == 1;
+    const cacheKey = isDefault ? 'admin:donation_history:p1' : null;
+    if (cacheKey) {
+      const cached = await redis.get(cacheKey);
+      if (cached) return res.json(JSON.parse(cached));
+    }
+
     // Build query
     const query = { deletion_scheduled: { $ne: true } };
     
@@ -848,22 +867,16 @@ const getAdminDonationHistory = async (req, res) => {
       }
     ]);
     
-    res.json({
+    const payload = {
       donations,
-      pagination: {
-        total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        pages: Math.ceil(total / limit)
-      },
+      pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / limit) },
       statistics: stats.reduce((acc, stat) => {
-        acc[stat._id] = {
-          count: stat.count,
-          totalServes: stat.totalServes
-        };
+        acc[stat._id] = { count: stat.count, totalServes: stat.totalServes };
         return acc;
       }, {})
-    });
+    };
+    if (cacheKey) await redis.set(cacheKey, JSON.stringify(payload), 60); // 60s TTL
+    res.json(payload);
   } catch (error) {
     console.error('Admin donation history error:', error);
     res.status(500).json({ message: error.message });

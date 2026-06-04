@@ -110,4 +110,31 @@ const passwordResetLimiter = async (req, res, next) => {
   next();
 };
 
-module.exports = { loginLimiter, registerLimiter, passwordResetLimiter };
+// OTP verification — per IP, 10 attempts per 15 min
+// OTP also has a per-account attempts counter in MongoDB (≤5) as a second layer
+const otpLimiter = async (req, res, next) => {
+  const ip = getIp(req);
+  const count = await incrKey(`rl:otp:${ip}`, 15 * 60);
+  if (count > 10) {
+    return res.status(429).json({
+      message: 'Too many OTP attempts from this network. Try again in 15 minutes.',
+      retryAfterSeconds: 900
+    });
+  }
+  next();
+};
+
+// Sync-offline — per user, 20 syncs per minute (prevents spam)
+const syncLimiter = async (req, res, next) => {
+  const userId = req.user?._id || req.user?.id || getIp(req);
+  const count = await incrKey(`rl:sync:${userId}`, 60);
+  if (count > 20) {
+    return res.status(429).json({
+      message: 'Sync rate limit exceeded. Wait 1 minute.',
+      retryAfterSeconds: 60
+    });
+  }
+  next();
+};
+
+module.exports = { loginLimiter, registerLimiter, passwordResetLimiter, otpLimiter, syncLimiter };

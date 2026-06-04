@@ -16,6 +16,7 @@ const { auth, requireRole, requireVerified } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const offlineService = require('../services/offlineService');
 const { validateCreateDonation, validateClaimDonation } = require('../middleware/validators');
+const { syncLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
@@ -36,18 +37,24 @@ router.get('/admin/history', auth, requireRole(['admin']), getAdminDonationHisto
 router.post('/:donationId/admin-release', auth, requireRole(['admin']), adminReleaseDonation);
 
 // Enhanced features
-router.post('/sync-offline', auth, syncOfflineActions);
+router.post('/sync-offline', auth, syncLimiter, syncOfflineActions);
 router.post('/sms-webhook', offlineService.handleIncomingSMS.bind(offlineService));
 router.get('/offline-package', auth, async (req, res) => {
   try {
+    const redis = require('../utils/redisClient');
+    const cacheKey = `offline:pkg:${req.user._id}`;
+    const cached = await redis.get(cacheKey);
+    if (cached) return res.json(JSON.parse(cached));
+
     const { longitude, latitude } = req.query;
     const location = {
       type: 'Point',
       coordinates: [parseFloat(longitude), parseFloat(latitude)]
     };
-    
-    const package = await offlineService.generateOfflinePackage(req.user._id, location);
-    res.json(package);
+
+    const pkg = await offlineService.generateOfflinePackage(req.user._id, location);
+    await redis.set(cacheKey, JSON.stringify(pkg), 300); // 5 min TTL
+    res.json(pkg);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -150,6 +150,10 @@ donationSchema.index({ location: '2dsphere' });
 donationSchema.index({ status: 1, expiresAt: 1 });
 donationSchema.index({ donor_id: 1, status: 1 });
 donationSchema.index({ claimed_by: 1, status: 1 });
+// Admin history: sorted by createdAt — supports getAdminDonationHistory default sort
+donationSchema.index({ createdAt: -1 });
+// Admin history with status filter
+donationSchema.index({ status: 1, createdAt: -1 });
 
 // Pre-save middleware to track status changes
 donationSchema.pre('save', function(next) {
