@@ -55,9 +55,9 @@ export const claimDonation = createAsyncThunk(
 
 export const markDonationCollected = createAsyncThunk(
   'donations/markCollected',
-  async (donationId: string, { rejectWithValue }) => {
+  async ({ donationId, rating, review }: { donationId: string; rating?: number; review?: string }, { rejectWithValue }) => {
     try {
-      const response = await api.post(`/donations/${donationId}/collect`);
+      const response = await api.post(`/donations/${donationId}/collect`, { rating, review });
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to mark collected');

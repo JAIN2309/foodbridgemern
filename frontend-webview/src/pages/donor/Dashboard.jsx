@@ -439,6 +439,34 @@ const DonorDashboard = () => {
                 </div>
               )}
 
+              {/* Collected-by card — shown for all collected donations */}
+              {selectedDonation.status === 'collected' && (
+                <div className="mb-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-8 h-8 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center flex-shrink-0">
+                      <svg className="w-4 h-4 text-blue-600 dark:text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-blue-500 dark:text-blue-400 uppercase tracking-wide">{t('donationDetails.collectedBy')}</p>
+                      <p className="text-sm font-bold text-blue-800 dark:text-blue-200 truncate">
+                        {selectedDonation.claimed_by?.organization_name || t('donationDetails.ngoOrganization')}
+                      </p>
+                    </div>
+                  </div>
+                  {selectedDonation.collected_at && (
+                    <p className="text-xs text-blue-500 dark:text-blue-400">
+                      {t('donationDetails.collectedOn')} {new Date(selectedDonation.collected_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  )}
+                  <div className="mt-2 flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">{t('donationDetails.thankYouImpact')}</p>
+                  </div>
+                </div>
+              )}
+
               {/* Pickup Info */}
               <div className="mb-6">
                 <h4 className="text-base font-bold text-gray-900 dark:text-white mb-3">{t('donationDetails.pickupInfo')}</h4>

@@ -484,7 +484,7 @@ export default function DonorDashboard() {
 
                   {/* Kg saved banner */}
                   {selectedDonation.status === 'collected' && selectedDonation.weight_kg > 0 && (
-                    <LinearGradient colors={['#059669', '#16a34a']} style={{ borderRadius: 14, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                    <LinearGradient colors={['#059669', '#16a34a']} style={{ borderRadius: 14, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
                       <View style={{ width: 36, height: 36, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 18, justifyContent: 'center', alignItems: 'center' }}>
                         <Ionicons name="leaf" size={20} color="#fff" />
                       </View>
@@ -493,6 +493,32 @@ export default function DonorDashboard() {
                         <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12 }}>{t('donationDetails.kgSavedDesc')}</Text>
                       </View>
                     </LinearGradient>
+                  )}
+
+                  {/* Collected-by card */}
+                  {selectedDonation.status === 'collected' && (
+                    <View style={{ backgroundColor: '#eff6ff', borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#bfdbfe' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                        <View style={{ width: 32, height: 32, backgroundColor: '#dbeafe', borderRadius: 16, justifyContent: 'center', alignItems: 'center' }}>
+                          <Ionicons name="people" size={16} color="#2563eb" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: '#3b82f6', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('donationDetails.collectedBy')}</Text>
+                          <Text style={{ fontSize: 14, fontWeight: '700', color: '#1e40af' }} numberOfLines={1}>
+                            {selectedDonation.claimed_by?.organization_name || t('donationDetails.ngoOrganization')}
+                          </Text>
+                        </View>
+                      </View>
+                      {selectedDonation.collected_at && (
+                        <Text style={{ fontSize: 11, color: '#3b82f6', marginBottom: 6 }}>
+                          {t('donationDetails.collectedOn')} {new Date(selectedDonation.collected_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                      )}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Ionicons name="checkmark-circle" size={13} color="#10b981" />
+                        <Text style={{ fontSize: 11, color: '#059669', fontWeight: '600' }}>{t('donationDetails.thankYouImpact')}</Text>
+                      </View>
+                    </View>
                   )}
 
                   {/* Details Section */}

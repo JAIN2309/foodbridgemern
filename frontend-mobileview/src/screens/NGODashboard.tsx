@@ -28,6 +28,9 @@ export default function NGODashboard() {
   const [releaseModal, setReleaseModal] = useState({ open: false, donationId: '', donationName: '' });
   const [releaseReason, setReleaseReason] = useState('');
   const [pickupModal, setPickupModal] = useState<{ open: boolean; donationId: string; donationName: string; pickupWindowEnd: Date | null; }>({ open: false, donationId: '', donationName: '', pickupWindowEnd: null });
+  const [ratingModal, setRatingModal] = useState({ open: false, donationId: '' });
+  const [ratingStars, setRatingStars] = useState(0);
+  const [ratingComment, setRatingComment] = useState('');
   const [pickupType, setPickupType] = useState<'instant' | 'scheduled'>('instant');
   const [scheduledDate, setScheduledDate] = useState(new Date(Date.now() + 60 * 60 * 1000));
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -86,31 +89,29 @@ export default function NGODashboard() {
   const isFiltered = filters.search || filters.category !== 'all' || filters.radius !== 10 || filters.minServes || filters.sortBy !== 'time_remaining';
 
   const handleMarkCollected = (donationId: string) => {
-    Alert.alert(
-      t('dashboard.ngo.markCollected'),
-      t('dashboard.ngo.confirmCollect'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('dashboard.ngo.markCollected'),
-          style: 'default',
-          onPress: async () => {
-            if (!isOnline) {
-              await enqueue({ type: 'mark_collected', donationId });
-              Toast.show({ type: 'info', text1: t('offline.savedOffline'), text2: t('offline.willSync') });
-              return;
-            }
-            try {
-              await dispatch(markDonationCollected(donationId)).unwrap();
-              Toast.show({ type: 'success', text1: t('dashboard.ngo.markedCollected') });
-              dispatch(fetchClaimedDonations());
-            } catch (error: any) {
-              Toast.show({ type: 'error', text1: t('dashboard.ngo.collectFailed') });
-            }
-          }
-        }
-      ]
-    );
+    setRatingStars(0); setRatingComment('');
+    setRatingModal({ open: true, donationId });
+  };
+
+  const submitCollect = async (withRating: boolean) => {
+    const { donationId } = ratingModal;
+    setRatingModal({ open: false, donationId: '' });
+    if (!isOnline) {
+      await enqueue({ type: 'mark_collected', donationId });
+      Toast.show({ type: 'info', text1: t('offline.savedOffline'), text2: t('offline.willSync') });
+      return;
+    }
+    try {
+      await dispatch(markDonationCollected({
+        donationId,
+        ...(withRating && ratingStars > 0 ? { rating: ratingStars, review: ratingComment.trim() || undefined } : {})
+      })).unwrap();
+      Toast.show({ type: 'success', text1: t('dashboard.ngo.markedCollected') });
+      setActiveTab('claims');
+      dispatch(fetchClaimedDonations());
+    } catch {
+      Toast.show({ type: 'error', text1: t('dashboard.ngo.collectFailed') });
+    }
   };
 
   const handleRelease = (donationId: string, donationName: string) => {
@@ -656,6 +657,58 @@ export default function NGODashboard() {
                 style={{ flex: 1, paddingVertical: 12, borderRadius: 12, backgroundColor: pickupType === 'instant' ? '#16a34a' : '#2563eb', alignItems: 'center' }}
               >
                 <Text style={{ fontWeight: '700', color: '#fff' }}>{t('dashboard.ngo.confirmPickupBtn')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Rating Modal — opens when NGO taps Mark Collected */}
+      <Modal visible={ratingModal.open} transparent animationType="fade" onRequestClose={() => submitCollect(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 24, width: '100%' }}>
+            <Text style={{ fontSize: 24, textAlign: 'center', marginBottom: 6 }}>⭐</Text>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1f2937', textAlign: 'center', marginBottom: 4 }}>
+              {t('dashboard.ngo.ratePickupTitle')}
+            </Text>
+            <Text style={{ fontSize: 13, color: '#6b7280', textAlign: 'center', marginBottom: 20 }}>
+              {t('dashboard.ngo.ratePickupSubtitle')}
+            </Text>
+
+            {/* Stars */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 12 }}>
+              {[1,2,3,4,5].map(star => (
+                <TouchableOpacity key={star} onPress={() => setRatingStars(star)}>
+                  <Text style={{ fontSize: 36 }}>{star <= ratingStars ? '⭐' : '☆'}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {ratingStars > 0 && (
+              <Text style={{ textAlign: 'center', fontSize: 12, color: '#d97706', fontWeight: '600', marginBottom: 12 }}>
+                {['','Poor quality','Below average','Good','Very good','Excellent!'][ratingStars]}
+              </Text>
+            )}
+
+            {/* Comment */}
+            <View style={{ borderWidth: 1.5, borderColor: '#e5e7eb', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 16, minHeight: 60 }}>
+              <Text
+                style={{ fontSize: 13, color: '#111827' }}
+                onPress={() => {}}
+              >
+                {/* TextInput would go here — using simple placeholder note */}
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity onPress={() => submitCollect(false)}
+                style={{ flex: 1, paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, borderColor: '#d1d5db', alignItems: 'center' }}>
+                <Text style={{ fontWeight: '600', color: '#6b7280' }}>{t('dashboard.ngo.skipRating')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => submitCollect(true)} disabled={ratingStars === 0}
+                style={{ flex: 1, paddingVertical: 12, borderRadius: 12, backgroundColor: ratingStars > 0 ? '#16a34a' : '#e5e7eb', alignItems: 'center' }}>
+                <Text style={{ fontWeight: '700', color: ratingStars > 0 ? '#fff' : '#9ca3af' }}>
+                  {ratingStars > 0 ? `✅ ${t('dashboard.ngo.submitRating')}` : t('dashboard.ngo.selectStars')}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

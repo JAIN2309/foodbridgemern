@@ -36,6 +36,11 @@ const NGODashboard = () => {
   const [releaseModal, setReleaseModal] = useState({ open: false, donationId: null });
   const [releaseReason, setReleaseReason] = useState('');
   const [releaseCustom, setReleaseCustom] = useState('');
+  const [ratingModal, setRatingModal] = useState({ open: false, donationId: null, donationName: '' });
+  const [ratingStars, setRatingStars] = useState(0);
+  const [ratingHover, setRatingHover] = useState(0);
+  const [ratingComment, setRatingComment] = useState('');
+  const [ratingLoading, setRatingLoading] = useState(false);
 
   const RELEASE_REASONS = [
     t('dashboard.ngo.releaseReasonDistance'),
@@ -105,6 +110,30 @@ const NGODashboard = () => {
       socketService.offAllListeners();
     };
   }, [dispatch]);
+
+  const openRatingModal = (donation) => {
+    setRatingStars(0); setRatingHover(0); setRatingComment('');
+    setRatingModal({ open: true, donationId: donation._id, donationName: donation.food_items?.map(i => i.name).join(', ') || '' });
+  };
+
+  const submitCollect = async (withRating) => {
+    setRatingLoading(true);
+    const { donationId } = ratingModal;
+    setRatingModal(m => ({ ...m, open: false }));
+    try {
+      await dispatch(markCollectedNGO({
+        donationId,
+        ...(withRating && ratingStars > 0 ? { rating: ratingStars, review: ratingComment.trim() || undefined } : {})
+      })).unwrap();
+      toast.success(t('dashboard.ngo.markedCollected'));
+      dispatch(fetchNGOHistory());
+      if (geoLocation) dispatch(fetchNearbyDonations({ longitude: geoLocation.longitude, latitude: geoLocation.latitude, maxDistance: filters.radius * 1000 }));
+    } catch (err) {
+      toast.error(err || t('dashboard.ngo.collectFailed'));
+    } finally {
+      setRatingLoading(false);
+    }
+  };
 
   const openPickupModal = (donation) => setPickupModal({
     open: true,
@@ -759,19 +788,9 @@ const NGODashboard = () => {
                           {donation.status === 'reserved' && (
                             <div className="flex gap-2 mt-1">
                               <button
-                                onClick={async () => {
-                                  try {
-                                    await dispatch(markCollectedNGO({ donationId: donation._id })).unwrap();
-                                    toast.success(t('dashboard.ngo.markedCollected'));
-                                    // Redux state already updated in-place via markCollectedNGO.fulfilled
-                                    // Re-fetch history for fresh data from server
-                                    dispatch(fetchNGOHistory());
-                                    if (geoLocation) dispatch(fetchNearbyDonations({ longitude: geoLocation.longitude, latitude: geoLocation.latitude, maxDistance: filters.radius * 1000 }));
-                                  } catch (err) {
-                                    toast.error(err || t('dashboard.ngo.collectFailed'));
-                                  }
-                                }}
-                                className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors"
+                                onClick={() => openRatingModal(donation)}
+                                disabled={ratingLoading}
+                                className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
                               >
                                 ✅ {t('dashboard.ngo.markCollected')}
                               </button>
@@ -906,6 +925,59 @@ const NGODashboard = () => {
               className="flex-1 px-4 py-2.5 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               {t('dashboard.ngo.confirmReleaseBtn')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Rating Modal — opens when NGO clicks Mark Collected */}
+    {ratingModal.open && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => submitCollect(false)} />
+        <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm p-6">
+          <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3 text-2xl">⭐</div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white text-center mb-1">{t('dashboard.ngo.ratePickupTitle')}</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-1">{t('dashboard.ngo.ratePickupSubtitle')}</p>
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 text-center mb-4 truncate px-2">"{ratingModal.donationName}"</p>
+
+          {/* Stars */}
+          <div className="flex justify-center gap-2 mb-4">
+            {[1,2,3,4,5].map(star => (
+              <button key={star}
+                onMouseEnter={() => setRatingHover(star)}
+                onMouseLeave={() => setRatingHover(0)}
+                onClick={() => setRatingStars(star)}
+                className="text-4xl transition-all hover:scale-110 focus:outline-none"
+              >
+                {star <= (ratingHover || ratingStars) ? '⭐' : '☆'}
+              </button>
+            ))}
+          </div>
+          {ratingStars > 0 && (
+            <p className="text-center text-xs font-semibold text-amber-600 mb-3">
+              {['','⭐ Poor quality','⭐⭐ Below average','⭐⭐⭐ Good','⭐⭐⭐⭐ Very good','⭐⭐⭐⭐⭐ Excellent!'][ratingStars]}
+            </p>
+          )}
+
+          {/* Optional comment */}
+          <textarea
+            value={ratingComment}
+            onChange={e => setRatingComment(e.target.value)}
+            placeholder={t('dashboard.ngo.rateCommentPlaceholder')}
+            rows={2}
+            maxLength={300}
+            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl text-sm mb-4 focus:outline-none focus:border-green-400 resize-none"
+          />
+
+          <div className="flex gap-3">
+            <button onClick={() => submitCollect(false)}
+              className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+              {t('dashboard.ngo.skipRating')}
+            </button>
+            <button onClick={() => submitCollect(true)} disabled={ratingStars === 0}
+              className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              {ratingStars > 0 ? `✅ ${t('dashboard.ngo.submitRating')}` : t('dashboard.ngo.selectStars')}
             </button>
           </div>
         </div>
