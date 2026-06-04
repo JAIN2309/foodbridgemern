@@ -163,6 +163,7 @@ export default {
       pickupBeforeWindowEnd: 'આ પહેલા હોવું જોઈએ',
       releaseHistoryTitle: 'પિકઅપ કેમ ન થઈ?',
       searchPlaceholder: 'ખોરાક, દાતા અથવા સરનામું...',
+      category: 'શ્રેણી',
       radius: 'અંતર',
       minServes: 'ન્યૂનતમ',
       sortBy: 'ગોઠવો',

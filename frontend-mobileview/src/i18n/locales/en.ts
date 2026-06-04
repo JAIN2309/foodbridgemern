@@ -163,6 +163,7 @@ export default {
       pickupBeforeWindowEnd: 'Must be before',
       releaseHistoryTitle: 'Why not picked up?',
       searchPlaceholder: 'Search food, donor or address...',
+      category: 'Category',
       radius: 'Radius',
       minServes: 'Min serves',
       sortBy: 'Sort',

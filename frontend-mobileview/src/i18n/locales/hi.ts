@@ -163,6 +163,7 @@ export default {
       pickupBeforeWindowEnd: 'इससे पहले होना चाहिए',
       releaseHistoryTitle: 'पिकअप क्यों नहीं हुआ?',
       searchPlaceholder: 'भोजन, दानकर्ता या पता खोजें...',
+      category: 'श्रेणी',
       radius: 'दूरी',
       minServes: 'न्यूनतम',
       sortBy: 'क्रम',

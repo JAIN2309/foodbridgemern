@@ -374,77 +374,105 @@ export default function NGODashboard() {
         {activeTab === 'feed' && (
           <>
             {/* ── Filter Bar ── */}
-            <View style={{ backgroundColor: '#fff', paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
-              {/* Search box */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', paddingHorizontal: 10, marginBottom: 10, marginTop: 8 }}>
+            <View style={{ backgroundColor: '#f9fafb', borderBottomWidth: 1, borderBottomColor: '#e5e7eb', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 14, gap: 12 }}>
+
+              {/* Search */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 10, borderWidth: 1.5, borderColor: '#e5e7eb', paddingHorizontal: 10, height: 40 }}>
                 <Ionicons name="search-outline" size={16} color="#9ca3af" />
                 <TextInput
                   value={filters.search}
                   onChangeText={v => setFilters(f => ({ ...f, search: v }))}
                   placeholder={t('dashboard.ngo.searchPlaceholder')}
                   placeholderTextColor="#9ca3af"
-                  style={{ flex: 1, paddingVertical: 9, paddingHorizontal: 8, fontSize: 14, color: '#111827' }}
+                  style={{ flex: 1, paddingHorizontal: 8, fontSize: 13, color: '#111827' }}
                 />
-                {filters.search ? <TouchableOpacity onPress={() => setFilters(f => ({ ...f, search: '' }))}><Ionicons name="close-circle" size={16} color="#9ca3af" /></TouchableOpacity> : null}
+                {filters.search ? (
+                  <TouchableOpacity onPress={() => setFilters(f => ({ ...f, search: '' }))}>
+                    <Ionicons name="close-circle" size={16} color="#9ca3af" />
+                  </TouchableOpacity>
+                ) : null}
               </View>
 
-              {/* Category chips */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
-                <View style={{ flexDirection: 'row', gap: 6 }}>
-                  {[['all','All'],['vegetarian','🥦 Veg'],['non-vegetarian','🍗 Non-Veg'],['vegan','🌱 Vegan'],['mixed','🍱 Mixed']].map(([val, lbl]) => (
-                    <TouchableOpacity key={val} onPress={() => setFilters(f => ({ ...f, category: val }))}
-                      style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5,
-                        borderColor: filters.category === val ? '#16a34a' : '#e5e7eb',
-                        backgroundColor: filters.category === val ? '#16a34a' : '#fff' }}>
-                      <Text style={{ fontSize: 12, fontWeight: '600', color: filters.category === val ? '#fff' : '#374151' }}>{lbl}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
+              {/* Category — labelled row */}
+              <View>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: '#9ca3af', letterSpacing: 0.8, marginBottom: 6, textTransform: 'uppercase' }}>{t('dashboard.ngo.category')}</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    {[['all','All'],['vegetarian','🥦 Vegetarian'],['non-vegetarian','🍗 Non-Veg'],['vegan','🌱 Vegan'],['mixed','🍱 Mixed']].map(([val, lbl]) => (
+                      <TouchableOpacity key={val} onPress={() => setFilters(f => ({ ...f, category: val }))}
+                        style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, borderWidth: 1.5,
+                          borderColor: filters.category === val ? '#16a34a' : '#e5e7eb',
+                          backgroundColor: filters.category === val ? '#16a34a' : '#fff' }}>
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: filters.category === val ? '#fff' : '#374151' }}>{lbl}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
 
-              {/* Radius + Sort + Min serves row */}
+              {/* Radius + Sort + Min serves — three groups in one scroll row */}
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={{ fontSize: 11, color: '#9ca3af', fontWeight: '600' }}>RADIUS</Text>
-                  {[1,5,10].map(km => (
-                    <TouchableOpacity key={km} onPress={() => setFilters(f => ({ ...f, radius: km }))}
-                      style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16, borderWidth: 1.5,
-                        borderColor: filters.radius === km ? '#2563eb' : '#e5e7eb',
-                        backgroundColor: filters.radius === km ? '#2563eb' : '#fff' }}>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: filters.radius === km ? '#fff' : '#374151' }}>{km}km</Text>
-                    </TouchableOpacity>
-                  ))}
+                <View style={{ flexDirection: 'row', gap: 16, alignItems: 'flex-end' }}>
 
-                  <View style={{ width: 1, height: 18, backgroundColor: '#e5e7eb', marginHorizontal: 4 }} />
-                  <Text style={{ fontSize: 11, color: '#9ca3af', fontWeight: '600' }}>SORT</Text>
-                  {[['time_remaining','⏱ Urgent'],['distance','📍 Near'],['newest','🕐 New']].map(([val, lbl]) => (
-                    <TouchableOpacity key={val} onPress={() => setFilters(f => ({ ...f, sortBy: val }))}
-                      style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16, borderWidth: 1.5,
-                        borderColor: filters.sortBy === val ? '#f59e0b' : '#e5e7eb',
-                        backgroundColor: filters.sortBy === val ? '#f59e0b' : '#fff' }}>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: filters.sortBy === val ? '#fff' : '#374151' }}>{lbl}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  {/* Radius */}
+                  <View>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#9ca3af', letterSpacing: 0.8, marginBottom: 6, textTransform: 'uppercase' }}>{t('dashboard.ngo.radius')}</Text>
+                    <View style={{ flexDirection: 'row', gap: 5 }}>
+                      {[1,5,10].map(km => (
+                        <TouchableOpacity key={km} onPress={() => setFilters(f => ({ ...f, radius: km }))}
+                          style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, borderWidth: 1.5,
+                            borderColor: filters.radius === km ? '#2563eb' : '#e5e7eb',
+                            backgroundColor: filters.radius === km ? '#2563eb' : '#fff' }}>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: filters.radius === km ? '#fff' : '#374151' }}>{km} km</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
 
-                  <View style={{ width: 1, height: 18, backgroundColor: '#e5e7eb', marginHorizontal: 4 }} />
-                  <Text style={{ fontSize: 11, color: '#9ca3af', fontWeight: '600' }}>MIN</Text>
-                  <TextInput
-                    value={filters.minServes}
-                    onChangeText={v => setFilters(f => ({ ...f, minServes: v.replace(/[^0-9]/g, '') }))}
-                    placeholder="Any"
-                    placeholderTextColor="#9ca3af"
-                    keyboardType="number-pad"
-                    style={{ width: 44, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 10, borderWidth: 1.5, borderColor: filters.minServes ? '#2563eb' : '#e5e7eb', fontSize: 12, color: '#111827', backgroundColor: '#fff' }}
-                  />
+                  {/* Sort */}
+                  <View>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#9ca3af', letterSpacing: 0.8, marginBottom: 6, textTransform: 'uppercase' }}>{t('dashboard.ngo.sortBy')}</Text>
+                    <View style={{ flexDirection: 'row', gap: 5 }}>
+                      {[['time_remaining','⏱ Urgency'],['distance','📍 Distance'],['newest','🕐 Newest']].map(([val, lbl]) => (
+                        <TouchableOpacity key={val} onPress={() => setFilters(f => ({ ...f, sortBy: val }))}
+                          style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, borderWidth: 1.5,
+                            borderColor: filters.sortBy === val ? '#f59e0b' : '#e5e7eb',
+                            backgroundColor: filters.sortBy === val ? '#f59e0b' : '#fff' }}>
+                          <Text style={{ fontSize: 12, fontWeight: '600', color: filters.sortBy === val ? '#fff' : '#374151' }}>{lbl}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
 
+                  {/* Min Serves */}
+                  <View>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#9ca3af', letterSpacing: 0.8, marginBottom: 6, textTransform: 'uppercase' }}>{t('dashboard.ngo.minServes')}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <TextInput
+                        value={filters.minServes}
+                        onChangeText={v => setFilters(f => ({ ...f, minServes: v.replace(/[^0-9]/g, '') }))}
+                        placeholder={t('dashboard.ngo.any')}
+                        placeholderTextColor="#9ca3af"
+                        keyboardType="number-pad"
+                        style={{ width: 52, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 8, borderWidth: 1.5,
+                          borderColor: filters.minServes ? '#2563eb' : '#e5e7eb',
+                          fontSize: 13, color: '#111827', backgroundColor: '#fff', textAlign: 'center' }}
+                      />
+                      <Text style={{ fontSize: 11, color: '#9ca3af' }}>people</Text>
+                    </View>
+                  </View>
+
+                  {/* Clear */}
                   {isFiltered ? (
                     <TouchableOpacity onPress={() => setFilters({ search: '', category: 'all', radius: 10, minServes: '', sortBy: 'time_remaining' })}
-                      style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16, borderWidth: 1.5, borderColor: '#ef4444', backgroundColor: '#fff', marginLeft: 4 }}>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#ef4444' }}>✕ {t('dashboard.ngo.clearFilters')}</Text>
+                      style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, borderWidth: 1.5, borderColor: '#ef4444', backgroundColor: '#fff7f7', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="close" size={12} color="#ef4444" />
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#ef4444' }}>{t('dashboard.ngo.clearFilters')}</Text>
                     </TouchableOpacity>
                   ) : null}
                 </View>
               </ScrollView>
+
             </View>
             {/* ── End Filter Bar ── */}
 

@@ -235,6 +235,7 @@
       "pickupBeforeWindowEnd": "Must be before",
       "releaseHistoryTitle": "Why not picked up?",
       "searchPlaceholder": "Search by food, donor or address...",
+      "category": "Category",
       "radius": "Radius",
       "minServes": "Min serves",
       "sortBy": "Sort",
