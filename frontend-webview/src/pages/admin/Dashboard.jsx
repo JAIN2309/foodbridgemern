@@ -38,7 +38,9 @@ const AdminDashboard = () => {
   const [expandedRating, setExpandedRating] = useState(null);
   const [usersLoading, setUsersLoading] = useState(false);
 
-  const VALID_TABS = ['overview', 'verify', 'map', 'analytics', 'users', 'history'];
+  const VALID_TABS = ['overview', 'verify', 'map', 'analytics', 'users', 'history', 'ratings'];
+  const [ratingsData, setRatingsData] = useState(null);
+  const [ratingsLoading, setRatingsLoading] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({ open: false, userId: null, approved: null, userName: '' });
   const [statusConfirm, setStatusConfirm] = useState({ open: false, userId: null, userName: '', currentActive: true });
   const [detailDrawer, setDetailDrawer] = useState({ open: false, user: null, data: null, loading: false });
@@ -213,6 +215,17 @@ const AdminDashboard = () => {
       setDetailDrawer(d => ({ ...d, data: res.data, loading: false }));
     } catch {
       setDetailDrawer(d => ({ ...d, loading: false }));
+    }
+  };
+
+  const fetchRatings = async () => {
+    if (ratingsData) return; // already loaded
+    setRatingsLoading(true);
+    try {
+      const res = await api.get('/users/ratings/summary');
+      setRatingsData(res.data);
+    } catch { /* silent */ } finally {
+      setRatingsLoading(false);
     }
   };
 
@@ -765,6 +778,16 @@ const AdminDashboard = () => {
               }`}
             >
               {t('dashboard.admin.history')} ({donationHistory.length})
+            </button>
+            <button
+              onClick={() => { setActiveTab('ratings'); fetchRatings(); }}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'ratings'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+              }`}
+            >
+              ⭐ {t('dashboard.admin.ratingsTab')}
             </button>
           </nav>
         </div>
@@ -1513,6 +1536,163 @@ const AdminDashboard = () => {
                       </div>
                     </div>
                   )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ── RATINGS TAB ── */}
+          {activeTab === 'ratings' && (
+            <div className="space-y-6">
+              {ratingsLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500 mr-3" />
+                  <span className="text-gray-500">{t('dashboard.admin.loading')}</span>
+                </div>
+              ) : !ratingsData ? (
+                <div className="text-center py-16 text-gray-400">No ratings data yet.</div>
+              ) : (
+                <>
+                  {/* Platform stats row */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {[
+                      { label: t('dashboard.admin.totalReviews'),  value: ratingsData.stats.total_reviews, icon: '📝', bg: 'bg-amber-50', text: 'text-amber-700' },
+                      { label: t('dashboard.admin.platformAvg'),   value: `★ ${ratingsData.stats.platform_avg}`, icon: '⭐', bg: 'bg-yellow-50', text: 'text-yellow-700' },
+                      { label: t('dashboard.admin.ratedUsers'),    value: ratingsData.stats.rated_users, icon: '👥', bg: 'bg-blue-50', text: 'text-blue-700' },
+                      { label: t('dashboard.admin.fiveStarCount'), value: ratingsData.stats.distribution[5] || 0, icon: '🏆', bg: 'bg-green-50', text: 'text-green-700' },
+                    ].map(({ label, value, icon, bg, text }) => (
+                      <div key={label} className={`${bg} rounded-xl p-4 border border-white/50`}>
+                        <div className="text-2xl mb-1">{icon}</div>
+                        <p className={`text-xl font-bold ${text}`}>{value}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Rating distribution bar */}
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-5">
+                    <h4 className="text-sm font-bold text-gray-600 dark:text-gray-300 mb-4">{t('dashboard.admin.ratingDistribution')}</h4>
+                    <div className="space-y-2">
+                      {[5,4,3,2,1].map(star => {
+                        const count = ratingsData.stats.distribution[star] || 0;
+                        const pct = ratingsData.stats.total_reviews > 0 ? Math.round((count / ratingsData.stats.total_reviews) * 100) : 0;
+                        return (
+                          <div key={star} className="flex items-center gap-3 text-sm">
+                            <span className="text-amber-400 w-3 font-bold">{star}</span>
+                            <span className="text-amber-400 text-xs">★</span>
+                            <div className="flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-3">
+                              <div className="bg-amber-400 h-3 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-gray-600 dark:text-gray-400 w-8 text-right text-xs font-medium">{count}</span>
+                            <span className="text-gray-400 text-xs w-8">{pct}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Leaderboards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Top NGOs */}
+                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-5">
+                      <h4 className="text-sm font-bold text-gray-600 dark:text-gray-300 mb-4 flex items-center gap-2">
+                        🏆 {t('dashboard.admin.topNGOs')}
+                      </h4>
+                      <div className="space-y-2">
+                        {ratingsData.top_ngos.length === 0 ? (
+                          <p className="text-xs text-gray-400 italic">No NGO ratings yet</p>
+                        ) : ratingsData.top_ngos.map((u, i) => (
+                          <div key={u._id} className="flex items-center gap-3 bg-white dark:bg-gray-700 rounded-lg px-3 py-2.5 border border-gray-100 dark:border-gray-600">
+                            <span className={`text-sm font-bold w-5 text-center ${i === 0 ? 'text-amber-500' : i === 1 ? 'text-gray-400' : i === 2 ? 'text-orange-400' : 'text-gray-300'}`}>
+                              {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{u.organization_name}</p>
+                              <p className="text-xs text-gray-400">{u.ratings.count} review{u.ratings.count !== 1 ? 's' : ''}</p>
+                            </div>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <span className="text-amber-400 text-sm">★</span>
+                              <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{(u.ratings.average || 0).toFixed(1)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Top Donors */}
+                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-5">
+                      <h4 className="text-sm font-bold text-gray-600 dark:text-gray-300 mb-4 flex items-center gap-2">
+                        🏆 {t('dashboard.admin.topDonors')}
+                      </h4>
+                      <div className="space-y-2">
+                        {ratingsData.top_donors.length === 0 ? (
+                          <p className="text-xs text-gray-400 italic">No donor ratings yet</p>
+                        ) : ratingsData.top_donors.map((u, i) => (
+                          <div key={u._id} className="flex items-center gap-3 bg-white dark:bg-gray-700 rounded-lg px-3 py-2.5 border border-gray-100 dark:border-gray-600">
+                            <span className={`text-sm font-bold w-5 text-center ${i === 0 ? 'text-amber-500' : i === 1 ? 'text-gray-400' : i === 2 ? 'text-orange-400' : 'text-gray-300'}`}>
+                              {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{u.organization_name}</p>
+                              <p className="text-xs text-gray-400">{u.ratings.count} review{u.ratings.count !== 1 ? 's' : ''}</p>
+                            </div>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <span className="text-amber-400 text-sm">★</span>
+                              <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{(u.ratings.average || 0).toFixed(1)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Recent reviews feed */}
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-sm font-bold text-gray-600 dark:text-gray-300">{t('dashboard.admin.recentReviewsFeed')}</h4>
+                      <button onClick={() => { setRatingsData(null); fetchRatings(); }} className="text-xs text-blue-600 hover:underline">↺ Refresh</button>
+                    </div>
+                    <div className="space-y-3">
+                      {ratingsData.recent_reviews.length === 0 ? (
+                        <p className="text-xs text-gray-400 italic text-center py-4">No reviews yet</p>
+                      ) : ratingsData.recent_reviews.map((r, i) => (
+                        <div key={i} className="bg-white dark:bg-gray-700 rounded-xl p-4 border border-gray-100 dark:border-gray-600 flex gap-3">
+                          {/* Star badge */}
+                          <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold ${
+                            r.rating >= 4 ? 'bg-amber-100 text-amber-700' : r.rating === 3 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {r.rating}★
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                              {/* Stars */}
+                              <span className="text-amber-400 text-xs tracking-tight">
+                                {'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}
+                              </span>
+                              {/* Who reviewed whom */}
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {r.reviewer_name
+                                  ? <><span className="font-medium text-gray-700 dark:text-gray-200">{r.reviewer_name}</span> → <span className={`font-medium ${r.recipient_role === 'ngo' ? 'text-green-700 dark:text-green-400' : 'text-blue-700 dark:text-blue-400'}`}>{r.recipient_name}</span></>
+                                  : <span className="font-medium text-gray-700 dark:text-gray-200">{r.recipient_name}</span>
+                                }
+                              </span>
+                              <span className={`px-1.5 py-0.5 text-xs rounded font-semibold ${r.recipient_role === 'ngo' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                                {r.recipient_role?.toUpperCase()}
+                              </span>
+                            </div>
+                            {r.comment && (
+                              <p className="text-sm text-gray-600 dark:text-gray-300 leading-snug">"{r.comment}"</p>
+                            )}
+                            {r.created_at && (
+                              <p className="text-xs text-gray-400 mt-1">
+                                {new Date(r.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </>
               )}
             </div>

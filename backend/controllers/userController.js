@@ -643,6 +643,90 @@ const getExportAnalytics = async (req, res) => {
   }
 };
 
+const getRatingsSummary = async (req, res) => {
+  try {
+    const [platformStats, topNGOs, topDonors, recentReviews] = await Promise.all([
+
+      // Overall platform rating stats
+      User.aggregate([
+        { $match: { 'ratings.count': { $gt: 0 } } },
+        { $group: {
+          _id: null,
+          total_reviews:  { $sum: '$ratings.count' },
+          platform_avg:   { $avg: '$ratings.average' },
+          rated_users:    { $sum: 1 },
+          five_star:  { $sum: { $size: { $filter: { input: '$ratings.reviews', as: 'r', cond: { $eq: ['$$r.rating', 5] } } } } },
+          four_star:  { $sum: { $size: { $filter: { input: '$ratings.reviews', as: 'r', cond: { $eq: ['$$r.rating', 4] } } } } },
+          three_star: { $sum: { $size: { $filter: { input: '$ratings.reviews', as: 'r', cond: { $eq: ['$$r.rating', 3] } } } } },
+          two_star:   { $sum: { $size: { $filter: { input: '$ratings.reviews', as: 'r', cond: { $eq: ['$$r.rating', 2] } } } } },
+          one_star:   { $sum: { $size: { $filter: { input: '$ratings.reviews', as: 'r', cond: { $eq: ['$$r.rating', 1] } } } } },
+        }}
+      ]),
+
+      // Top 10 NGOs by rating
+      User.find({ role: 'ngo', 'ratings.count': { $gt: 0 } })
+        .select('organization_name contact_person ratings trust_score is_verified')
+        .sort({ 'ratings.average': -1, 'ratings.count': -1 })
+        .limit(10),
+
+      // Top 10 Donors by rating
+      User.find({ role: 'donor', 'ratings.count': { $gt: 0 } })
+        .select('organization_name contact_person ratings trust_score is_verified')
+        .sort({ 'ratings.average': -1, 'ratings.count': -1 })
+        .limit(10),
+
+      // Recent reviews feed — unwind all users' reviews into a flat timeline
+      User.aggregate([
+        { $match: { 'ratings.reviews.0': { $exists: true } } },
+        { $unwind: '$ratings.reviews' },
+        { $project: {
+          recipient_name: '$organization_name',
+          recipient_role: '$role',
+          rating:    '$ratings.reviews.rating',
+          comment:   '$ratings.reviews.comment',
+          created_at:'$ratings.reviews.created_at',
+          reviewer_id:'$ratings.reviews.reviewer_id'
+        }},
+        { $sort: { created_at: -1 } },
+        { $limit: 30 },
+        { $lookup: {
+          from: 'users',
+          localField: 'reviewer_id',
+          foreignField: '_id',
+          as: 'reviewer'
+        }},
+        { $unwind: { path: '$reviewer', preserveNullAndEmptyArrays: true } },
+        { $project: {
+          recipient_name: 1,
+          recipient_role: 1,
+          rating: 1,
+          comment: 1,
+          created_at: 1,
+          reviewer_name: '$reviewer.organization_name',
+          reviewer_role: '$reviewer.role'
+        }}
+      ])
+    ]);
+
+    const stats = platformStats[0] || { total_reviews: 0, platform_avg: 0, rated_users: 0 };
+
+    res.json({
+      stats: {
+        total_reviews: stats.total_reviews,
+        platform_avg:  Math.round((stats.platform_avg || 0) * 10) / 10,
+        rated_users:   stats.rated_users,
+        distribution:  { 5: stats.five_star || 0, 4: stats.four_star || 0, 3: stats.three_star || 0, 2: stats.two_star || 0, 1: stats.one_star || 0 }
+      },
+      top_ngos:       topNGOs,
+      top_donors:     topDonors,
+      recent_reviews: recentReviews
+    });
+  } catch (error) {
+    console.error('getRatingsSummary error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getPendingVerifications,
   verifyUser,
@@ -657,5 +741,6 @@ module.exports = {
   deleteProfilePicture,
   toggleUserStatus,
   getUserDetail,
+  getRatingsSummary,
   getExportAnalytics
 };

@@ -13,7 +13,8 @@ const {
   deleteProfilePicture,
   toggleUserStatus,
   getUserDetail,
-  getExportAnalytics
+  getExportAnalytics,
+  getRatingsSummary
 } = require('../controllers/userController');
 const { auth, requireRole } = require('../middleware/auth');
 const { validateAdminUserAction } = require('../middleware/validators');
@@ -39,6 +40,7 @@ router.put('/:userId/status', auth, requireRole(['admin']), validateAdminUserAct
 router.get('/:userId/detail', auth, requireRole(['admin']), getUserDetail);
 router.get('/stats', auth, requireRole(['admin']), getAdminStats);
 router.get('/export/analytics', auth, requireRole(['admin']), getExportAnalytics);
+router.get('/ratings/summary', auth, requireRole(['admin']), getRatingsSummary);
 router.get('/donations/all', auth, requireRole(['admin']), getAllActiveDonations);
 router.get('/all', auth, requireRole(['admin']), getAllUsers);
 
