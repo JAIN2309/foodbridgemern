@@ -21,7 +21,12 @@ export default function NGODashboard() {
   const dispatch = useAppDispatch();
   const { donations, claimedDonations } = useAppSelector((state) => state.donations);
   const { user } = useAppSelector((state) => state.auth);
-  const { location } = useLocation();
+  const { location: gpsLocation } = useLocation();
+  // GPS → profile coords from registration → null
+  const profileCoords = user?.location?.coordinates
+    ? { latitude: user.location.coordinates[1], longitude: user.location.coordinates[0] }
+    : null;
+  const location = gpsLocation || profileCoords;
   const { isOnline, pendingCount, isSyncing } = useOfflineSync();
   const [activeTab, setActiveTab] = useState('feed');
   const [filters, setFilters] = useState({ search: '', category: 'all', radius: 10, minServes: '', sortBy: 'time_remaining' });

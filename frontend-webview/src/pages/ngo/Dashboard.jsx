@@ -24,6 +24,13 @@ const NGODashboard = () => {
   const { user } = useSelector((state) => state.auth);
   const { nearbyDonations, userDonations, isLoading } = useSelector((state) => state.donations);
   const { location: geoLocation, error: geoError, loading: geoLoading, retry: retryLocation } = useGeolocation();
+
+  // Priority: live GPS → profile coords from registration → null (show prompt)
+  const profileCoords = user?.location?.coordinates
+    ? { longitude: user.location.coordinates[0], latitude: user.location.coordinates[1] }
+    : null;
+  const coords = geoLocation || profileCoords;
+  const usingProfileFallback = !geoLocation && !!profileCoords;
   const [activeTab, setActiveTab] = useState('feed');
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
   const [filters, setFilters] = useState({
@@ -59,10 +66,10 @@ const NGODashboard = () => {
     }
     
     // Only fetch donations if we have real location — never fall back to hardcoded coords
-    if (geoLocation) {
+    if (coords) {
       dispatch(fetchNearbyDonations({
-        longitude: geoLocation.longitude,
-        latitude:  geoLocation.latitude,
+        longitude: coords.longitude,
+        latitude:  coords.latitude,
         maxDistance: filters.radius * 1000
       }));
     }
@@ -70,10 +77,10 @@ const NGODashboard = () => {
 
     // Auto-refresh every 30 seconds — skip nearby if still no location
     const interval = setInterval(() => {
-      if (geoLocation) {
+      if (coords) {
         dispatch(fetchNearbyDonations({
-          longitude: geoLocation.longitude,
-          latitude:  geoLocation.latitude,
+          longitude: coords.longitude,
+          latitude:  coords.latitude,
           maxDistance: filters.radius * 1000
         }));
       }
@@ -128,7 +135,7 @@ const NGODashboard = () => {
       })).unwrap();
       toast.success(t('dashboard.ngo.markedCollected'));
       dispatch(fetchNGOHistory());
-      if (geoLocation) dispatch(fetchNearbyDonations({ longitude: geoLocation.longitude, latitude: geoLocation.latitude, maxDistance: filters.radius * 1000 }));
+      if (coords) dispatch(fetchNearbyDonations({ longitude: coords.longitude, latitude: coords.latitude, maxDistance: filters.radius * 1000 }));
     } catch (err) {
       toast.error(err || t('dashboard.ngo.collectFailed'));
     } finally {
@@ -174,7 +181,7 @@ const NGODashboard = () => {
       })).unwrap();
       toast.success(t('dashboard.ngo.claimSuccess'));
       setActiveTab('history'); // switch to My Claims so NGO sees their reservation
-      if (geoLocation) dispatch(fetchNearbyDonations({ longitude: geoLocation.longitude, latitude: geoLocation.latitude, maxDistance: filters.radius * 1000 }));
+      if (coords) dispatch(fetchNearbyDonations({ longitude: coords.longitude, latitude: coords.latitude, maxDistance: filters.radius * 1000 }));
       dispatch(fetchNGOHistory());
     } catch (error) {
       toast.error(error || t('dashboard.ngo.claimFailed'));
@@ -206,8 +213,8 @@ const NGODashboard = () => {
 
   // Re-fetch when radius changes — only if location is available
   useEffect(() => {
-    if (geoLocation) {
-      dispatch(fetchNearbyDonations({ longitude: geoLocation.longitude, latitude: geoLocation.latitude, maxDistance: filters.radius * 1000 }));
+    if (coords) {
+      dispatch(fetchNearbyDonations({ longitude: coords.longitude, latitude: coords.latitude, maxDistance: filters.radius * 1000 }));
     }
   }, [filters.radius, geoLocation]);
 
@@ -334,30 +341,32 @@ const NGODashboard = () => {
           {activeTab === 'feed' && (
             <div className="space-y-4">
 
-              {/* Location permission prompt — shown when GPS unavailable */}
-              {!geoLocation && (
-                <div className={`rounded-xl p-5 text-center border-2 ${
-                  geoLoading
-                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-                    : 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700'
-                }`}>
-                  <div className="text-3xl mb-3">{geoLoading ? '📍' : '⚠️'}</div>
-                  <h4 className="font-bold text-gray-800 dark:text-white mb-1">
-                    {geoLoading ? t('dashboard.ngo.locationDetecting') : t('dashboard.ngo.locationRequired')}
-                  </h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    {geoLoading
-                      ? t('dashboard.ngo.locationDetectingDesc')
-                      : (geoError || t('dashboard.ngo.locationRequiredDesc'))}
-                  </p>
-                  {!geoLoading && (
-                    <button
-                      onClick={retryLocation}
-                      className="px-5 py-2 bg-primary-600 text-white rounded-xl text-sm font-semibold hover:bg-primary-700 transition-colors"
-                    >
-                      {t('dashboard.ngo.enableLocation')}
-                    </button>
-                  )}
+              {/* GPS unavailable but using profile coords — soft info banner */}
+              {usingProfileFallback && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl px-4 py-2.5 flex items-center gap-2 text-sm">
+                  <span className="text-blue-500">📍</span>
+                  <span className="text-blue-700 dark:text-blue-300">{t('dashboard.ngo.usingProfileLocation')}</span>
+                  <button onClick={retryLocation} className="ml-auto text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold">{t('dashboard.ngo.enableGPS')}</button>
+                </div>
+              )}
+
+              {/* No location at all — GPS and profile both missing */}
+              {!coords && !geoLoading && (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-300 dark:border-amber-700 rounded-xl p-5 text-center">
+                  <div className="text-3xl mb-3">⚠️</div>
+                  <h4 className="font-bold text-gray-800 dark:text-white mb-1">{t('dashboard.ngo.locationRequired')}</h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{geoError || t('dashboard.ngo.locationRequiredDesc')}</p>
+                  <button onClick={retryLocation} className="px-5 py-2 bg-primary-600 text-white rounded-xl text-sm font-semibold hover:bg-primary-700 transition-colors">
+                    {t('dashboard.ngo.enableLocation')}
+                  </button>
+                </div>
+              )}
+
+              {/* Detecting GPS */}
+              {!coords && geoLoading && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 rounded-xl p-4 text-center">
+                  <div className="text-2xl mb-2">📍</div>
+                  <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">{t('dashboard.ngo.locationDetecting')}</p>
                 </div>
               )}
 
@@ -486,7 +495,7 @@ const NGODashboard = () => {
                           {t('dashboard.ngo.clearFilters')}
                         </button>
                       ) : (
-                        <button onClick={() => { if (geoLocation) dispatch(fetchNearbyDonations({ longitude: geoLocation.longitude, latitude: geoLocation.latitude, maxDistance: filters.radius * 1000 })); }}
+                        <button onClick={() => { if (coords) dispatch(fetchNearbyDonations({ longitude: coords.longitude, latitude: coords.latitude, maxDistance: filters.radius * 1000 })); }}
                           className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
                           {t('dashboard.ngo.refreshDonations')}
                         </button>
@@ -621,7 +630,7 @@ const NGODashboard = () => {
                 <div className="h-96 rounded-lg overflow-hidden">
                   {geoLocation && (
                     <MapContainer
-                      center={[geoLocation.latitude, geoLocation.longitude]}
+                      center={[coords.latitude, coords.longitude]}
                       zoom={13}
                       style={{ height: '100%', width: '100%' }}
                     >
@@ -946,7 +955,7 @@ const NGODashboard = () => {
                   toast.success(t('dashboard.ngo.releaseSuccess'));
                   setReleaseModal({ open: false, donationId: null });
                   dispatch(fetchNGOHistory());
-                  if (geoLocation) dispatch(fetchNearbyDonations({ longitude: geoLocation.longitude, latitude: geoLocation.latitude, maxDistance: 10000 }));
+                  if (coords) dispatch(fetchNearbyDonations({ longitude: coords.longitude, latitude: coords.latitude, maxDistance: 10000 }));
                 } catch {
                   toast.error(t('dashboard.ngo.releaseFailed'));
                 }

@@ -246,6 +246,8 @@
       "locationDetecting": "સ્થાન શોધી રહ્યા છીએ...",
       "locationDetectingDesc": "કૃપા રાહ જુઓ.",
       "enableLocation": "સ્થાન સક્ષમ કરો",
+      "usingProfileLocation": "નોંધાયેલ સરનામું વાપરવામાં આવી રહ્યું છે. ચોક્કસ પરિણામ માટે GPS સક્ષમ કરો.",
+      "enableGPS": "GPS સક્ષમ કરો",
       "category": "શ્રેણી",
       "radius": "અંતર",
       "minServes": "ન્યૂનતમ સેવા",

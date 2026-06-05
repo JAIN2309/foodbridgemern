@@ -246,6 +246,8 @@
       "locationDetecting": "Detecting Your Location...",
       "locationDetectingDesc": "Please wait while we get your GPS coordinates.",
       "enableLocation": "Enable Location",
+      "usingProfileLocation": "Using your registered address for nearby search. Enable GPS for more accurate results.",
+      "enableGPS": "Enable GPS",
       "category": "Category",
       "radius": "Radius",
       "minServes": "Min serves",

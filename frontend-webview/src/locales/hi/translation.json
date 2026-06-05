@@ -246,6 +246,8 @@
       "locationDetecting": "स्थान पहचाना जा रहा है...",
       "locationDetectingDesc": "कृपया प्रतीक्षा करें।",
       "enableLocation": "स्थान सक्षम करें",
+      "usingProfileLocation": "पंजीकृत पते का उपयोग हो रहा है। सटीक परिणामों के लिए GPS सक्षम करें।",
+      "enableGPS": "GPS सक्षम करें",
       "category": "श्रेणी",
       "radius": "दूरी",
       "minServes": "न्यूनतम सेवाएं",
