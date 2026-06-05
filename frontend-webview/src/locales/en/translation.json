@@ -387,6 +387,8 @@
       "ratingsAnalytics": "Ratings Analytics",
       "applyFilter": "Apply",
       "clearFilter": "Clear",
+      "exportExcel": "Excel",
+      "exportPDF": "PDF",
       "filteredPeriod": "Filtered period",
       "today": "today"
     }
