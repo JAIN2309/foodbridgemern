@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  RefreshControl, Image, Modal, TextInput, Pressable,
+  RefreshControl, Image, Modal, TextInput, Pressable, Animated,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,6 +32,7 @@ export default function NGODashboard() {
   const [ratingModal, setRatingModal] = useState({ open: false, donationId: '' });
   const [ratingStars, setRatingStars] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
+  const starAnims = useRef([1,2,3,4,5].map(() => new Animated.Value(1))).current;
   const [pickupType, setPickupType] = useState<'instant' | 'scheduled'>('instant');
   const [scheduledDate, setScheduledDate] = useState(new Date(Date.now() + 60 * 60 * 1000));
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -664,73 +666,88 @@ export default function NGODashboard() {
       </Modal>
 
       {/* Rating Modal — opens when NGO taps Mark Collected */}
-      <Modal visible={ratingModal.open} transparent animationType="fade" onRequestClose={() => submitCollect(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 24, width: '100%' }}>
-            <Text style={{ fontSize: 24, textAlign: 'center', marginBottom: 6 }}>⭐</Text>
-            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1f2937', textAlign: 'center', marginBottom: 4 }}>
+      <Modal visible={ratingModal.open} transparent animationType="slide" onRequestClose={() => submitCollect(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 28, paddingBottom: 36 }}>
+            {/* Drag handle */}
+            <View style={{ width: 36, height: 4, backgroundColor: '#e5e7eb', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
+
+            {/* SVG-style star header */}
+            <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: '#fef3c7', justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: 12 }}>
+              <Ionicons name="star" size={26} color="#f59e0b" />
+            </View>
+            <Text style={{ fontSize: 20, fontWeight: '800', color: '#1f2937', textAlign: 'center', marginBottom: 4 }}>
               {t('dashboard.ngo.ratePickupTitle')}
             </Text>
-            <Text style={{ fontSize: 13, color: '#6b7280', textAlign: 'center', marginBottom: 20 }}>
+            <Text style={{ fontSize: 13, color: '#6b7280', textAlign: 'center', marginBottom: 24 }}>
               {t('dashboard.ngo.ratePickupSubtitle')}
             </Text>
 
-            {/* Stars — colorable Unicode ★/☆ with cascade sizing + press feedback */}
-            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            {/* Animated stars with Ionicons + spring bounce + haptics + deselect */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 10 }}>
               {[1,2,3,4,5].map(star => {
                 const filled = star <= ratingStars;
-                const isSelected = star === ratingStars;
                 return (
-                  <Pressable key={star} onPress={() => setRatingStars(star)}
-                    style={({ pressed }) => ({
-                      transform: [{ scale: pressed ? 0.85 : isSelected ? 1.2 : filled ? 1.05 : 1 }],
-                      transition: 'transform 0.12s'
-                    })}>
-                    <Text style={{
-                      fontSize: isSelected ? 42 : filled ? 36 : 32,
-                      color: filled ? '#f59e0b' : '#d1d5db',
-                      lineHeight: 48,
-                      textShadowColor: isSelected ? 'rgba(245,158,11,0.4)' : 'transparent',
-                      textShadowOffset: { width: 0, height: 2 },
-                      textShadowRadius: isSelected ? 6 : 0,
-                    }}>★</Text>
-                  </Pressable>
+                  <TouchableOpacity key={star} activeOpacity={0.7}
+                    onPress={() => {
+                      const next = star === ratingStars ? star - 1 : star;
+                      setRatingStars(next);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                      Animated.sequence([
+                        Animated.spring(starAnims[star - 1], { toValue: 1.5, useNativeDriver: true, speed: 60, bounciness: 20 }),
+                        Animated.spring(starAnims[star - 1], { toValue: 1, useNativeDriver: true, speed: 25, bounciness: 8 }),
+                      ]).start();
+                    }}>
+                    <Animated.View style={{ transform: [{ scale: starAnims[star - 1] }] }}>
+                      <Ionicons
+                        name={filled ? 'star' : 'star-outline'}
+                        size={40}
+                        color={filled ? '#f59e0b' : '#d1d5db'}
+                      />
+                    </Animated.View>
+                  </TouchableOpacity>
                 );
               })}
             </View>
-            {/* Label — slides in on selection */}
-            <View style={{ alignItems: 'center', marginBottom: 12, minHeight: 26 }}>
+
+            {/* Label */}
+            <View style={{ alignItems: 'center', marginBottom: 18, minHeight: 28 }}>
               {ratingStars > 0 && (
-                <View style={{ backgroundColor: '#fef3c7', paddingHorizontal: 14, paddingVertical: 4, borderRadius: 20 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#d97706' }}>
+                <View style={{ backgroundColor: '#fef3c7', paddingHorizontal: 16, paddingVertical: 5, borderRadius: 20 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#d97706' }}>
                     {['','Poor quality','Below average','Good','Very good','Excellent!'][ratingStars]}
                   </Text>
                 </View>
               )}
             </View>
 
-            {/* Comment */}
-            <View style={{ borderWidth: 1.5, borderColor: '#e5e7eb', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 16, minHeight: 60 }}>
-              <Text
-                style={{ fontSize: 13, color: '#111827' }}
-                onPress={() => {}}
-              >
-                {/* TextInput would go here — using simple placeholder note */}
-              </Text>
-            </View>
+            {/* Comment — only shown after star selected */}
+            {ratingStars > 0 && (
+              <TextInput
+                value={ratingComment}
+                onChangeText={setRatingComment}
+                placeholder="Add a comment (optional)"
+                placeholderTextColor="#9ca3af"
+                multiline numberOfLines={2}
+                maxLength={300}
+                style={{ borderWidth: 1.5, borderColor: '#e5e7eb', borderRadius: 14, padding: 12, fontSize: 14, color: '#111827', marginBottom: 18, textAlignVertical: 'top', minHeight: 64 }}
+              />
+            )}
 
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <TouchableOpacity onPress={() => submitCollect(false)}
-                style={{ flex: 1, paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, borderColor: '#d1d5db', alignItems: 'center' }}>
-                <Text style={{ fontWeight: '600', color: '#6b7280' }}>{t('dashboard.ngo.skipRating')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => submitCollect(true)} disabled={ratingStars === 0}
-                style={{ flex: 1, paddingVertical: 12, borderRadius: 12, backgroundColor: ratingStars > 0 ? '#16a34a' : '#e5e7eb', alignItems: 'center' }}>
-                <Text style={{ fontWeight: '700', color: ratingStars > 0 ? '#fff' : '#9ca3af' }}>
-                  {ratingStars > 0 ? `✅ ${t('dashboard.ngo.submitRating')}` : t('dashboard.ngo.selectStars')}
-                </Text>
-              </TouchableOpacity>
-            </View>
+            {/* Submit — primary, full width */}
+            <TouchableOpacity
+              onPress={() => submitCollect(true)}
+              disabled={ratingStars === 0}
+              style={{ backgroundColor: ratingStars > 0 ? '#16a34a' : '#e5e7eb', paddingVertical: 14, borderRadius: 14, alignItems: 'center', marginBottom: 10 }}>
+              <Text style={{ fontWeight: '800', fontSize: 15, color: ratingStars > 0 ? '#fff' : '#9ca3af' }}>
+                {ratingStars > 0 ? t('dashboard.ngo.submitRating') : t('dashboard.ngo.selectStars')}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Skip — plain text link, not a button */}
+            <TouchableOpacity onPress={() => submitCollect(false)} style={{ alignItems: 'center', paddingVertical: 6 }}>
+              <Text style={{ fontSize: 13, color: '#9ca3af' }}>{t('dashboard.ngo.skipRating')}</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

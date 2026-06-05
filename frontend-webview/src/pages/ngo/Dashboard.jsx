@@ -936,7 +936,9 @@ const NGODashboard = () => {
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => submitCollect(false)} />
         <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm p-6">
-          <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3 text-2xl">⭐</div>
+          <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-3">
+            <svg width="28" height="28" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#f59e0b" stroke="#d97706" strokeWidth="1.5" strokeLinejoin="round"/></svg>
+          </div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white text-center mb-1">{t('dashboard.ngo.ratePickupTitle')}</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-1">{t('dashboard.ngo.ratePickupSubtitle')}</p>
           <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 text-center mb-4 truncate px-2">"{ratingModal.donationName}"</p>
@@ -951,7 +953,7 @@ const NGODashboard = () => {
               const scale     = isHover ? 1.45 : isCascade ? 1.15 : 1;
               return (
                 <button key={star} onMouseEnter={() => setRatingHover(star)}
-                  onMouseLeave={() => setRatingHover(0)} onClick={() => setRatingStars(star)}
+                  onMouseLeave={() => setRatingHover(0)} onClick={() => setRatingStars(s => s === star ? 0 : star)}
                   className="focus:outline-none" style={{ lineHeight: 0 }}>
                   <svg width="42" height="42" viewBox="0 0 24 24" style={{
                     transform: `scale(${scale})`,
@@ -978,26 +980,29 @@ const NGODashboard = () => {
             )}
           </div>
 
-          {/* Optional comment */}
-          <textarea
-            value={ratingComment}
-            onChange={e => setRatingComment(e.target.value)}
-            placeholder={t('dashboard.ngo.rateCommentPlaceholder')}
-            rows={2}
-            maxLength={300}
-            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl text-sm mb-4 focus:outline-none focus:border-green-400 resize-none"
-          />
-
-          <div className="flex gap-3">
-            <button onClick={() => submitCollect(false)}
-              className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-              {t('dashboard.ngo.skipRating')}
-            </button>
-            <button onClick={() => submitCollect(true)} disabled={ratingStars === 0}
-              className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-              {ratingStars > 0 ? `✅ ${t('dashboard.ngo.submitRating')}` : t('dashboard.ngo.selectStars')}
-            </button>
+          {/* Comment — smooth entrance when stars selected */}
+          <div style={{ maxHeight: ratingStars > 0 ? '120px' : '0px', overflow: 'hidden', transition: 'max-height 0.25s ease', marginBottom: ratingStars > 0 ? '16px' : '0px' }}>
+            <textarea
+              value={ratingComment}
+              onChange={e => setRatingComment(e.target.value)}
+              placeholder="Optional comment..."
+              rows={2}
+              maxLength={300}
+              className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl text-sm focus:outline-none focus:border-amber-400 resize-none"
+            />
           </div>
+
+          {/* Submit — full width primary button */}
+          <button onClick={() => submitCollect(true)} disabled={ratingStars === 0}
+            className="w-full py-3 mb-2 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-sm">
+            {ratingStars > 0 ? t('dashboard.ngo.submitRating') : t('dashboard.ngo.selectStars')}
+          </button>
+
+          {/* Skip — plain text link, not competing with Submit */}
+          <button onClick={() => submitCollect(false)}
+            className="w-full py-1.5 text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+            {t('dashboard.ngo.skipRating')}
+          </button>
         </div>
       </div>
     )}

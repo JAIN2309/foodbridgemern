@@ -346,9 +346,10 @@ const DonorDashboard = () => {
               {/* ── Rate NGO banner — visible immediately at top when collected + not yet rated ── */}
               {selectedDonation.status === 'collected' && !ngoRating.submitted && (
                 <div className="mb-5 bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-300 dark:border-amber-700 rounded-xl p-4">
-                  <p className="text-sm font-bold text-amber-800 dark:text-amber-200 mb-3 flex items-center gap-2">
-                    ⭐ {t('donationDetails.rateNGOTitle')}
-                  </p>
+                  <div className="flex items-center gap-2 mb-3">
+                    <svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#f59e0b" stroke="#d97706" strokeWidth="1.5" strokeLinejoin="round"/></svg>
+                    <p className="text-sm font-bold text-amber-800 dark:text-amber-200">{t('donationDetails.rateNGOTitle')}</p>
+                  </div>
                   {/* Stars — SVG cascade + spring animation */}
                   <div className="flex gap-1.5 mb-2">
                     {[1,2,3,4,5].map(s => {
@@ -360,7 +361,7 @@ const DonorDashboard = () => {
                       return (
                         <button key={s} onMouseEnter={() => setNgoRating(r => ({ ...r, hover: s }))}
                           onMouseLeave={() => setNgoRating(r => ({ ...r, hover: 0 }))}
-                          onClick={() => setNgoRating(r => ({ ...r, stars: s }))}
+                          onClick={() => setNgoRating(r => ({ ...r, stars: s === r.stars ? 0 : s }))}
                           className="focus:outline-none" style={{ lineHeight: 0 }}>
                           <svg width="36" height="36" viewBox="0 0 24 24" style={{
                             transform: `scale(${scale})`,
@@ -399,8 +400,8 @@ const DonorDashboard = () => {
                       <button
                         onClick={submitNGORating}
                         disabled={ngoRating.loading}
-                        className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold rounded-lg disabled:opacity-50 transition-colors">
-                        {ngoRating.loading ? '...' : `⭐ ${t('donationDetails.submitNGORating')}`}
+                        className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold rounded-xl disabled:opacity-50 transition-colors">
+                        {ngoRating.loading ? '...' : t('donationDetails.submitNGORating')}
                       </button>
                     </>
                   )}

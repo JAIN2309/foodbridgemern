@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Pressable, StyleSheet, TextInput, ActivityIndicator, RefreshControl, Platform, KeyboardAvoidingView, Image, Modal, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Pressable, Animated, StyleSheet, TextInput, ActivityIndicator, RefreshControl, Platform, KeyboardAvoidingView, Image, Modal, Alert } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,6 +49,7 @@ export default function DonorDashboard() {
   const [selectedDonation, setSelectedDonation] = useState<any>(null);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
   const [ngoRating, setNgoRating] = useState({ stars: 0, comment: '', loading: false, submitted: false });
+  const ngoStarAnims = useRef([1,2,3,4,5].map(() => new Animated.Value(1))).current;
   const [scrollIndicatorHeight, setScrollIndicatorHeight] = useState(0);
   const [scrollIndicatorTop, setScrollIndicatorTop] = useState(0);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
@@ -428,25 +430,25 @@ export default function DonorDashboard() {
                       <Text style={{ fontSize: 14, fontWeight: '800', color: '#92400e', marginBottom: 14 }}>
                         {t('donationDetails.rateNGOTitle')}
                       </Text>
-                      {/* Stars — colorable ★/☆ with cascade sizing + press feedback */}
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                      {/* Stars — Ionicons + Animated.spring + haptics + deselect */}
+                      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
                         {[1,2,3,4,5].map(s => {
                           const filled = s <= ngoRating.stars;
-                          const isSelected = s === ngoRating.stars;
                           return (
-                            <Pressable key={s} onPress={() => setNgoRating(r => ({ ...r, stars: s }))}
-                              style={({ pressed }) => ({
-                                transform: [{ scale: pressed ? 0.85 : isSelected ? 1.2 : filled ? 1.05 : 1 }]
-                              })}>
-                              <Text style={{
-                                fontSize: isSelected ? 40 : filled ? 34 : 30,
-                                color: filled ? '#f59e0b' : '#d1d5db',
-                                lineHeight: 46,
-                                textShadowColor: isSelected ? 'rgba(245,158,11,0.4)' : 'transparent',
-                                textShadowOffset: { width: 0, height: 2 },
-                                textShadowRadius: isSelected ? 5 : 0,
-                              }}>★</Text>
-                            </Pressable>
+                            <TouchableOpacity key={s} activeOpacity={0.7}
+                              onPress={() => {
+                                const next = s === ngoRating.stars ? s - 1 : s;
+                                setNgoRating(r => ({ ...r, stars: next }));
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                                Animated.sequence([
+                                  Animated.spring(ngoStarAnims[s - 1], { toValue: 1.45, useNativeDriver: true, speed: 60, bounciness: 20 }),
+                                  Animated.spring(ngoStarAnims[s - 1], { toValue: 1, useNativeDriver: true, speed: 25, bounciness: 8 }),
+                                ]).start();
+                              }}>
+                              <Animated.View style={{ transform: [{ scale: ngoStarAnims[s - 1] }] }}>
+                                <Ionicons name={filled ? 'star' : 'star-outline'} size={34} color={filled ? '#f59e0b' : '#d1d5db'} />
+                              </Animated.View>
+                            </TouchableOpacity>
                           );
                         })}
                       </View>
@@ -462,7 +464,7 @@ export default function DonorDashboard() {
                       </View>
                       {ngoRating.stars > 0 && (
                         <TouchableOpacity onPress={submitNGORating} disabled={ngoRating.loading}
-                          style={{ backgroundColor: ngoRating.loading ? '#fcd34d' : '#f59e0b', paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}>
+                          style={{ backgroundColor: ngoRating.loading ? '#fcd34d' : '#f59e0b', paddingVertical: 11, borderRadius: 12, alignItems: 'center' }}>
                           <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>
                             {ngoRating.loading ? '...' : t('donationDetails.submitNGORating')}
                           </Text>
