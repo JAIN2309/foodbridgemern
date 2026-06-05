@@ -466,10 +466,10 @@ const AdminDashboard = () => {
       ${banner('TOP RATED NGOs')}
       ${thead('#', 'NGO Name', 'Avg Rating', 'Review Count', '', '', '', '')}
       ${ratingsData.top_ngos.slice(0,5).map((u,i) => `<tr>
-        <td style="${S.rank0}">${i+1}</td>
-        <td style="${S.cellL(i)}">${u.organization_name}</td>
+        <td style="${rk(i)}">${i+1}</td>
+        <td style="${c(i)}">${u.organization_name}</td>
         <td style="${cbC(i)}">★ ${(u.ratings?.average||0).toFixed(1)}</td>
-        <td style="${S.cellC(i)}">${u.ratings?.count||0}</td>
+        <td style="${cC(i)}">${u.ratings?.count||0}</td>
         <td colspan="4" style="${S.empty}"></td>
       </tr>`).join('')}
       ${spacer()}` : '<!-- No ratings data -->'}

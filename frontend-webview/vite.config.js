@@ -9,7 +9,7 @@ const CSP = [
   "script-src 'self' 'unsafe-inline'",   // unsafe-inline required for Vite HMR preamble
   "style-src 'self' 'unsafe-inline' https://unpkg.com",
   "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.openstreetmap.org",
-  "connect-src 'self' http://localhost:5001 http://localhost:5000 ws://localhost:5173 ws://localhost:5001 wss: https://*.ingest.sentry.io",
+  "connect-src 'self' http://localhost:5001 http://localhost:5000 ws://localhost:5173 ws://localhost:5001 wss: https://*.sentry.io",
   "font-src 'self' data:",
   "worker-src 'self' blob:",
   "object-src 'none'",

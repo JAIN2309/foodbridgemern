@@ -54,26 +54,7 @@ const SplashScreen = ({ onComplete }) => {
         <p className="text-white/70 mt-4 text-sm">Loading...</p>
       </div>
 
-      <style jsx>{`
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .animate-fade-in {
-          animation: fade-in 0.6s ease-out;
-        }
-
-        .animate-fade-in-delay {
-          animation: fade-in 0.6s ease-out 0.2s both;
-        }
-      `}</style>
+      {/* keyframes moved to index.css — styled-jsx not available in this project */}
     </div>
   );
 };

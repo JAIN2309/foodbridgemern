@@ -7,6 +7,14 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* SplashScreen animations */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in       { animation: fade-in 0.6s ease-out; }
+.animate-fade-in-delay { animation: fade-in 0.6s ease-out 0.2s both; }
+
 /* Dark mode base styles */
 @layer base {
   :root {

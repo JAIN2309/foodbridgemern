@@ -29,26 +29,17 @@ function App() {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    console.log('🚀 APP COMPONENT - TOKEN CHECK:', { token: !!token, user: !!user });
     if (token && !user) {
-      console.log('🔄 DISPATCHING LOAD USER...');
       dispatch(loadUser());
     } else if (token && user) {
-      // Check if user profile is incomplete
       const requiredFields = ['contact_person', 'phone', 'address'];
       const missingFields = requiredFields.filter(field => !user[field]);
-      
-      if (missingFields.length > 0) {
-        console.log('⚠️ INCOMPLETE PROFILE DETECTED, LOADING FULL DATA...');
-        dispatch(loadUser());
-      }
+      if (missingFields.length > 0) dispatch(loadUser());
     }
-  }, [dispatch, token]); // Removed 'user' from dependencies
+  }, [dispatch, token]);
 
   useEffect(() => {
-    console.log('🔌 AUTH STATE CHANGED:', { isAuthenticated, user: user ? 'present' : 'null' });
     if (isAuthenticated && user) {
-      console.log('👤 USER ROLE FOR SOCKET:', user.role);
       // Only connect socket if backend is available
       const connectSocket = async () => {
         try {
