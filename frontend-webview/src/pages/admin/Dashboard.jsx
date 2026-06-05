@@ -171,7 +171,9 @@ const AdminDashboard = () => {
         api.get(`/donations/admin/history?page=1&limit=${historyLimit}`)
       ]);
       
-      setPendingUsers(pendingRes.data || []);
+      // Backend now returns { users, pagination } after pagination fix
+      const pendingData = pendingRes.data;
+      setPendingUsers(Array.isArray(pendingData) ? pendingData : (pendingData?.users || []));
       setStats(statsRes.data || {});
       setActiveDonations(donationsRes.data || []);
       setAllUsers(usersRes.data?.users || []);
