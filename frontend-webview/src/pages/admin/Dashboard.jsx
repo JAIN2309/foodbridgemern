@@ -264,7 +264,10 @@ const AdminDashboard = () => {
   };
 
   const generateExcel = (d) => {
-    const period = d.period.is_all_time ? 'All time' : `${d.period.start} to ${d.period.end || 'today'}`;
+    const period     = d.period.is_all_time ? 'All time' : `${d.period.start} to ${d.period.end || 'today'}`;
+    const trendLabel = d.period.daily_from === d.period.daily_to
+      ? `Today (${d.period.daily_from})`
+      : `${d.period.daily_from} to ${d.period.daily_to}`;
     const pct    = (n, tot) => tot > 0 ? `${Math.round(n / tot * 100)}%` : '0%';
     const COLS   = 8;
 
@@ -318,7 +321,7 @@ const AdminDashboard = () => {
 
       <!-- TITLE -->
       <tr><td colspan="${COLS}" style="${S.title}">FoodBridge — Analytics Report</td></tr>
-      <tr><td colspan="${COLS}" style="${S.meta}">Period: ${period}   |   Generated: ${new Date(d.generated_at).toLocaleString()}   |   Trend window: ${d.period.daily_from} to ${d.period.daily_to}</td></tr>
+      <tr><td colspan="${COLS}" style="${S.meta}">Period: ${period}   |   Generated: ${new Date(d.generated_at).toLocaleString()}   |   Trend: ${trendLabel}</td></tr>
       ${spacer()}
 
       <!-- KPI SUMMARY ROW -->
@@ -368,7 +371,7 @@ const AdminDashboard = () => {
       ${spacer()}
 
       <!-- SECTION 3: DAILY BREAKDOWN -->
-      ${banner('SECTION 3  —  DAILY BREAKDOWN', `Trend window: ${d.period.daily_from} to ${d.period.daily_to}`)}
+      ${banner('SECTION 3  —  DAILY BREAKDOWN', `Trend: ${trendLabel}`)}
       ${thead('Date', 'Total Posted', 'Collected', 'Reserved', 'Expired', 'Kg Saved', 'People Served', '')}
       ${d.daily_breakdown.map((x, i) => `<tr>
         <td style="${cb(i)}">${x.date}</td>
@@ -491,7 +494,10 @@ const AdminDashboard = () => {
   };
 
   const generatePDF = (d) => {
-    const period = d.period.is_all_time ? 'All time' : `${d.period.start} → ${d.period.end || 'today'}`;
+    const period     = d.period.is_all_time ? 'All time' : `${d.period.start} → ${d.period.end || 'today'}`;
+    const trendLabel = d.period.daily_from === d.period.daily_to
+      ? `Today (${d.period.daily_from})`
+      : `${d.period.daily_from} to ${d.period.daily_to}`;
     const r = (label, value, extra = '') =>
       `<tr><td>${label}</td><td class="val">${value}</td>${extra ? `<td class="note">${extra}</td>` : ''}</tr>`;
     const th = (...cols) => `<tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr>`;
@@ -531,7 +537,7 @@ const AdminDashboard = () => {
 
     <div class="header">
       <h1>🌱 FoodBridge Analytics Report</h1>
-      <div class="sub">Period: <strong>${period}</strong> &nbsp;·&nbsp; Generated: ${new Date(d.generated_at).toLocaleString()} &nbsp;·&nbsp; Daily trend: ${d.period.daily_from} to ${d.period.daily_to}</div>
+      <div class="sub">Period: <strong>${period}</strong> &nbsp;·&nbsp; Generated: ${new Date(d.generated_at).toLocaleString()} &nbsp;·&nbsp; Daily trend: ${trendLabel}</div>
     </div>
 
     <div class="kpi-grid">
@@ -594,7 +600,7 @@ const AdminDashboard = () => {
       </div>
     </div>
 
-    <h2>Daily Breakdown (${d.period.daily_from} → ${d.period.daily_to})</h2>
+    <h2>Daily Breakdown (${trendLabel})</h2>
     <table>
       ${th('Date','Posted','Collected','Reserved','Expired','Kg Saved','Serves')}
       ${d.daily_breakdown.map(x => td(x.date,`<strong>${x.total}</strong>`,`<span class="badge green">${x.collected}</span>`,x.reserved,`<span class="badge red">${x.expired}</span>`,x.kg,x.serves)).join('')}

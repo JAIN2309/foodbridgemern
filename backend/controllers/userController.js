@@ -498,8 +498,9 @@ const getExportAnalytics = async (req, res) => {
     const donationMatch   = hasRange ? { createdAt: dateFilter } : {};
     const claimMatch      = hasRange ? { claimed_at: dateFilter } : {};
 
-    // Default daily window: last 30 days when no range given
-    const dailyFrom = hasRange ? (dateFilter.$gte || new Date(Date.now() - 30 * 86400000)) : new Date(Date.now() - 30 * 86400000);
+    // Daily window: use selected range if provided, otherwise show only today
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const dailyFrom = hasRange ? (dateFilter.$gte || todayStart) : todayStart;
     const dailyTo   = hasRange ? (dateFilter.$lte || new Date()) : new Date();
 
     const [
