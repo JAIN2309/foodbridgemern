@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Dimensions,
@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
+import * as Location from 'expo-location';
 import { useAppDispatch, useAppSelector } from '../hooks/useRedux';
 import { registerUser } from '../store/authSlice';
 import Toast from 'react-native-toast-message';
@@ -39,6 +40,26 @@ export default function RegisterScreen() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [focused, setFocused] = useState('');
+  const [coords, setCoords] = useState<{ longitude: number; latitude: number } | null>(null);
+  const [locationStatus, setLocationStatus] = useState<'idle'|'loading'|'ok'|'denied'>('idle');
+
+  // Request location when screen mounts
+  useEffect(() => {
+    requestLocation();
+  }, []);
+
+  const requestLocation = async () => {
+    setLocationStatus('loading');
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') { setLocationStatus('denied'); return; }
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setCoords({ longitude: pos.coords.longitude, latitude: pos.coords.latitude });
+      setLocationStatus('ok');
+    } catch {
+      setLocationStatus('denied');
+    }
+  };
 
   const update = (key: string, val: string) => setFormData(p => ({ ...p, [key]: val }));
 
@@ -95,8 +116,16 @@ export default function RegisterScreen() {
       Toast.show({ type: 'error', text1: t('auth.register.validationError'), text2: validationError, visibilityTime: 4000 });
       return;
     }
+    if (!coords) {
+      Toast.show({ type: 'error', text1: t('auth.register.locationRequired'), text2: t('auth.register.locationEnable'), visibilityTime: 4000 });
+      requestLocation();
+      return;
+    }
     try {
-      await dispatch(registerUser(formData)).unwrap();
+      await dispatch(registerUser({
+        ...formData,
+        coordinates: [coords.longitude, coords.latitude],
+      })).unwrap();
       Toast.show({ type: 'success', text1: t('auth.register.accountCreated') });
       router.replace('/(tabs)');
     } catch (error: any) {
@@ -293,8 +322,32 @@ export default function RegisterScreen() {
               </Text>
             </View>
 
+            {/* Location status indicator */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, padding: 10, borderRadius: 10,
+              backgroundColor: locationStatus === 'ok' ? '#f0fdf4' : locationStatus === 'denied' ? '#fef2f2' : '#eff6ff',
+              borderWidth: 1,
+              borderColor: locationStatus === 'ok' ? '#bbf7d0' : locationStatus === 'denied' ? '#fecaca' : '#bfdbfe' }}>
+              <Ionicons
+                name={locationStatus === 'ok' ? 'location' : locationStatus === 'denied' ? 'location-outline' : 'time-outline'}
+                size={16}
+                color={locationStatus === 'ok' ? '#16a34a' : locationStatus === 'denied' ? '#dc2626' : '#2563eb'}
+              />
+              <Text style={{ flex: 1, fontSize: 12, color: locationStatus === 'ok' ? '#15803d' : locationStatus === 'denied' ? '#b91c1c' : '#1d4ed8' }}>
+                {locationStatus === 'ok'
+                  ? t('auth.register.locationDetected')
+                  : locationStatus === 'denied'
+                  ? t('auth.register.locationEnable')
+                  : t('auth.register.locationDetecting')}
+              </Text>
+              {locationStatus === 'denied' && (
+                <TouchableOpacity onPress={requestLocation}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#dc2626' }}>{t('auth.register.retryLocation')}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
             {/* Submit */}
-            <TouchableOpacity onPress={handleRegister} disabled={isLoading} activeOpacity={0.9} style={{ marginTop: 8 }}>
+            <TouchableOpacity onPress={handleRegister} disabled={isLoading || locationStatus === 'loading'} activeOpacity={0.9} style={{ marginTop: 8 }}>
               <LinearGradient
                 colors={formData.role === 'ngo' ? ['#16a34a', '#2563eb'] : ['#2563eb', '#7c3aed', '#db2777']}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
