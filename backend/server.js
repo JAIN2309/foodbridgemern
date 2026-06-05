@@ -125,10 +125,16 @@ app.get('/api/health', async (req, res) => {
   })();
 
   const allOk = mongoStatus === 'connected' && redisStatus === 'connected';
+  const istTime = new Date().toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false
+  });
 
   res.status(allOk ? 200 : 503).json({
     status:     allOk ? 'ok' : 'degraded',
-    timestamp:  new Date().toISOString(),
+    timestamp:  `${istTime} IST`,
     uptime_sec: Math.floor(process.uptime()),
     services: {
       mongodb: mongoStatus,
