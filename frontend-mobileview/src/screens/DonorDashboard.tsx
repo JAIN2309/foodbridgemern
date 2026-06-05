@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput, ActivityIndicator, RefreshControl, Platform, KeyboardAvoidingView, Image, Modal, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Pressable, StyleSheet, TextInput, ActivityIndicator, RefreshControl, Platform, KeyboardAvoidingView, Image, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
@@ -422,33 +422,51 @@ export default function DonorDashboard() {
                     </View>
                   </View>
 
-                  {/* ── Rate NGO banner — prominent, right at top when collected ── */}
+                  {/* ── Rate NGO banner ── */}
                   {selectedDonation.status === 'collected' && !ngoRating.submitted && (
                     <View style={{ marginHorizontal: 20, marginBottom: 16, backgroundColor: '#fffbeb', borderWidth: 2, borderColor: '#f59e0b', borderRadius: 14, padding: 16 }}>
-                      <Text style={{ fontSize: 14, fontWeight: '800', color: '#92400e', marginBottom: 12 }}>
-                        ⭐ {t('donationDetails.rateNGOTitle')}
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: '#92400e', marginBottom: 14 }}>
+                        {t('donationDetails.rateNGOTitle')}
                       </Text>
-                      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-                        {[1,2,3,4,5].map(s => (
-                          <TouchableOpacity key={s} onPress={() => setNgoRating(r => ({ ...r, stars: s }))}>
-                            <Text style={{ fontSize: 32 }}>{s <= ngoRating.stars ? '⭐' : '☆'}</Text>
-                          </TouchableOpacity>
-                        ))}
+                      {/* Stars — colorable ★/☆ with cascade sizing + press feedback */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                        {[1,2,3,4,5].map(s => {
+                          const filled = s <= ngoRating.stars;
+                          const isSelected = s === ngoRating.stars;
+                          return (
+                            <Pressable key={s} onPress={() => setNgoRating(r => ({ ...r, stars: s }))}
+                              style={({ pressed }) => ({
+                                transform: [{ scale: pressed ? 0.85 : isSelected ? 1.2 : filled ? 1.05 : 1 }]
+                              })}>
+                              <Text style={{
+                                fontSize: isSelected ? 40 : filled ? 34 : 30,
+                                color: filled ? '#f59e0b' : '#d1d5db',
+                                lineHeight: 46,
+                                textShadowColor: isSelected ? 'rgba(245,158,11,0.4)' : 'transparent',
+                                textShadowOffset: { width: 0, height: 2 },
+                                textShadowRadius: isSelected ? 5 : 0,
+                              }}>★</Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                      {/* Label */}
+                      <View style={{ minHeight: 24, marginBottom: ngoRating.stars > 0 ? 10 : 0 }}>
+                        {ngoRating.stars > 0 && (
+                          <View style={{ alignSelf: 'flex-start', backgroundColor: '#fef3c7', paddingHorizontal: 12, paddingVertical: 3, borderRadius: 20 }}>
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: '#d97706' }}>
+                              {['','Poor quality','Below average','Good','Very good','Excellent!'][ngoRating.stars]}
+                            </Text>
+                          </View>
+                        )}
                       </View>
                       {ngoRating.stars > 0 && (
-                        <>
-                          <Text style={{ fontSize: 12, color: '#d97706', fontWeight: '600', marginBottom: 8 }}>
-                            {['','⭐ Poor','⭐⭐ Below avg','⭐⭐⭐ Good','⭐⭐⭐⭐ Very good','⭐⭐⭐⭐⭐ Excellent'][ngoRating.stars]}
+                        <TouchableOpacity onPress={submitNGORating} disabled={ngoRating.loading}
+                          style={{ backgroundColor: ngoRating.loading ? '#fcd34d' : '#f59e0b', paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}>
+                          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>
+                            {ngoRating.loading ? '...' : t('donationDetails.submitNGORating')}
                           </Text>
-                          <TouchableOpacity
-                            onPress={submitNGORating}
-                            disabled={ngoRating.loading}
-                            style={{ backgroundColor: ngoRating.loading ? '#fcd34d' : '#f59e0b', paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}>
-                            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>
-                              {ngoRating.loading ? '...' : `⭐ ${t('donationDetails.submitNGORating')}`}
-                            </Text>
-                          </TouchableOpacity>
-                        </>
+                        </TouchableOpacity>
                       )}
                     </View>
                   )}

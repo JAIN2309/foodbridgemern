@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  RefreshControl, Image, Modal, TextInput,
+  RefreshControl, Image, Modal, TextInput, Pressable,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -675,19 +675,39 @@ export default function NGODashboard() {
               {t('dashboard.ngo.ratePickupSubtitle')}
             </Text>
 
-            {/* Stars */}
-            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 12 }}>
-              {[1,2,3,4,5].map(star => (
-                <TouchableOpacity key={star} onPress={() => setRatingStars(star)}>
-                  <Text style={{ fontSize: 36 }}>{star <= ratingStars ? '⭐' : '☆'}</Text>
-                </TouchableOpacity>
-              ))}
+            {/* Stars — colorable Unicode ★/☆ with cascade sizing + press feedback */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              {[1,2,3,4,5].map(star => {
+                const filled = star <= ratingStars;
+                const isSelected = star === ratingStars;
+                return (
+                  <Pressable key={star} onPress={() => setRatingStars(star)}
+                    style={({ pressed }) => ({
+                      transform: [{ scale: pressed ? 0.85 : isSelected ? 1.2 : filled ? 1.05 : 1 }],
+                      transition: 'transform 0.12s'
+                    })}>
+                    <Text style={{
+                      fontSize: isSelected ? 42 : filled ? 36 : 32,
+                      color: filled ? '#f59e0b' : '#d1d5db',
+                      lineHeight: 48,
+                      textShadowColor: isSelected ? 'rgba(245,158,11,0.4)' : 'transparent',
+                      textShadowOffset: { width: 0, height: 2 },
+                      textShadowRadius: isSelected ? 6 : 0,
+                    }}>★</Text>
+                  </Pressable>
+                );
+              })}
             </View>
-            {ratingStars > 0 && (
-              <Text style={{ textAlign: 'center', fontSize: 12, color: '#d97706', fontWeight: '600', marginBottom: 12 }}>
-                {['','Poor quality','Below average','Good','Very good','Excellent!'][ratingStars]}
-              </Text>
-            )}
+            {/* Label — slides in on selection */}
+            <View style={{ alignItems: 'center', marginBottom: 12, minHeight: 26 }}>
+              {ratingStars > 0 && (
+                <View style={{ backgroundColor: '#fef3c7', paddingHorizontal: 14, paddingVertical: 4, borderRadius: 20 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#d97706' }}>
+                    {['','Poor quality','Below average','Good','Very good','Excellent!'][ratingStars]}
+                  </Text>
+                </View>
+              )}
+            </View>
 
             {/* Comment */}
             <View style={{ borderWidth: 1.5, borderColor: '#e5e7eb', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 16, minHeight: 60 }}>

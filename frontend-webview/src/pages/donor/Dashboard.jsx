@@ -349,22 +349,45 @@ const DonorDashboard = () => {
                   <p className="text-sm font-bold text-amber-800 dark:text-amber-200 mb-3 flex items-center gap-2">
                     ⭐ {t('donationDetails.rateNGOTitle')}
                   </p>
-                  <div className="flex gap-2 mb-3">
-                    {[1,2,3,4,5].map(s => (
-                      <button key={s}
-                        onMouseEnter={() => setNgoRating(r => ({ ...r, hover: s }))}
-                        onMouseLeave={() => setNgoRating(r => ({ ...r, hover: 0 }))}
-                        onClick={() => setNgoRating(r => ({ ...r, stars: s }))}
-                        className="text-3xl transition-all hover:scale-125 focus:outline-none">
-                        {s <= (ngoRating.hover || ngoRating.stars) ? '⭐' : '☆'}
-                      </button>
-                    ))}
+                  {/* Stars — SVG cascade + spring animation */}
+                  <div className="flex gap-1.5 mb-2">
+                    {[1,2,3,4,5].map(s => {
+                      const active    = s <= (ngoRating.hover || ngoRating.stars);
+                      const isHover   = s === ngoRating.hover;
+                      const isCascade = ngoRating.hover > 0 && s < ngoRating.hover;
+                      const isLocked  = s <= ngoRating.stars && ngoRating.hover === 0;
+                      const scale     = isHover ? 1.45 : isCascade ? 1.15 : 1;
+                      return (
+                        <button key={s} onMouseEnter={() => setNgoRating(r => ({ ...r, hover: s }))}
+                          onMouseLeave={() => setNgoRating(r => ({ ...r, hover: 0 }))}
+                          onClick={() => setNgoRating(r => ({ ...r, stars: s }))}
+                          className="focus:outline-none" style={{ lineHeight: 0 }}>
+                          <svg width="36" height="36" viewBox="0 0 24 24" style={{
+                            transform: `scale(${scale})`,
+                            transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1)',
+                            filter: isLocked ? 'drop-shadow(0 2px 5px rgba(245,158,11,0.5))' : 'none',
+                          }}>
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                              fill={active ? '#f59e0b' : '#e5e7eb'}
+                              stroke={active ? '#d97706' : '#d1d5db'}
+                              strokeWidth="1.5" strokeLinejoin="round"
+                              style={{ transition: 'fill 0.12s ease, stroke 0.12s ease' }} />
+                          </svg>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {/* Label — shows on hover AND on selection */}
+                  <div style={{ minHeight: '22px' }} className="mb-2">
+                    {(ngoRating.hover || ngoRating.stars) > 0 && (
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-200 dark:bg-amber-800/40 text-amber-800 dark:text-amber-200"
+                        style={{ animation: 'fadeIn 0.15s ease' }}>
+                        {['','Poor','Below avg','Good','Very good','Excellent'][ngoRating.hover || ngoRating.stars]}
+                      </span>
+                    )}
                   </div>
                   {ngoRating.stars > 0 && (
                     <>
-                      <p className="text-xs text-amber-600 font-semibold mb-2">
-                        {['','⭐ Poor','⭐⭐ Below avg','⭐⭐⭐ Good','⭐⭐⭐⭐ Very good','⭐⭐⭐⭐⭐ Excellent'][ngoRating.stars]}
-                      </p>
                       <input
                         type="text"
                         value={ngoRating.comment}
