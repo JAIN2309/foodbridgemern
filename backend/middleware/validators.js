@@ -210,6 +210,50 @@ const validateAdminUserAction = [
   handleValidation
 ];
 
+// ─── Donation: Release ───────────────────────────────────────────────────────
+const validateRelease = [
+  param('donationId').isMongoId().withMessage('Invalid donation ID'),
+  body('reason').optional().trim().isLength({ max: 500 }).withMessage('Reason max 500 characters'),
+  handleValidation
+];
+
+// ─── Rating: NGO / Donor ─────────────────────────────────────────────────────
+const validateRating = [
+  param('donationId').isMongoId().withMessage('Invalid donation ID'),
+  body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be 1–5'),
+  body('review').optional().trim().escape().isLength({ max: 500 }).withMessage('Review max 500 characters'),
+  handleValidation
+];
+
+// ─── Sync Offline ─────────────────────────────────────────────────────────────
+const validateSyncOffline = [
+  body('pending_actions')
+    .isArray({ min: 1, max: 50 }).withMessage('pending_actions must be array of 1–50 items')
+    .custom((actions) => {
+      const VALID = ['claim_donation', 'mark_collected', 'release_donation', 'create_donation'];
+      actions.forEach((a, i) => {
+        if (!VALID.includes(a.action)) throw new Error(`Action ${i}: invalid action type`);
+        if (!a.data) throw new Error(`Action ${i}: missing data object`);
+      });
+      return true;
+    }),
+  handleValidation
+];
+
+// ─── Pagination params ────────────────────────────────────────────────────────
+const validatePagination = [
+  body('page').optional().isInt({ min: 1 }).withMessage('page must be a positive integer'),
+  body('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit must be 1–100'),
+  handleValidation
+];
+
+// ─── Date range params (query) ────────────────────────────────────────────────
+const validateDateRange = [
+  body('startDate').optional().isISO8601().withMessage('startDate must be a valid ISO date'),
+  body('endDate').optional().isISO8601().withMessage('endDate must be a valid ISO date'),
+  handleValidation
+];
+
 module.exports = {
   validateRegister,
   validateLogin,
@@ -218,4 +262,9 @@ module.exports = {
   validateCreateDonation,
   validateClaimDonation,
   validateAdminUserAction,
+  validateRelease,
+  validateRating,
+  validateSyncOffline,
+  validatePagination,
+  validateDateRange,
 };

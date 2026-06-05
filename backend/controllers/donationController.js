@@ -46,9 +46,6 @@ const calculateQualityScore = (food_items, safety_checklist) => {
 
 const createDonation = async (req, res) => {
   try {
-    console.log('🍽️ CREATE DONATION - Start');
-    console.log('User ID:', req.user._id);
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
     
     let {
       food_items,
@@ -83,14 +80,11 @@ const createDonation = async (req, res) => {
       // Convert buffer to base64 data URL
       const base64Image = req.file.buffer.toString('base64');
       photo_url = `data:${req.file.mimetype};base64,${base64Image}`;
-      console.log('📸 Photo uploaded, size:', req.file.size, 'bytes');
     }
 
     // Validate food safety
-    console.log('🔍 Validating food safety...');
     const safetyErrors = validateFoodSafety(food_items);
     if (safetyErrors.length > 0) {
-      console.log('❌ Food safety validation failed:', safetyErrors);
       return res.status(400).json({ 
         message: 'Food safety validation failed', 
         errors: safetyErrors 
@@ -99,12 +93,10 @@ const createDonation = async (req, res) => {
 
     // Calculate quality score
     const quality_score = calculateQualityScore(food_items, safety_checklist);
-    console.log('📊 Quality score calculated:', quality_score);
     
     // Auto-expire buffer: expire 2 hours before actual expiry
     const earliestExpiry = Math.min(...food_items.map(item => new Date(item.expiry_date)));
     const autoExpireTime = new Date(earliestExpiry - (2 * 60 * 60 * 1000));
-    console.log('⏰ Auto-expire time set:', autoExpireTime);
 
     const donation = new Donation({
       donor_id: req.user._id,
@@ -126,31 +118,23 @@ const createDonation = async (req, res) => {
       expiresAt: Math.min(new Date(pickup_window_end), autoExpireTime)
     });
 
-    console.log('💾 Saving donation to database...');
     await donation.save();
-    console.log('✅ Donation saved with ID:', donation._id);
     
     // Create logistics entry
-    console.log('🚚 Creating logistics entry...');
     const logistics = new Logistics({
       donation_id: donation._id,
       priority_score: quality_score * 10
     });
     await logistics.save();
-    console.log('✅ Logistics entry created');
     
     // Update donor stats
-    console.log('📈 Updating donor stats...');
     await User.findByIdAndUpdate(req.user._id, {
       $inc: { 'activity_stats.donations_posted': 1 }
     });
-    console.log('✅ Donor stats updated');
 
     // Invalidate cache and notify nearby NGOs
-    console.log('🔄 Invalidating location cache...');
     await performanceService.invalidateLocationCache(coordinates[0], coordinates[1]);
     
-    console.log('🔍 Finding nearby NGOs...');
     const io = req.app.get('io');
     const nearbyNGOs = await User.find({
       role: 'ngo',
@@ -164,7 +148,6 @@ const createDonation = async (req, res) => {
       }
     }).sort({ trust_score: -1 }).limit(20);
 
-    console.log(`📢 Notifying ${nearbyNGOs.length} nearby trusted NGOs`);
     nearbyNGOs.forEach(async (ngo) => {
       io.to(`ngo-${ngo._id}`).emit('new-donation', {
         donation: donation,
@@ -174,13 +157,11 @@ const createDonation = async (req, res) => {
       
       try {
         await sendEmail(ngo.email, emailTemplates.newDonation(donation, ngo));
-        console.log(`📧 Email sent to NGO: ${ngo.organization_name}`);
       } catch (emailError) {
         console.error('❌ Email failed for NGO:', ngo.organization_name, emailError.message);
       }
     });
 
-    console.log('🎉 CREATE DONATION - Success');
     res.status(201).json(donation);
   } catch (error) {
     console.error('💥 CREATE DONATION - Error:', error.message);
@@ -192,24 +173,17 @@ const createDonation = async (req, res) => {
 const getNearbyDonations = async (req, res) => {
   try {
     const { longitude, latitude, maxDistance = 10000, minQuality = 0 } = req.query;
-    console.log('🗺️ GET NEARBY DONATIONS - Start');
-    console.log('Parameters:', { longitude, latitude, maxDistance, minQuality });
-    console.log('User:', req.user.organization_name, 'Role:', req.user.role);
     
     // Use performance service for caching
-    console.log('🔍 Fetching cached nearby donations...');
     const donations = await performanceService.getCachedNearbyDonations(
       longitude, latitude, maxDistance
     );
-    console.log(`📊 Found ${donations.length} donations from cache/DB`);
     
     // Filter by quality if specified
     const filteredDonations = donations.filter(donation => 
       (donation.quality_score || 0) >= parseFloat(minQuality)
     );
-    console.log(`✅ Filtered to ${filteredDonations.length} donations (min quality: ${minQuality})`);
 
-    console.log('🎉 GET NEARBY DONATIONS - Success');
     res.json(filteredDonations);
   } catch (error) {
     console.error('💥 GET NEARBY DONATIONS - Error:', error.message);
@@ -534,7 +508,6 @@ const handleFailedPickup = async (donationId, ngoId, reason = 'timeout') => {
         { _id: donationId, status: 'reserved' },
         { status: 'expired' }
       );
-      console.log(`Donation ${donationId} expired after ${failedAttempts} failed attempts`);
     }
   } catch (error) {
     console.error('Failed pickup handling error:', error);
@@ -917,7 +890,6 @@ const markExpiredDonations = async () => {
     }
 
     const total = expiredDonations.length + overdueReserved.length;
-    console.log(`✅ Expiry job: ${expiredDonations.length} expired, ${overdueReserved.length} overdue reserved reverted`);
     return total;
   } catch (error) {
     console.error('❌ Error marking expired donations:', error);
@@ -945,7 +917,6 @@ const cleanupOldDonations = async (daysOld = 90) => {
       }
     );
     
-    console.log(`🗑️ Marked ${result.modifiedCount} old donations for cleanup`);
     return result.modifiedCount;
   } catch (error) {
     console.error('❌ Error cleaning up old donations:', error);

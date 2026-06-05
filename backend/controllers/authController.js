@@ -173,20 +173,7 @@ const login = async (req, res) => {
 const getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
-    console.log('👤 Raw user fields from DB:', {
-      email: user.email,
-      phone: user.phone,
-      contact_person: user.contact_person,
-      email_encrypted: user.email_encrypted ? 'exists' : 'null',
-      phone_encrypted: user.phone_encrypted ? 'exists' : 'null',
-      contact_person_encrypted: user.contact_person_encrypted ? 'exists' : 'null'
-    });
     const decryptedUser = decryptUserFields(user);
-    console.log('👤 Decrypted user fields:', {
-      email: decryptedUser.email,
-      phone: decryptedUser.phone,
-      contact_person: decryptedUser.contact_person
-    });
     res.json(decryptedUser);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -219,7 +206,6 @@ const logout = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    console.log('📝 Update Profile Request Body:', req.body);
     const { contact_person, phone, email, organization_name, address, coordinates } = req.body;
     const userId = req.user._id;
 
@@ -239,7 +225,6 @@ const updateProfile = async (req, res) => {
     if (organization_name !== undefined) updateData.organization_name = organization_name;
     if (address !== undefined) updateData.address = address;
     
-    console.log('📝 Update Data:', updateData);
     
     // Update location if coordinates provided
     if (coordinates && Array.isArray(coordinates) && coordinates.length === 2) {
@@ -264,9 +249,7 @@ const updateProfile = async (req, res) => {
     const userWithDecryption = await User.findById(userId).select('-password');
     const decryptedUser = decryptUserFields(userWithDecryption);
 
-    console.log('✅ Updated User org name:', decryptedUser.organization_name);
-    console.log('✅ Updated User phone:', decryptedUser.phone);
-    console.log('✅ Preserved activity stats:', decryptedUser.activity_stats);
+    await redis.del(`user:${userId}`); // bust user cache so fresh data is served
 
     res.json({
       message: 'Profile updated successfully',

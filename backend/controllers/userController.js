@@ -8,13 +8,23 @@ const STATS_TTL = 300; // 5 minutes
 
 const getPendingVerifications = async (req, res) => {
   try {
-    const cached = await redis.get('admin:pending');
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.min(50, parseInt(req.query.limit) || 20);
+    const cacheKey = `admin:pending:p${page}`;
+    const cached = await redis.get(cacheKey);
     if (cached) return res.json(JSON.parse(cached));
 
-    const users = await User.find({ is_verified: false, role: { $ne: 'admin' } }).select('-password');
+    const total = await User.countDocuments({ is_verified: false, role: { $ne: 'admin' } });
+    const users = await User.find({ is_verified: false, role: { $ne: 'admin' } })
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
     const decryptedUsers = users.map(user => decryptUserFields(user));
-    await redis.set('admin:pending', JSON.stringify(decryptedUsers), 60); // 1 min TTL
-    res.json(decryptedUsers);
+    const payload = { users: decryptedUsers, pagination: { total, page, limit, pages: Math.ceil(total / limit) } };
+    await redis.set(cacheKey, JSON.stringify(payload), 60);
+    res.json(payload);
   } catch (error) {
     console.error('getPendingVerifications error:', error);
     res.status(500).json({ message: error.message });
@@ -70,7 +80,6 @@ const getAdminStats = async (req, res) => {
     if (!hasDateRange) {
       const cached = await redis.get('admin:stats:v2');
       if (cached) {
-        console.log('⚡ Admin stats served from Redis cache');
         return res.json(JSON.parse(cached));
       }
     }
@@ -287,8 +296,9 @@ const toggleBiometric = async (req, res) => {
     ).select('-password');
 
     const decryptedUser = decryptUserFields(user);
+    await redis.del(`user:${userId}`); // bust cache — biometric status changed
 
-    res.json({ 
+    res.json({
       message: `Biometric ${enabled ? 'enabled' : 'disabled'} successfully`,
       biometric_enabled: decryptedUser.biometric_enabled
     });
@@ -310,20 +320,29 @@ const getBiometricStatus = async (req, res) => {
 
 const uploadProfilePicture = async (req, res) => {
   try {
-    const { image } = req.body; // Base64 encoded image
-    
-    if (!image) {
-      return res.status(400).json({ message: 'No image provided' });
+    const { image } = req.body;
+    if (!image) return res.status(400).json({ message: 'No image provided' });
+    if (typeof image !== 'string') return res.status(400).json({ message: 'Image must be a base64 string' });
+
+    // Enforce max 2MB as base64 (base64 is ~33% larger than binary, so 2MB base64 ≈ 1.5MB image)
+    const MAX_BASE64_BYTES = 2 * 1024 * 1024; // 2MB
+    if (Buffer.byteLength(image, 'utf8') > MAX_BASE64_BYTES) {
+      return res.status(413).json({ message: 'Image too large. Maximum size is 1.5 MB.' });
     }
 
-    // Encrypt the image data using simple base64 encoding (already encrypted from client)
+    // Validate it's actually a base64 image (must start with data:image/)
+    if (!image.startsWith('data:image/')) {
+      return res.status(400).json({ message: 'Invalid image format. Must be a base64 encoded image.' });
+    }
+
     const user = await User.findByIdAndUpdate(
       req.user.id,
       { profile_picture: image },
       { new: true }
     ).select('-password');
 
-    res.json({ 
+    await redis.del(`user:${req.user.id}`); // Bust user cache
+    res.json({
       message: 'Profile picture uploaded successfully',
       profile_picture: user.profile_picture
     });
@@ -335,9 +354,7 @@ const uploadProfilePicture = async (req, res) => {
 const getProfilePicture = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('profile_picture');
-    console.log('📸 Raw profile_picture from DB:', user.profile_picture ? user.profile_picture.substring(0, 100) : 'null');
     const decryptedUser = decryptUserFields(user);
-    console.log('📸 Decrypted profile_picture:', decryptedUser.profile_picture ? decryptedUser.profile_picture.substring(0, 100) : 'null');
     res.json({ profile_picture: decryptedUser.profile_picture });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -454,6 +471,19 @@ const getExportAnalytics = async (req, res) => {
   try {
     const mongoose = require('mongoose');
     const { startDate, endDate } = req.query;
+
+    // Validate date format if provided
+    if (startDate && isNaN(Date.parse(startDate))) {
+      return res.status(400).json({ message: 'Invalid startDate format. Use ISO 8601 (YYYY-MM-DD).' });
+    }
+    if (endDate && isNaN(Date.parse(endDate))) {
+      return res.status(400).json({ message: 'Invalid endDate format. Use ISO 8601 (YYYY-MM-DD).' });
+    }
+
+    // Cache for 2 minutes — export is expensive (14 aggregations) but admins need fresh-ish data
+    const cacheKey = `admin:export:${startDate || 'all'}:${endDate || 'all'}`;
+    const cached = await redis.get(cacheKey);
+    if (cached) return res.json(JSON.parse(cached));
 
     const dateFilter = {};
     if (startDate) dateFilter.$gte = new Date(startDate);
@@ -596,7 +626,7 @@ const getExportAnalytics = async (req, res) => {
     const schedT = ptMap.scheduled?.count || 0;
     const ptTot  = instT + schedT || 1;
 
-    res.json({
+    const exportPayload = {
       period: {
         start:       startDate || null,
         end:         endDate   || null,
@@ -646,7 +676,9 @@ const getExportAnalytics = async (req, res) => {
       release_reasons: releaseReasons.map(r => ({ reason: r._id || 'Unknown', count: r.count })),
       top_ngos: topNGOs,
       top_donors: topDonors
-    });
+    };
+    await redis.set(cacheKey, JSON.stringify(exportPayload), 120); // 2 min cache
+    res.json(exportPayload);
   } catch (error) {
     console.error('getExportAnalytics error:', error);
     res.status(500).json({ message: error.message });

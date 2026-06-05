@@ -17,7 +17,8 @@ const {
   getRatingsSummary
 } = require('../controllers/userController');
 const { auth, requireRole } = require('../middleware/auth');
-const { validateAdminUserAction } = require('../middleware/validators');
+const { validateAdminUserAction, validateDateRange } = require('../middleware/validators');
+const { exportLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
@@ -39,7 +40,7 @@ router.put('/:userId/verify', auth, requireRole(['admin']), validateAdminUserAct
 router.put('/:userId/status', auth, requireRole(['admin']), validateAdminUserAction, toggleUserStatus);
 router.get('/:userId/detail', auth, requireRole(['admin']), getUserDetail);
 router.get('/stats', auth, requireRole(['admin']), getAdminStats);
-router.get('/export/analytics', auth, requireRole(['admin']), getExportAnalytics);
+router.get('/export/analytics', auth, requireRole(['admin']), exportLimiter, getExportAnalytics);
 router.get('/ratings/summary', auth, requireRole(['admin']), getRatingsSummary);
 router.get('/donations/all', auth, requireRole(['admin']), getAllActiveDonations);
 router.get('/all', auth, requireRole(['admin']), getAllUsers);

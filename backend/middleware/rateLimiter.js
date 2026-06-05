@@ -137,4 +137,57 @@ const syncLimiter = async (req, res, next) => {
   next();
 };
 
-module.exports = { loginLimiter, registerLimiter, passwordResetLimiter, otpLimiter, syncLimiter };
+// Donation create — 20 per hour per donor (anti-spam)
+const donationCreateLimiter = async (req, res, next) => {
+  const userId = req.user?._id || req.user?.id || getIp(req);
+  const count = await incrKey(`rl:donation_create:${userId}`, 60 * 60);
+  if (count > 20) {
+    return res.status(429).json({ message: 'Too many donations posted. Try again in an hour.', retryAfterSeconds: 3600 });
+  }
+  next();
+};
+
+// Claim — 60 per hour per NGO (generous, avoids blocking legit use)
+const claimLimiter = async (req, res, next) => {
+  const userId = req.user?._id || req.user?.id || getIp(req);
+  const count = await incrKey(`rl:claim:${userId}`, 60 * 60);
+  if (count > 60) {
+    return res.status(429).json({ message: 'Too many claim attempts. Try again in an hour.', retryAfterSeconds: 3600 });
+  }
+  next();
+};
+
+// Rating — 30 per hour per user (prevents review spam)
+const ratingLimiter = async (req, res, next) => {
+  const userId = req.user?._id || req.user?.id || getIp(req);
+  const count = await incrKey(`rl:rating:${userId}`, 60 * 60);
+  if (count > 30) {
+    return res.status(429).json({ message: 'Too many rating submissions. Try again in an hour.', retryAfterSeconds: 3600 });
+  }
+  next();
+};
+
+// Export analytics — 5 per minute per admin (expensive aggregation)
+const exportLimiter = async (req, res, next) => {
+  const userId = req.user?._id || req.user?.id || getIp(req);
+  const count = await incrKey(`rl:export:${userId}`, 60);
+  if (count > 5) {
+    return res.status(429).json({ message: 'Export rate limit exceeded. Wait 1 minute.', retryAfterSeconds: 60 });
+  }
+  next();
+};
+
+// Map endpoints — 60 per minute per IP
+const mapLimiter = async (req, res, next) => {
+  const ip = getIp(req);
+  const count = await incrKey(`rl:map:${ip}`, 60);
+  if (count > 60) {
+    return res.status(429).json({ message: 'Too many map requests. Slow down.', retryAfterSeconds: 60 });
+  }
+  next();
+};
+
+module.exports = {
+  loginLimiter, registerLimiter, passwordResetLimiter, otpLimiter, syncLimiter,
+  donationCreateLimiter, claimLimiter, ratingLimiter, exportLimiter, mapLimiter
+};
