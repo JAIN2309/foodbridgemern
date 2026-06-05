@@ -1013,7 +1013,7 @@ const AdminDashboard = () => {
               <h3 className="text-lg font-medium">{t('dashboard.admin.liveDonationMap')}</h3>
               <div className="h-96 rounded-lg overflow-hidden">
                 <MapContainer
-                  center={[28.6139, 77.2090]} // Default to Delhi
+                  center={[20.5937, 78.9629]} // Centre of India
                   zoom={10}
                   style={{ height: '100%', width: '100%' }}
                 >

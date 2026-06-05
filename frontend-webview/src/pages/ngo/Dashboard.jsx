@@ -23,7 +23,7 @@ const NGODashboard = () => {
   const location = useLocation();
   const { user } = useSelector((state) => state.auth);
   const { nearbyDonations, userDonations, isLoading } = useSelector((state) => state.donations);
-  const { location: geoLocation } = useGeolocation();
+  const { location: geoLocation, error: geoError, loading: geoLoading, retry: retryLocation } = useGeolocation();
   const [activeTab, setActiveTab] = useState('feed');
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
   const [filters, setFilters] = useState({
@@ -58,24 +58,25 @@ const NGODashboard = () => {
       setActiveTab(['feed', 'history'].includes(tabParam) ? tabParam : 'feed');
     }
     
-    // Use location or fallback to Delhi coordinates
-    const coords = geoLocation || { latitude: 28.6139, longitude: 77.2090 };
-
-    dispatch(fetchNearbyDonations({
-      longitude: coords.longitude,
-      latitude: coords.latitude,
-      maxDistance: 10000
-    }));
-    
-    dispatch(fetchNGOHistory());
-    
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(() => {
+    // Only fetch donations if we have real location — never fall back to hardcoded coords
+    if (geoLocation) {
       dispatch(fetchNearbyDonations({
-        longitude: coords.longitude,
-        latitude: coords.latitude,
-        maxDistance: 10000
+        longitude: geoLocation.longitude,
+        latitude:  geoLocation.latitude,
+        maxDistance: filters.radius * 1000
       }));
+    }
+    dispatch(fetchNGOHistory());
+
+    // Auto-refresh every 30 seconds — skip nearby if still no location
+    const interval = setInterval(() => {
+      if (geoLocation) {
+        dispatch(fetchNearbyDonations({
+          longitude: geoLocation.longitude,
+          latitude:  geoLocation.latitude,
+          maxDistance: filters.radius * 1000
+        }));
+      }
       dispatch(fetchNGOHistory());
     }, 30000);
     
@@ -173,8 +174,7 @@ const NGODashboard = () => {
       })).unwrap();
       toast.success(t('dashboard.ngo.claimSuccess'));
       setActiveTab('history'); // switch to My Claims so NGO sees their reservation
-      const coords = geoLocation || { latitude: 28.6139, longitude: 77.2090 };
-      dispatch(fetchNearbyDonations({ longitude: coords.longitude, latitude: coords.latitude, maxDistance: 10000 }));
+      if (geoLocation) dispatch(fetchNearbyDonations({ longitude: geoLocation.longitude, latitude: geoLocation.latitude, maxDistance: filters.radius * 1000 }));
       dispatch(fetchNGOHistory());
     } catch (error) {
       toast.error(error || t('dashboard.ngo.claimFailed'));
@@ -204,11 +204,12 @@ const NGODashboard = () => {
     return `${hours}h ${minutes}m left`;
   };
 
-  // Re-fetch when radius changes
+  // Re-fetch when radius changes — only if location is available
   useEffect(() => {
-    const coords = geoLocation || { latitude: 28.6139, longitude: 77.2090 };
-    dispatch(fetchNearbyDonations({ longitude: coords.longitude, latitude: coords.latitude, maxDistance: filters.radius * 1000 }));
-  }, [filters.radius]);
+    if (geoLocation) {
+      dispatch(fetchNearbyDonations({ longitude: geoLocation.longitude, latitude: geoLocation.latitude, maxDistance: filters.radius * 1000 }));
+    }
+  }, [filters.radius, geoLocation]);
 
   const filteredFeed = useMemo(() => {
     let result = nearbyDonations.filter(d => d.status === 'available');
@@ -332,6 +333,34 @@ const NGODashboard = () => {
         <div className="p-6">
           {activeTab === 'feed' && (
             <div className="space-y-4">
+
+              {/* Location permission prompt — shown when GPS unavailable */}
+              {!geoLocation && (
+                <div className={`rounded-xl p-5 text-center border-2 ${
+                  geoLoading
+                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                    : 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700'
+                }`}>
+                  <div className="text-3xl mb-3">{geoLoading ? '📍' : '⚠️'}</div>
+                  <h4 className="font-bold text-gray-800 dark:text-white mb-1">
+                    {geoLoading ? t('dashboard.ngo.locationDetecting') : t('dashboard.ngo.locationRequired')}
+                  </h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    {geoLoading
+                      ? t('dashboard.ngo.locationDetectingDesc')
+                      : (geoError || t('dashboard.ngo.locationRequiredDesc'))}
+                  </p>
+                  {!geoLoading && (
+                    <button
+                      onClick={retryLocation}
+                      className="px-5 py-2 bg-primary-600 text-white rounded-xl text-sm font-semibold hover:bg-primary-700 transition-colors"
+                    >
+                      {t('dashboard.ngo.enableLocation')}
+                    </button>
+                  )}
+                </div>
+              )}
+
               <div className="flex justify-between items-center mb-3">
                 <h3 className="text-lg font-medium">{t('dashboard.ngo.availableDonations')} <span className="text-sm font-normal text-gray-400">({filteredFeed.length})</span></h3>
                 <div className="flex space-x-2">
@@ -457,7 +486,7 @@ const NGODashboard = () => {
                           {t('dashboard.ngo.clearFilters')}
                         </button>
                       ) : (
-                        <button onClick={() => { const c = geoLocation || { latitude: 28.6139, longitude: 77.2090 }; dispatch(fetchNearbyDonations({ longitude: c.longitude, latitude: c.latitude, maxDistance: filters.radius * 1000 })); }}
+                        <button onClick={() => { if (geoLocation) dispatch(fetchNearbyDonations({ longitude: geoLocation.longitude, latitude: geoLocation.latitude, maxDistance: filters.radius * 1000 })); }}
                           className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
                           {t('dashboard.ngo.refreshDonations')}
                         </button>
