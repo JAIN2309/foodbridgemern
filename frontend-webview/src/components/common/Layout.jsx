@@ -91,7 +91,7 @@ const Layout = ({ children }) => {
     baseItems.push({ icon: History, label: 'History', id: 'history', action: 'history' });
 
     if (user?.role === 'admin') {
-      baseItems.push({ icon: Star, label: 'Ratings', id: 'ratings', action: 'ratings' });
+      baseItems.push({ icon: Star, label: t('layout.ratings'), id: 'ratings', action: 'ratings' });
     }
 
     baseItems.push({ icon: Settings, label: 'Settings', id: 'settings', path: '/settings' });
