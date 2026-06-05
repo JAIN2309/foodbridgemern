@@ -98,7 +98,9 @@ const register = async (req, res) => {
       const redisCli = redis.getClient();
       const uKeys = await redisCli?.keys('admin:users:*') || [];
       if (uKeys.length) await redisCli.del(uKeys);
-      await redis.del('admin:pending');
+      // Bust all paginated pending pages
+      const pendingKeys = await redisCli?.keys('admin:pending:p*') || [];
+      if (pendingKeys.length) await redisCli.del(pendingKeys);
     } catch {}
 
     // Send registration email

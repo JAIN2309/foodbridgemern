@@ -56,7 +56,9 @@ const verifyUser = async (req, res) => {
     }
 
     await redis.del('admin:stats:v2');
-    await redis.del('admin:pending');
+    // Paginated pending cache — bust all pages
+    const pendingKeys = await redis.getClient()?.keys('admin:pending:p*') || [];
+    if (pendingKeys.length) await redis.getClient().del(pendingKeys);
     await redis.del(`user:${userId}`);
     await redis.del(`admin:user_detail:${userId}`);
     const userListKeys = await redis.getClient()?.keys('admin:users:*') || [];
