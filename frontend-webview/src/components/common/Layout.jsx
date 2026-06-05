@@ -4,16 +4,17 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { logout, logoutUser } from '../../store/slices/authSlice';
 import { useMobile } from '../../hooks/useMobile';
-import { 
-  Home, 
-  Plus, 
-  History, 
-  Settings, 
+import {
+  Home,
+  Plus,
+  History,
+  Settings,
   LogOut,
   Users,
   BarChart3,
   User,
-  MapPin
+  MapPin,
+  Star
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -88,6 +89,11 @@ const Layout = ({ children }) => {
     }
 
     baseItems.push({ icon: History, label: 'History', id: 'history', action: 'history' });
+
+    if (user?.role === 'admin') {
+      baseItems.push({ icon: Star, label: 'Ratings', id: 'ratings', action: 'ratings' });
+    }
+
     baseItems.push({ icon: Settings, label: 'Settings', id: 'settings', path: '/settings' });
 
     return baseItems;

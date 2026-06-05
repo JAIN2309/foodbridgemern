@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import {
   Users, CheckCircle, XCircle, MapPin, Clock, TrendingUp,
-  Package, ShieldCheck, Utensils, AlertCircle, BarChart3
+  Package, ShieldCheck, Utensils, AlertCircle, BarChart3, Star
 } from 'lucide-react';
 import api from '../../services/api';
 import DonationCard from '../../components/common/DonationCard';
@@ -243,8 +243,12 @@ const AdminDashboard = () => {
       if (start) params.set('startDate', start);
       if (end)   params.set('endDate',   end);
       const query = params.toString() ? `?${params}` : '';
-      const res = await api.get(`/users/stats${query}`);
-      setAnalyticsStats(res.data);
+      // Fetch stats + ratings in parallel
+      const [statsRes] = await Promise.all([
+        api.get(`/users/stats${query}`),
+        fetchRatings(), // also refresh ratings when date filter applied
+      ]);
+      setAnalyticsStats(statsRes.data);
     } catch { /* keep previous */ } finally {
       setAnalyticsLoading(false);
     }
@@ -434,6 +438,42 @@ const AdminDashboard = () => {
       })()}
       ${spacer()}
 
+      <!-- SECTION 8: RATINGS SUMMARY -->
+      ${ratingsData ? `
+      ${banner('SECTION 8  —  RATINGS SUMMARY')}
+      ${thead('Metric', 'Value', '', 'Star', 'Count', '% of Reviews', '', '')}
+      <tr>
+        <td style="${S.cellL(0)}">Total Reviews</td><td style="${S.boldC0}">${ratingsData.stats.total_reviews}</td><td style="${S.empty}"></td>
+        <td style="${S.rank0}">5★</td><td style="${S.boldC0}">${ratingsData.stats.distribution[5]||0}</td><td style="${S.cellC0}">${pct(ratingsData.stats.distribution[5]||0, ratingsData.stats.total_reviews||1)}</td><td colspan="2" style="${S.empty}"></td>
+      </tr>
+      <tr>
+        <td style="${S.cellL(1)}">Platform Average</td><td style="${S.boldC1}">★ ${ratingsData.stats.platform_avg}</td><td style="${S.empty}"></td>
+        <td style="${S.rank1}">4★</td><td style="${S.boldC1}">${ratingsData.stats.distribution[4]||0}</td><td style="${S.cellC1}">${pct(ratingsData.stats.distribution[4]||0, ratingsData.stats.total_reviews||1)}</td><td colspan="2" style="${S.empty}"></td>
+      </tr>
+      <tr>
+        <td style="${S.cellL(0)}">Rated Users</td><td style="${S.boldC0}">${ratingsData.stats.rated_users}</td><td style="${S.empty}"></td>
+        <td style="${S.rank0}">3★</td><td style="${S.boldC0}">${ratingsData.stats.distribution[3]||0}</td><td style="${S.cellC0}">${pct(ratingsData.stats.distribution[3]||0, ratingsData.stats.total_reviews||1)}</td><td colspan="2" style="${S.empty}"></td>
+      </tr>
+      <tr>
+        <td style="${S.cellL(1)}"></td><td style="${S.empty}"></td><td style="${S.empty}"></td>
+        <td style="${S.rank1}">2★</td><td style="${S.boldC1}">${ratingsData.stats.distribution[2]||0}</td><td style="${S.cellC1}">${pct(ratingsData.stats.distribution[2]||0, ratingsData.stats.total_reviews||1)}</td><td colspan="2" style="${S.empty}"></td>
+      </tr>
+      <tr>
+        <td style="${S.cellL(0)}"></td><td style="${S.empty}"></td><td style="${S.empty}"></td>
+        <td style="${S.rank0}">1★</td><td style="${S.boldC0}">${ratingsData.stats.distribution[1]||0}</td><td style="${S.cellC0}">${pct(ratingsData.stats.distribution[1]||0, ratingsData.stats.total_reviews||1)}</td><td colspan="2" style="${S.empty}"></td>
+      </tr>
+      ${spacer()}
+      ${banner('TOP RATED NGOs')}
+      ${thead('#', 'NGO Name', 'Avg Rating', 'Review Count', '', '', '', '')}
+      ${ratingsData.top_ngos.slice(0,5).map((u,i) => `<tr>
+        <td style="${S.rank0}">${i+1}</td>
+        <td style="${S.cellL(i)}">${u.organization_name}</td>
+        <td style="${cbC(i)}">★ ${(u.ratings?.average||0).toFixed(1)}</td>
+        <td style="${S.cellC(i)}">${u.ratings?.count||0}</td>
+        <td colspan="4" style="${S.empty}"></td>
+      </tr>`).join('')}
+      ${spacer()}` : '<!-- No ratings data -->'}
+
       <!-- FOOTER -->
       <tr><td colspan="${COLS}" style="background:#e8e8e8;color:#555;font-size:8pt;text-align:center;padding:7px;border-top:2px solid #999">
         FoodBridge Analytics Report   —   Generated ${new Date(d.generated_at).toLocaleString()}
@@ -576,6 +616,29 @@ const AdminDashboard = () => {
         </table>
       </div>
     </div>
+
+    ${ratingsData ? `
+    <div class="grid2" style="margin-top:16px">
+      <div>
+        <h2>⭐ Ratings Summary</h2>
+        <table>
+          ${th('Metric','Value')}
+          ${r('Total Reviews', ratingsData.stats.total_reviews)}
+          ${r('Platform Average', '★ ' + ratingsData.stats.platform_avg)}
+          ${r('Rated Users', ratingsData.stats.rated_users)}
+          ${r('5-Star Reviews', ratingsData.stats.distribution[5]||0)}
+          ${r('4-Star Reviews', ratingsData.stats.distribution[4]||0)}
+          ${r('3-Star Reviews', ratingsData.stats.distribution[3]||0)}
+        </table>
+      </div>
+      <div>
+        <h2>🏆 Top Rated NGOs</h2>
+        <table>
+          ${th('#','NGO Name','Avg','Reviews')}
+          ${ratingsData.top_ngos.slice(0,5).map((u,i) => td(`<span class="rank">${i+1}</span>`, u.organization_name, '★ '+(u.ratings?.average||0).toFixed(1), u.ratings?.count||0)).join('')}
+        </table>
+      </div>
+    </div>` : ''}
 
     <div class="footer">FoodBridge &nbsp;·&nbsp; Reducing food waste, one donation at a time &nbsp;·&nbsp; foodbridge.app</div>
     </body></html>`;
@@ -1227,6 +1290,48 @@ const AdminDashboard = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Ratings Analytics Section */}
+              {ratingsData && (
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-5">
+                  <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+                    <Star className="w-4 h-4 text-amber-500" /> {t('dashboard.admin.ratingsAnalytics')}
+                  </h4>
+
+                  {/* Summary cards */}
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    {[
+                      { label: t('dashboard.admin.totalReviews'),  value: ratingsData.stats.total_reviews, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20' },
+                      { label: t('dashboard.admin.platformAvg'),   value: `★ ${ratingsData.stats.platform_avg}`, color: 'text-yellow-600', bg: 'bg-yellow-50 dark:bg-yellow-900/20' },
+                      { label: t('dashboard.admin.ratedUsers'),    value: ratingsData.stats.rated_users, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+                    ].map(({ label, value, color, bg }) => (
+                      <div key={label} className={`${bg} rounded-xl p-3 text-center`}>
+                        <p className={`text-xl font-bold ${color}`}>{value}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Distribution bars */}
+                  <div className="space-y-1.5">
+                    {[5,4,3,2,1].map(star => {
+                      const count = ratingsData.stats.distribution[star] || 0;
+                      const pct   = ratingsData.stats.total_reviews > 0 ? Math.round((count / ratingsData.stats.total_reviews) * 100) : 0;
+                      return (
+                        <div key={star} className="flex items-center gap-2 text-xs">
+                          <span className="text-amber-500 font-bold w-3">{star}</span>
+                          <span className="text-amber-400 text-xs">★</span>
+                          <div className="flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                            <div className="bg-amber-400 h-2 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-gray-500 w-6 text-right">{count}</span>
+                          <span className="text-gray-400 w-8">{pct}%</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
