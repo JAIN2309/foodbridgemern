@@ -443,23 +443,23 @@ const AdminDashboard = () => {
       ${banner('SECTION 8  —  RATINGS SUMMARY')}
       ${thead('Metric', 'Value', '', 'Star', 'Count', '% of Reviews', '', '')}
       <tr>
-        <td style="${S.cellL(0)}">Total Reviews</td><td style="${S.boldC0}">${ratingsData.stats.total_reviews}</td><td style="${S.empty}"></td>
+        <td style="${c(0)}">Total Reviews</td><td style="${S.boldC0}">${ratingsData.stats.total_reviews}</td><td style="${S.empty}"></td>
         <td style="${S.rank0}">5★</td><td style="${S.boldC0}">${ratingsData.stats.distribution[5]||0}</td><td style="${S.cellC0}">${pct(ratingsData.stats.distribution[5]||0, ratingsData.stats.total_reviews||1)}</td><td colspan="2" style="${S.empty}"></td>
       </tr>
       <tr>
-        <td style="${S.cellL(1)}">Platform Average</td><td style="${S.boldC1}">★ ${ratingsData.stats.platform_avg}</td><td style="${S.empty}"></td>
+        <td style="${c(1)}">Platform Average</td><td style="${S.boldC1}">★ ${ratingsData.stats.platform_avg}</td><td style="${S.empty}"></td>
         <td style="${S.rank1}">4★</td><td style="${S.boldC1}">${ratingsData.stats.distribution[4]||0}</td><td style="${S.cellC1}">${pct(ratingsData.stats.distribution[4]||0, ratingsData.stats.total_reviews||1)}</td><td colspan="2" style="${S.empty}"></td>
       </tr>
       <tr>
-        <td style="${S.cellL(0)}">Rated Users</td><td style="${S.boldC0}">${ratingsData.stats.rated_users}</td><td style="${S.empty}"></td>
+        <td style="${c(0)}">Rated Users</td><td style="${S.boldC0}">${ratingsData.stats.rated_users}</td><td style="${S.empty}"></td>
         <td style="${S.rank0}">3★</td><td style="${S.boldC0}">${ratingsData.stats.distribution[3]||0}</td><td style="${S.cellC0}">${pct(ratingsData.stats.distribution[3]||0, ratingsData.stats.total_reviews||1)}</td><td colspan="2" style="${S.empty}"></td>
       </tr>
       <tr>
-        <td style="${S.cellL(1)}"></td><td style="${S.empty}"></td><td style="${S.empty}"></td>
+        <td style="${c(1)}"></td><td style="${S.empty}"></td><td style="${S.empty}"></td>
         <td style="${S.rank1}">2★</td><td style="${S.boldC1}">${ratingsData.stats.distribution[2]||0}</td><td style="${S.cellC1}">${pct(ratingsData.stats.distribution[2]||0, ratingsData.stats.total_reviews||1)}</td><td colspan="2" style="${S.empty}"></td>
       </tr>
       <tr>
-        <td style="${S.cellL(0)}"></td><td style="${S.empty}"></td><td style="${S.empty}"></td>
+        <td style="${c(0)}"></td><td style="${S.empty}"></td><td style="${S.empty}"></td>
         <td style="${S.rank0}">1★</td><td style="${S.boldC0}">${ratingsData.stats.distribution[1]||0}</td><td style="${S.cellC0}">${pct(ratingsData.stats.distribution[1]||0, ratingsData.stats.total_reviews||1)}</td><td colspan="2" style="${S.empty}"></td>
       </tr>
       ${spacer()}
@@ -652,16 +652,24 @@ const AdminDashboard = () => {
 
   const handleExportCSV = async () => {
     setExportLoading(true);
-    try { generateExcel(await fetchExportData()); }
-    catch { toast.error('Export failed'); }
-    finally { setExportLoading(false); }
+    try {
+      const data = await fetchExportData();
+      generateExcel(data);
+    } catch (err) {
+      console.error('Excel export error:', err);
+      toast.error(err?.response?.data?.message || err?.message || 'Export failed');
+    } finally { setExportLoading(false); }
   };
 
   const handleExportPDF = async () => {
     setExportLoading(true);
-    try { generatePDF(await fetchExportData()); }
-    catch { toast.error('Export failed'); }
-    finally { setExportLoading(false); }
+    try {
+      const data = await fetchExportData();
+      generatePDF(data);
+    } catch (err) {
+      console.error('PDF export error:', err);
+      toast.error(err?.response?.data?.message || err?.message || 'Export failed');
+    } finally { setExportLoading(false); }
   };
 
   const handleVerifyUser = async () => {
