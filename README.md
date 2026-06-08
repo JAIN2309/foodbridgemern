@@ -529,6 +529,7 @@ npm run fetch-roles         # Role-wise user report
 **JAIN2309**
 
 [![GitHub](https://img.shields.io/badge/GitHub-@JAIN2309-181717?style=for-the-badge&logo=github)](https://github.com/JAIN2309)
+[![Email](https://img.shields.io/badge/Email-krishjain641@gmail.com-EA4335?style=for-the-badge&logo=gmail&logoColor=white)](mailto:krishjain641@gmail.com)
 [![Repo](https://img.shields.io/badge/Repo-foodbridgemern-2088FF?style=for-the-badge&logo=git)](https://github.com/JAIN2309/foodbridgemern)
 
 <br/>
