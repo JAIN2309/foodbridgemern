@@ -17,6 +17,7 @@ const upload = require('../middleware/upload');
 const offlineService = require('../services/offlineService');
 const { validateCreateDonation, validateClaimDonation, validateRelease, validateRating, validateSyncOffline } = require('../middleware/validators');
 const { syncLimiter, donationCreateLimiter, claimLimiter, ratingLimiter } = require('../middleware/rateLimiter');
+const serverError = require('../utils/serverError');
 
 const router = express.Router();
 
@@ -71,7 +72,7 @@ router.get('/offline-package', auth, async (req, res) => {
     await redis.set(cacheKey, JSON.stringify(pkg), 300); // 5 min TTL
     res.json(pkg);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 });
 

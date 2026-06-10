@@ -3,6 +3,7 @@ const { register, login, getProfile, logout, updateProfile, verifyPassword, requ
 const { auth } = require('../middleware/auth');
 const { loginLimiter, registerLimiter, passwordResetLimiter, otpLimiter } = require('../middleware/rateLimiter');
 const { validateRegister, validateLogin, validateUpdateProfile, validatePasswordReset } = require('../middleware/validators');
+const serverError = require('../utils/serverError');
 
 const router = express.Router();
 
@@ -26,7 +27,7 @@ router.put('/push-token', auth, async (req, res) => {
     await (require('../utils/redisClient')).del(`user:${userId}`);
     res.json({ message: 'Push token saved' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 });
 

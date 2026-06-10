@@ -3,6 +3,7 @@ const router = express.Router();
 const mapService = require('../services/mapService');
 const { auth } = require('../middleware/auth');
 const { mapLimiter } = require('../middleware/rateLimiter');
+const serverError = require('../utils/serverError');
 
 // Find nearby locations — auth required, rate limited
 router.post('/nearby', auth, mapLimiter, async (req, res) => {
@@ -31,7 +32,7 @@ router.post('/nearby', auth, mapLimiter, async (req, res) => {
     const nearbyLocations = mapService.findNearbyLocations(latitude, longitude, locations, radius);
     res.json({ locations: nearbyLocations });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    serverError(res, error);
   }
 });
 
@@ -48,7 +49,7 @@ router.post('/distance', auth, mapLimiter, (req, res) => {
     const distance = mapService.calculateDistance(lat1, lon1, lat2, lon2);
     res.json({ distance });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    serverError(res, error);
   }
 });
 

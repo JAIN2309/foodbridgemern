@@ -267,6 +267,16 @@ PORT=5001
 >
 > 🛰 **Sentry:** DSN from sentry.io → Project Settings → Client Keys. Web uses `VITE_SENTRY_DSN`, mobile uses `EXPO_PUBLIC_SENTRY_DSN`.
 
+**Mobile** (`frontend-mobileview/.env`) — point the app at your PC's LAN IP (run `ipconfig` to find it):
+
+```env
+# Your PC's LAN IP — both the REST API and Socket.IO derive from this single value
+EXPO_PUBLIC_API_URL=http://192.168.1.10:5001/api
+EXPO_PUBLIC_SENTRY_DSN=https://xxx@oXXX.ingest.sentry.io/XXX
+```
+
+> 📶 **One IP to rule them all:** `api.ts` reads `EXPO_PUBLIC_API_URL`, and `socket.ts` derives the Socket.IO URL from it (strips `/api`). Change the IP in `.env` only. Restart Expo with cache clear after editing — `npx expo start -c` — since `EXPO_PUBLIC_*` vars are inlined at bundle time.
+
 ### 4️⃣ Create the first admin
 ```bash
 cd backend && npm run create-admin
@@ -391,6 +401,7 @@ cd backend && npm run create-admin
 | 🔢 **OTP single-use** | Verified flag prevents reuse; per-account attempt cap |
 | 🧹 **Log redaction** | Passwords, tokens, encrypted fields stripped from all logs |
 | 🛑 **CSP** | Content-Security-Policy on web (script-src self, allow-listed connect-src) |
+| 🙈 **No error leakage** | 500s return a generic message to the client; full error + stack logged server-side and captured to Sentry (never exposed) |
 
 ---
 
@@ -438,6 +449,8 @@ NGO claims donation
 ```
 
 Both donor and NGO dashboards also auto-refresh every 30 seconds as a fallback.
+
+> 🏠 **Room joins:** web and mobile both `emit('join-ngo-room' / 'join-donor-room', userId)` on connect, so targeted events reach the right client on every platform consistently.
 
 ### 📴 Offline Sync (Android)
 ```

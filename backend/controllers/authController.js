@@ -3,6 +3,7 @@ const User  = require('../models/User');
 const redis = require('../utils/redisClient');
 const { sendEmail, emailTemplates } = require('../services/emailService');
 const { decryptUserFields } = require('../utils/userHelper');
+const serverError = require('../utils/serverError');
 
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -121,7 +122,7 @@ const register = async (req, res) => {
       user: userProfile
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -168,7 +169,7 @@ const login = async (req, res) => {
       profile_picture: user.profile_picture
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -178,7 +179,7 @@ const getProfile = async (req, res) => {
     const decryptedUser = decryptUserFields(user);
     res.json(decryptedUser);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -202,7 +203,7 @@ const logout = async (req, res) => {
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout API error:', error);
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -259,7 +260,7 @@ const updateProfile = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Update Profile Error:', error);
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -283,7 +284,7 @@ const verifyPassword = async (req, res) => {
     // Password is correct
     res.json({ message: 'Password verified', valid: true });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -319,7 +320,7 @@ const requestPasswordReset = async (req, res) => {
       res.status(500).json({ message: 'Failed to send OTP email' });
     }
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -362,7 +363,7 @@ const verifyOTP = async (req, res) => {
 
     res.json({ message: 'OTP verified successfully', verified: true });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -416,7 +417,7 @@ const resetPassword = async (req, res) => {
     res.json({ message: 'Password reset successful. Please log in again.' });
   } catch (error) {
     console.error('❌ Password reset error:', error);
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 

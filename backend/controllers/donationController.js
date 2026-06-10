@@ -4,6 +4,7 @@ const Logistics = require('../models/Logistics');
 const User = require('../models/User');
 const redis = require('../utils/redisClient');
 const { sendEmail, emailTemplates } = require('../services/emailService');
+const serverError = require('../utils/serverError');
 const performanceService = require('../services/performanceService');
 const { pushToUser, silentSyncToUser } = require('../services/pushService');
 
@@ -166,7 +167,7 @@ const createDonation = async (req, res) => {
   } catch (error) {
     console.error('💥 CREATE DONATION - Error:', error.message);
     console.error('Stack trace:', error.stack);
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -187,7 +188,7 @@ const getNearbyDonations = async (req, res) => {
     res.json(filteredDonations);
   } catch (error) {
     console.error('💥 GET NEARBY DONATIONS - Error:', error.message);
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -339,7 +340,7 @@ const claimDonation = async (req, res) => {
       scheduled_pickup_time: parsedScheduledTime
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -462,7 +463,7 @@ const markCollected = async (req, res) => {
       rating_submitted: !!rating
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -561,7 +562,7 @@ const releaseDonation = async (req, res) => {
 
     res.json({ message: 'Donation released back to available' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -630,7 +631,7 @@ const rateNGO = async (req, res) => {
 
     res.json({ message: 'NGO rated successfully', rating: parseInt(rating) });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -659,7 +660,7 @@ const adminReleaseDonation = async (req, res) => {
 
     res.json({ message: 'Donation force-released to available', donation });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -735,7 +736,7 @@ const syncOfflineActions = async (req, res) => {
 
     res.json({ results, synced_at: new Date() });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -759,7 +760,7 @@ const getDonorHistory = async (req, res) => {
       pagination: { total, page, limit, pages: Math.ceil(total / limit) }
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -779,7 +780,7 @@ const getNGOHistory = async (req, res) => {
     await redis.set(cacheKey, JSON.stringify(donations), 30); // 30s TTL — matches dashboard refresh
     res.json(donations);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -852,7 +853,7 @@ const getAdminDonationHistory = async (req, res) => {
     res.json(payload);
   } catch (error) {
     console.error('Admin donation history error:', error);
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 

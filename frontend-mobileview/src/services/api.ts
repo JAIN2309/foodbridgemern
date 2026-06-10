@@ -2,7 +2,9 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { LocationData } from './mapService';
 
-const API_BASE_URL = 'http://10.17.24.65:5001/api'; // Your Computer IP
+// Reads EXPO_PUBLIC_API_URL from .env (update the IP there when your network
+// changes). Falls back to the hardcoded LAN IP if the env var is unset.
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.17.24.65:5001/api';
 export { API_BASE_URL };
 
 const api = axios.create({

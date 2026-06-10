@@ -3,6 +3,7 @@ const Donation = require('../models/Donation');
 const redis    = require('../utils/redisClient');
 const { sendEmail, emailTemplates } = require('../services/emailService');
 const { decryptUserFields } = require('../utils/userHelper');
+const serverError = require('../utils/serverError');
 
 const STATS_TTL = 300; // 5 minutes
 
@@ -27,7 +28,7 @@ const getPendingVerifications = async (req, res) => {
     res.json(payload);
   } catch (error) {
     console.error('getPendingVerifications error:', error);
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -69,7 +70,7 @@ const verifyUser = async (req, res) => {
       user: decryptedUser
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -197,7 +198,7 @@ const getAdminStats = async (req, res) => {
     res.json(response);
   } catch (error) {
     console.error('getAdminStats error:', error);
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -217,7 +218,7 @@ const getAllActiveDonations = async (req, res) => {
     res.json(donations);
   } catch (error) {
     console.error('getAllActiveDonations error:', error);
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -257,7 +258,7 @@ const getAllUsers = async (req, res) => {
     res.json(payload);
   } catch (error) {
     console.error('getAllUsers error:', error);
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -305,7 +306,7 @@ const toggleBiometric = async (req, res) => {
       biometric_enabled: decryptedUser.biometric_enabled
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -316,7 +317,7 @@ const getBiometricStatus = async (req, res) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json({ biometric_enabled: user.biometric_enabled });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -349,7 +350,7 @@ const uploadProfilePicture = async (req, res) => {
       profile_picture: user.profile_picture
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -359,7 +360,7 @@ const getProfilePicture = async (req, res) => {
     const decryptedUser = decryptUserFields(user);
     res.json({ profile_picture: decryptedUser.profile_picture });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -373,7 +374,7 @@ const deleteProfilePicture = async (req, res) => {
 
     res.json({ message: 'Profile picture deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -417,7 +418,7 @@ const toggleUserStatus = async (req, res) => {
 
     res.json({ message: `User ${is_active ? 'activated' : 'deactivated'} successfully`, is_active });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -465,7 +466,7 @@ const getUserDetail = async (req, res) => {
     await redis.set(cacheKey, JSON.stringify(detail), 120); // 2 min TTL
     res.json(detail);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -684,7 +685,7 @@ const getExportAnalytics = async (req, res) => {
     res.json(exportPayload);
   } catch (error) {
     console.error('getExportAnalytics error:', error);
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
@@ -774,7 +775,7 @@ const getRatingsSummary = async (req, res) => {
     res.json(payload);
   } catch (error) {
     console.error('getRatingsSummary error:', error);
-    res.status(500).json({ message: error.message });
+    serverError(res, error);
   }
 };
 
