@@ -69,8 +69,10 @@ Thumbs.db
 tmp/
 temp/
 
-# Project documents
+# Project documents (temp — local doc editing, not part of the codebase)
 foodbridge.pdf
+*.docx
+~$*.docx
 
 # Firebase config (contains API keys)
 google-services.json
