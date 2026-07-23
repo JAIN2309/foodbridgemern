@@ -24,6 +24,17 @@ A **production-grade MERN food donation platform** connecting food donors with N
 
 ---
 
+## 🌐 Live Deployment URLs
+
+| Component | Service | Live URL | Platform |
+| :--- | :--- | :--- | :--- |
+| **Frontend Web App** | `frontend-webview` | 🌐 **[https://jain2309.github.io/foodbridgemern/](https://jain2309.github.io/foodbridgemern/)** | **GitHub Pages** |
+| **Backend API** | `backend` | ⚙️ **[https://foodbridgemern.onrender.com](https://foodbridgemern.onrender.com)** | **Render** |
+| **Database** | MongoDB Atlas | 🍃 `Cluster0` (Cloud MongoDB) | **MongoDB Atlas** |
+| **Cache & Sockets** | Redis | ⚡ Upstash TLS Redis | **Upstash** |
+
+---
+
 ## 📑 Table of Contents
 
 - [✨ Features](#-features)
