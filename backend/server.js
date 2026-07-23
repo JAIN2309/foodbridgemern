@@ -156,30 +156,32 @@ io.on('connection', (socket) => {
 app.set('io', io);
 
 async function start() {
-  await redis.connect();
+  const PORT = process.env.PORT || 5001;
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+  });
 
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ MongoDB Connected');
+    await redis.connect();
   } catch (err) {
-    console.error('❌ MongoDB connection failed:', err.message);
-    console.error('   Fix MONGODB_URI in .env and restart.');
-    process.exit(1);
+    console.warn('⚠️ Redis connection warning:', err.message);
+  }
+
+  if (process.env.MONGODB_URI) {
+    try {
+      await mongoose.connect(process.env.MONGODB_URI);
+      console.log('✅ MongoDB Connected');
+    } catch (err) {
+      console.error('❌ MongoDB connection failed:', err.message);
+    }
+  } else {
+    console.warn('⚠️ MONGODB_URI is not set in Environment Variables');
   }
 
   if (process.env.NODE_ENV !== 'production') {
     startCronJobs();
   }
   expiryScheduler.start();
-
-  const PORT = process.env.PORT || 5001;
-  server.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`   Local:   http://localhost:${PORT}`);
-      console.log(`   Network: http://10.0.2.2:${PORT}`);
-    }
-  });
 }
 
 start();
