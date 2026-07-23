@@ -172,13 +172,14 @@ async function start() {
   }
   expiryScheduler.start();
 
-  if (process.env.NODE_ENV !== 'production') {
-    const PORT = process.env.PORT || 5001;
-    server.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
+  const PORT = process.env.PORT || 5001;
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`   Local:   http://localhost:${PORT}`);
       console.log(`   Network: http://10.0.2.2:${PORT}`);
-    });
-  }
+    }
+  });
 }
 
 start();
