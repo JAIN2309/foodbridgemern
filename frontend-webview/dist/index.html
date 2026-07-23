@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FoodBridge - Food Rescue Platform</title>
+
+    <!--
+      Content Security Policy
+      ─────────────────────────────────────────────────────────────────
+      default-src 'self'
+        → block everything not explicitly listed below
+
+      script-src 'self'
+        → only run JS files served from this origin (no inline scripts,
+          no scripts from CDNs). Vite bundles everything into /assets/*.js.
+
+      style-src 'self' 'unsafe-inline' https://unpkg.com
+        → allow Tailwind utility classes (Vite injects them as <style> tags
+          during dev) + Leaflet CSS loaded from unpkg.com CDN
+
+      img-src 'self' data: blob: https://*.tile.openstreetmap.org
+        → data:  → food photos stored as base64 in MongoDB
+          blob:  → object URLs created by URL.createObjectURL()
+          *.tile.openstreetmap.org → Leaflet map tiles
+
+      connect-src 'self' http://localhost:5001 http://localhost:5000
+                  ws://localhost:5173 ws://localhost:5001 wss:
+        → 'self'             → Vite proxy (/api passes through same origin)
+          localhost:5001/5000 → direct backend API calls in dev
+          ws://localhost:5173 → Vite HMR (hot-reload) websocket in dev
+          ws://localhost:5001 → Socket.io websocket in dev
+          wss:               → Socket.io wss:// in production
+
+      font-src 'self' data:
+        → embedded fonts (data URIs) if any icon font is inlined
+
+      worker-src 'self' blob:
+        → Web Workers (Leaflet uses blob: workers for tile rendering)
+
+      object-src 'none'
+        → block Flash, Java applets, PDFs in <object>/<embed> completely
+
+      base-uri 'self'
+        → prevent <base href="https://evil.com"> injection which would
+          redirect all relative links to an attacker's server
+
+      form-action 'self'
+        → prevent forms from submitting to external URLs even if injected
+      ─────────────────────────────────────────────────────────────────
+    -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self';
+      style-src 'self' 'unsafe-inline' https://unpkg.com;
+      img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.openstreetmap.org;
+      connect-src 'self' http://localhost:5001 http://localhost:5000 ws://localhost:5173 ws://localhost:5001 wss: https://*.sentry.io https://*.onrender.com;
+      font-src 'self' data:;
+      worker-src 'self' blob:;
+      object-src 'none';
+      base-uri 'self';
+      form-action 'self';
+    " />
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script type="module" crossorigin src="/foodbridgemern/assets/index-DFM3isiP.js"></script>
+    <link rel="stylesheet" crossorigin href="/foodbridgemern/assets/index-CLG2fpCY.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
