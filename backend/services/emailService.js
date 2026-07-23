@@ -7,13 +7,25 @@ const SMTP_CONFIGURED =
   process.env.SMTP_PASS !== 'your_app_password';
 
 const transporter = SMTP_CONFIGURED
-  ? nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
-    })
+  ? nodemailer.createTransport(
+      process.env.SMTP_HOST
+        ? {
+            host: process.env.SMTP_HOST,
+            port: parseInt(process.env.SMTP_PORT, 10) || 587,
+            secure: process.env.SMTP_PORT == 465,
+            auth: {
+              user: process.env.SMTP_USER,
+              pass: process.env.SMTP_PASS
+            }
+          }
+        : {
+            service: 'gmail',
+            auth: {
+              user: process.env.SMTP_USER,
+              pass: process.env.SMTP_PASS
+            }
+          }
+    )
   : null;
 
 if (SMTP_CONFIGURED) {
