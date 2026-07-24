@@ -103,6 +103,15 @@ A **production-grade MERN food donation platform** connecting food donors with N
 
 ---
 
+## ⚡ Production Optimizations & Resilience
+
+- 🖼️ **Client-Side WebP Image Compression**: Automatically resizes and converts 5MB–10MB high-res food photos down to **~25 KB WebP format** using HTML5 Canvas before network transfer. Boosts MongoDB M0 free-tier capacity from ~77 photos to **20,000+ photos** (250x storage efficiency!).
+- 🛡️ **Production ErrorBoundary**: Built-in React error boundary wrapper preventing blank white screens across all routes with a graceful recovery interface.
+- 🚀 **Resilient Port Listener**: Instant HTTP server initialization on Render with graceful MongoDB & Redis connection error handling.
+- 🌐 **Production CSP & SPA Fallback**: Configured Content Security Policy allowing WebP, Sockets, and maps alongside a `404.html` SPA routing fallback.
+
+---
+
 ## 🛠 Tech Stack
 
 <details open>
