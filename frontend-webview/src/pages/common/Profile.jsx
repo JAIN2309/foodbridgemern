@@ -75,53 +75,46 @@ const Profile = () => {
       return;
     }
 
-    // Validate file size (max 500KB)
-    if (file.size > 500 * 1024) {
-      toast.error('Image size should be less than 500KB');
-      return;
-    }
-
     setUploadingPicture(true);
     try {
-      // Convert to base64
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64String = reader.result;
-        
-        // Double check base64 size
-        if (base64String.length > 500000) {
-          toast.error('Image too large after conversion. Please select a smaller image.');
-          setUploadingPicture(false);
-          return;
-        }
-        
-        // Upload to backend
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}/users/profile-picture`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify({ image: base64String })
+      let base64String = '';
+      try {
+        const { compressImage } = await import('../../utils/imageCompressor');
+        const { dataUrl } = await compressImage(file, 400, 400, 0.7);
+        base64String = dataUrl;
+      } catch (err) {
+        base64String = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(file);
         });
+      }
+        
+      // Upload to backend
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}/users/profile-picture`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ image: base64String })
+      });
 
-        if (!response.ok) {
-          if (response.status === 413) {
-            throw new Error('Image too large');
-          }
-          throw new Error('Upload failed');
+      if (!response.ok) {
+        if (response.status === 413) {
+          throw new Error('Image too large');
         }
-        
-        const data = await response.json();
-        setProfilePicture(data.profile_picture);
-        
-        // Refresh user data from backend to update Redux store
-        await dispatch({ type: 'auth/loadUser/fulfilled', payload: { ...user, profile_picture: data.profile_picture } });
-        
-        toast.success(t('profile.pictureUpdated'));
-        setUploadingPicture(false);
-      };
-      reader.readAsDataURL(file);
+        throw new Error('Upload failed');
+      }
+      
+      const data = await response.json();
+      setProfilePicture(data.profile_picture);
+      
+      // Refresh user data from backend to update Redux store
+      await dispatch({ type: 'auth/loadUser/fulfilled', payload: { ...user, profile_picture: data.profile_picture } });
+      
+      toast.success(t('profile.pictureUpdated'));
+      setUploadingPicture(false);
     } catch (error) {
       toast.error(error.message || 'Failed to upload profile picture');
       setUploadingPicture(false);

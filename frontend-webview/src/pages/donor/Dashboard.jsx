@@ -210,20 +210,27 @@ const DonorDashboard = () => {
     toast.info('Donation posting cancelled');
   };
 
-  const handlePhotoChange = (e) => {
+  const handlePhotoChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image size must be less than 5MB');
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('Image size must be less than 10MB');
         return;
       }
       
-      setPhotoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const { compressImage } = await import('../../utils/imageCompressor');
+        const { file: compressedFile, dataUrl } = await compressImage(file);
+        setPhotoFile(compressedFile);
+        setPhotoPreview(dataUrl);
+      } catch (err) {
+        setPhotoFile(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPhotoPreview(reader.result);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
